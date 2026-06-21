@@ -4,7 +4,7 @@ import { getDb } from "../db";
 import { getMatchSchemaStatus } from "../db/schema-verify";
 import { PROTECTED_SUPER_ADMIN_EMAIL } from "../lib/super-admin";
 
-const AUTH_BUILD = "live-score-fallback-v1";
+const AUTH_BUILD = "api-sports-football-v1";
 
 const router = Router();
 

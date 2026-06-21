@@ -2,6 +2,9 @@ import { Router } from "express";
 import { getDb } from "../db";
 import { getLastSyncStatus } from "../lib/sportsdb/sync";
 import { pingSportsApi, getSportsApiKey } from "../lib/sportsdb/client";
+import { getApiFootballSettings } from "../lib/apifootball/settings";
+import { pingApiFootball } from "../lib/apifootball/client";
+import { API_FOOTBALL_LEAGUES, currentFootballSeason } from "../lib/apifootball/leagues";
 import { cacheGet, cacheSet } from "../services/redis";
 
 const router = Router();
@@ -9,17 +12,20 @@ const router = Router();
 router.get("/status", async (_req, res) => {
   try {
     const db = await getDb();
+    const apiSettings = await getApiFootballSettings();
     let lastSync = null;
     try {
       lastSync = await getLastSyncStatus(db);
     } catch {
       lastSync = null;
     }
-    const apiReachable = await pingSportsApi();
+    const sportsDbReachable = await pingSportsApi();
+    const apiSportsReachable = apiSettings.enabled ? await pingApiFootball(apiSettings.apiKey) : false;
 
     let leaguesCount = 0;
     let teamsCount = 0;
     let syncedMatchesCount = 0;
+    let apiFootballMatchesCount = 0;
     try {
       const leagues = await db.query(`SELECT id FROM leagues LIMIT 1`);
       leaguesCount = leagues.rows.length;
@@ -27,6 +33,8 @@ router.get("/status", async (_req, res) => {
       teamsCount = Number(teams.rows[0]?.count ?? 0);
       const syncedMatches = await db.query(`SELECT COUNT(*) as count FROM matches WHERE external_event_id IS NOT NULL`);
       syncedMatchesCount = Number(syncedMatches.rows[0]?.count ?? 0);
+      const afMatches = await db.query(`SELECT COUNT(*) as count FROM matches WHERE apifootball_fixture_id IS NOT NULL`);
+      apiFootballMatchesCount = Number(afMatches.rows[0]?.count ?? 0);
     } catch {
       /* tables may not exist yet during first deploy */
     }
@@ -36,9 +44,18 @@ router.get("/status", async (_req, res) => {
     ).catch(() => ({ rows: [] }));
 
     res.json({
-      provider: "thesportsdb",
-      apiKeyConfigured: Boolean(getSportsApiKey()),
-      apiReachable,
+      provider: apiSettings.enabled ? "api-sports" : "thesportsdb",
+      apiSports: {
+        configured: apiSettings.enabled,
+        keySource: apiSettings.source,
+        reachable: apiSportsReachable,
+        refreshSec: apiSettings.refreshIntervalMs / 1000,
+        syncedMatches: apiFootballMatchesCount,
+      },
+      theSportsDb: {
+        apiKeyConfigured: Boolean(getSportsApiKey()),
+        apiReachable: sportsDbReachable,
+      },
       lastSync: lastSync
         ? {
             status: lastSync.status,
@@ -124,6 +141,48 @@ router.get("/teams", async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: "Failed to load teams" });
+  }
+});
+
+router.get("/standings", async (req, res) => {
+  try {
+    const leagueId = Number(req.query.leagueId || req.query.league);
+    const season = Number(req.query.season) || currentFootballSeason();
+
+    if (!Number.isFinite(leagueId) || leagueId <= 0) {
+      return res.status(400).json({ error: "leagueId query parameter required" });
+    }
+
+    const cacheKey = `apifootball:standings:public:${leagueId}:${season}`;
+    const cached = await cacheGet<unknown[]>(cacheKey);
+    if (cached) return res.json({ leagueId, season, standings: cached, cached: true });
+
+    const settings = await getApiFootballSettings();
+    if (!settings.enabled) {
+      return res.json({ leagueId, season, standings: [], cached: false, message: "API-Sports not configured" });
+    }
+
+    const { fetchStandings } = await import("../lib/apifootball/client");
+    const standings = await fetchStandings(settings.apiKey, leagueId, season);
+    await cacheSet(cacheKey, standings, 3600);
+
+    const league = API_FOOTBALL_LEAGUES.find((l) => l.apiId === leagueId);
+    res.json({
+      leagueId,
+      leagueName: league?.name,
+      season,
+      standings,
+      cached: false,
+    });
+  } catch (err) {
+    console.error("[sports/standings]", err);
+    const leagueId = Number(req.query.leagueId);
+    const season = Number(req.query.season) || currentFootballSeason();
+    const stale = await cacheGet<unknown[]>(`apifootball:standings:public:${leagueId}:${season}`);
+    if (stale) {
+      return res.json({ leagueId, season, standings: stale, cached: true, fallback: true });
+    }
+    res.status(502).json({ error: "Failed to load standings", standings: [] });
   }
 });
 

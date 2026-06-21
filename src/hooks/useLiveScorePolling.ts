@@ -6,9 +6,9 @@ import type { Match } from "@/lib/constants";
 import { mergeMatchLists, toMatch } from "@/lib/match-utils";
 import { logLiveMatchPayload } from "@/lib/live-score-utils";
 
-const LIVE_SCORE_POLL_MS = 45_000;
+const LIVE_SCORE_POLL_MS = 60_000;
 
-/** Poll live match scores every 45s without reloading the page. */
+/** Poll live match scores every 60s without reloading the page. */
 export function useLiveScorePolling(
   setMatches: React.Dispatch<React.SetStateAction<Match[]>>,
   enabled = true

@@ -12,6 +12,7 @@ function parseKickoff(row: Record<string, unknown>): number {
 }
 
 function isRealAutoMatch(row: Record<string, unknown>): boolean {
+  if (row.apifootball_fixture_id) return false;
   return !boolFrom(row, "is_simulated") && !boolFrom(row, "status_override");
 }
 

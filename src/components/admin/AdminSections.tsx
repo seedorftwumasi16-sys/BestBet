@@ -345,7 +345,7 @@ export function AdminSettingsSection() {
   const [momoNumber, setMomoNumber] = useState("0203907314");
   const [momoRecipient, setMomoRecipient] = useState("RAHAMATU NUHU");
   const [apiFootballKey, setApiFootballKey] = useState("");
-  const [apiFootballRefresh, setApiFootballRefresh] = useState("45");
+  const [apiFootballRefresh, setApiFootballRefresh] = useState("60");
   const [saving, setSaving] = useState(false);
   const [savingApiFootball, setSavingApiFootball] = useState(false);
 
@@ -421,7 +421,8 @@ export function AdminSettingsSection() {
       <div className="card-premium p-5 space-y-4">
         <h3 className="text-sm font-bold font-display text-bestbet-yellow">API-Football Live Scores</h3>
         <p className="text-xs text-bestbet-gray-muted">
-          Powers real match live scores, minutes, cards, and automatic settlement at full time.
+          Powers live scores, fixtures, team/league logos, and standings. Prefer setting{" "}
+          <code className="text-bestbet-yellow">APIFOOTBALL_API_KEY</code> as a server environment variable (never exposed to users).
         </p>
         <Input
           label="API Key"

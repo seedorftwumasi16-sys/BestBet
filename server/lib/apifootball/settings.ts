@@ -5,20 +5,44 @@ export const APIFOOTBALL_SETTINGS = {
   refreshIntervalSec: "apifootball_refresh_interval",
 } as const;
 
-const DEFAULT_REFRESH_SEC = 45;
+const DEFAULT_REFRESH_SEC = 60;
+
+/** API key is read from server env first — never exposed to the frontend. */
+export function getApiKeyFromEnv(): string {
+  return (
+    process.env.APIFOOTBALL_API_KEY?.trim() ||
+    process.env.API_SPORTS_KEY?.trim() ||
+    ""
+  );
+}
 
 export async function getApiFootballSettings(): Promise<{
   apiKey: string;
   refreshIntervalMs: number;
   enabled: boolean;
+  source: "env" | "database" | "none";
 }> {
+  const envKey = getApiKeyFromEnv();
+  if (envKey) {
+    const refreshSec = Math.max(
+      30,
+      Math.min(60, Number(process.env.APIFOOTBALL_REFRESH_SEC || DEFAULT_REFRESH_SEC) || DEFAULT_REFRESH_SEC)
+    );
+    return {
+      apiKey: envKey,
+      refreshIntervalMs: refreshSec * 1000,
+      enabled: true,
+      source: "env",
+    };
+  }
+
   const db = await getDb();
   const result = await db.query(
     `SELECT key, value FROM site_settings WHERE key IN (?, ?)`,
     [APIFOOTBALL_SETTINGS.apiKey, APIFOOTBALL_SETTINGS.refreshIntervalSec]
   );
   const map = Object.fromEntries(result.rows.map((r) => [String(r.key), String(r.value ?? "")]));
-  const apiKey = (map[APIFOOTBALL_SETTINGS.apiKey] || process.env.APIFOOTBALL_API_KEY || "").trim();
+  const apiKey = (map[APIFOOTBALL_SETTINGS.apiKey] || "").trim();
   const refreshSec = Math.max(
     30,
     Math.min(60, Number(map[APIFOOTBALL_SETTINGS.refreshIntervalSec] || DEFAULT_REFRESH_SEC) || DEFAULT_REFRESH_SEC)
@@ -27,6 +51,7 @@ export async function getApiFootballSettings(): Promise<{
     apiKey,
     refreshIntervalMs: refreshSec * 1000,
     enabled: Boolean(apiKey),
+    source: apiKey ? "database" : "none",
   };
 }
 

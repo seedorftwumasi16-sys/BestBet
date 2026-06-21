@@ -85,7 +85,7 @@ const SETTINGS = [
   { key: "min_withdrawal", value: "10" },
   { key: "referral_bonus", value: "10" },
   { key: "currency", value: "GHS" },
-  { key: "apifootball_refresh_interval", value: "45" },
+  { key: "apifootball_refresh_interval", value: "60" },
 ];
 
 export async function seed(): Promise<void> {
