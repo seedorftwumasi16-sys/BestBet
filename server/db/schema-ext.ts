@@ -222,7 +222,7 @@ CREATE TABLE IF NOT EXISTS sports_teams (
   league_name TEXT,
   sport TEXT NOT NULL DEFAULT 'football',
   country TEXT,
-  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  updated_at TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS sports_sync_log (
@@ -233,7 +233,7 @@ CREATE TABLE IF NOT EXISTS sports_sync_log (
   teams_synced INTEGER DEFAULT 0,
   events_synced INTEGER DEFAULT 0,
   source TEXT DEFAULT 'thesportsdb',
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TEXT NOT NULL DEFAULT ''
 );
 `;
 

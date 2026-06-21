@@ -8,12 +8,31 @@ const router = Router();
 router.get("/status", async (_req, res) => {
   try {
     const db = await getDb();
-    const lastSync = await getLastSyncStatus(db);
+    let lastSync = null;
+    try {
+      lastSync = await getLastSyncStatus(db);
+    } catch {
+      lastSync = null;
+    }
     const apiReachable = await pingSportsApi();
 
-    const leagues = await db.query(`SELECT id, name, sport, badge_url, external_id FROM leagues WHERE active = 1 OR active = true ORDER BY name ASC LIMIT 50`);
-    const teams = await db.query(`SELECT COUNT(*) as count FROM sports_teams`);
-    const syncedMatches = await db.query(`SELECT COUNT(*) as count FROM matches WHERE external_event_id IS NOT NULL`);
+    let leaguesCount = 0;
+    let teamsCount = 0;
+    let syncedMatchesCount = 0;
+    try {
+      const leagues = await db.query(`SELECT id FROM leagues LIMIT 1`);
+      leaguesCount = leagues.rows.length;
+      const teams = await db.query(`SELECT COUNT(*) as count FROM sports_teams`);
+      teamsCount = Number(teams.rows[0]?.count ?? 0);
+      const syncedMatches = await db.query(`SELECT COUNT(*) as count FROM matches WHERE external_event_id IS NOT NULL`);
+      syncedMatchesCount = Number(syncedMatches.rows[0]?.count ?? 0);
+    } catch {
+      /* tables may not exist yet during first deploy */
+    }
+
+    const leagues = await db.query(
+      `SELECT id, name, sport, badge_url, external_id FROM leagues ORDER BY name ASC LIMIT 50`
+    ).catch(() => ({ rows: [] }));
 
     res.json({
       provider: "thesportsdb",
@@ -31,8 +50,8 @@ router.get("/status", async (_req, res) => {
         : null,
       cached: {
         leagues: leagues.rows.length,
-        teams: Number(teams.rows[0]?.count ?? 0),
-        syncedMatches: Number(syncedMatches.rows[0]?.count ?? 0),
+        teams: teamsCount,
+        syncedMatches: syncedMatchesCount,
       },
     });
   } catch (err) {

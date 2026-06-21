@@ -64,18 +64,23 @@ async function logSync(
   db: Database,
   result: Omit<SportsSyncResult, "ok"> & { ok: boolean }
 ): Promise<void> {
-  await db.query(
-    `INSERT INTO sports_sync_log (id, status, message, leagues_synced, teams_synced, events_synced, source) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [
-      uuidv4(),
-      result.ok ? "success" : "fallback",
-      result.message,
-      result.leaguesSynced,
-      result.teamsSynced,
-      result.eventsSynced,
-      "thesportsdb",
-    ]
-  );
+  try {
+    await db.query(
+      `INSERT INTO sports_sync_log (id, status, message, leagues_synced, teams_synced, events_synced, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        uuidv4(),
+        result.ok ? "success" : "fallback",
+        result.message,
+        result.leaguesSynced,
+        result.teamsSynced,
+        result.eventsSynced,
+        "thesportsdb",
+        new Date().toISOString(),
+      ]
+    );
+  } catch (err) {
+    console.warn("[sports-sync] Could not write sync log:", err instanceof Error ? err.message : err);
+  }
 }
 
 async function upsertLeague(db: Database, league: { id: string; name: string; sport: string; badge?: string }) {
