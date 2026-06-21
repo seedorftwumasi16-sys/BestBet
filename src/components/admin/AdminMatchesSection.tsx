@@ -210,8 +210,17 @@ export function AdminMatchesSection() {
 
   const saveMatch = async () => {
     if (saving) return;
-    if (!form.homeTeam || !form.awayTeam || !form.league) {
+    if (!form.homeTeam.trim() || !form.awayTeam.trim() || !form.league.trim()) {
       toast.error("Home team, away team, and league are required");
+      return;
+    }
+
+    if (Number.isNaN(Number(form.oddsHome)) || Number(form.oddsHome) <= 1) {
+      toast.error("Home odds must be greater than 1.00");
+      return;
+    }
+    if (Number.isNaN(Number(form.oddsAway)) || Number(form.oddsAway) <= 1) {
+      toast.error("Away odds must be greater than 1.00");
       return;
     }
 
@@ -228,8 +237,10 @@ export function AdminMatchesSection() {
         toast.success("Match created successfully");
       }
       closeForm();
+      load();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save match");
+      const message = err instanceof Error ? err.message : "Failed to save match";
+      toast.error(message);
     } finally {
       setSaving(false);
     }

@@ -99,7 +99,11 @@ export async function syncOddsForMatch(
 
   await db.query(`DELETE FROM odds WHERE match_id = ?`, [matchId]);
 
+  const seen = new Set<string>();
   for (const row of rows) {
+    const key = `${row.market}:${row.selection}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
     await db.query(
       `INSERT INTO odds (id, match_id, market, selection, odds_value) VALUES (?, ?, ?, ?, ?)`,
       [uuidv4(), matchId, row.market, row.selection, row.odds_value]

@@ -135,6 +135,8 @@ function createJsonDb(filePath: string): Database {
             rows = rows.filter((r) => r.user_id === params[0]);
           } else if (sql.includes("bet_id = ?")) {
             rows = rows.filter((r) => r.bet_id === params[0]);
+          } else if (sql.includes("match_id = ?")) {
+            rows = rows.filter((r) => r.match_id === params[0]);
           } else if (sql.includes("id = ?") && sql.includes("user_id = ?")) {
             rows = rows.filter((r) => r.id === params[0] && r.user_id === params[1]);
           } else if (sql.includes("id = ?")) {
@@ -304,12 +306,62 @@ function createJsonDb(filePath: string): Database {
         } else if (sql.includes("odds_home = ?")) {
           const row = store.tables.matches.find((r) => r.id === params[2]);
           if (row) { row.odds_home = params[0]; row.odds_away = params[1]; }
+        } else if (table === "matches" && sql.includes("home_team = ?")) {
+          const row = store.tables.matches.find((r) => r.id === params[params.length - 1]);
+          if (row) {
+            const fields = [
+              "home_team",
+              "away_team",
+              "league",
+              "sport",
+              "start_time",
+              "is_live",
+              "match_status",
+              "is_featured",
+              "betting_suspended",
+              "is_simulated",
+              "odds_home",
+              "odds_draw",
+              "odds_away",
+              "odds_over",
+              "odds_under",
+              "odds_btts_yes",
+              "odds_btts_no",
+              "over_under_line",
+              "home_score",
+              "away_score",
+              "live_minute",
+            ];
+            fields.forEach((field, index) => {
+              row[field] = params[index];
+            });
+          }
         } else if (sql.includes("read = 1")) {
           const row = store.tables[table].find((r) => r.id === params[0] && r.user_id === params[1]);
           if (row) row.read = 1;
         }
         persist();
         return { rows: [], rowCount: 1 };
+      }
+
+      if (upper.startsWith("DELETE")) {
+        const match = sql.match(/DELETE\s+FROM\s+(\w+)/i);
+        const table = match?.[1] ?? "";
+        ensureTable(table);
+        const before = store.tables[table].length;
+
+        if (sql.includes("match_id = ?") && sql.includes("market = 'correct_score'")) {
+          store.tables[table] = store.tables[table].filter(
+            (r) => !(r.match_id === params[0] && r.market === "correct_score")
+          );
+        } else if (sql.includes("match_id = ?")) {
+          store.tables[table] = store.tables[table].filter((r) => r.match_id !== params[0]);
+        } else if (sql.includes("id = ?")) {
+          store.tables[table] = store.tables[table].filter((r) => r.id !== params[0]);
+        }
+
+        persist();
+        return { rows: [], rowCount: Math.max(0, before - store.tables[table].length) };
       }
 
       return { rows: [], rowCount: 0 };
@@ -332,6 +384,9 @@ const PG_BOOL_COLUMNS = new Set([
   "phone_verified",
   "read",
   "is_live",
+  "is_featured",
+  "betting_suspended",
+  "is_simulated",
   "active",
   "cashout_available",
 ]);

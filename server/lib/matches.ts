@@ -284,56 +284,68 @@ export async function createMatchRecord(id: string, input: MatchInput) {
   const db = await getDb();
   const status = input.matchStatus || "upcoming";
   const live = syncLiveFields(status);
-  await db.query(
-    `INSERT INTO matches (
-      id, home_team, away_team, league, sport, start_time, is_live, match_status,
-      is_featured, betting_suspended, is_simulated, created_at,
-      odds_home, odds_draw, odds_away,
-      odds_over, odds_under, odds_btts_yes, odds_btts_no, over_under_line,
-      home_score, away_score, live_minute
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      id,
-      input.homeTeam,
-      input.awayTeam,
-      input.league,
-      input.sport,
-      input.startTime || new Date().toISOString(),
-      boolVal(db, live.is_live),
-      live.match_status,
-      boolVal(db, !!input.isFeatured),
-      boolVal(db, !!input.bettingSuspended),
-      boolVal(db, !!input.isSimulated),
-      new Date().toISOString(),
-      input.oddsHome ?? 1.5,
-      input.oddsDraw ?? null,
-      input.oddsAway ?? 2.5,
-      input.oddsOver ?? null,
-      input.oddsUnder ?? null,
-      input.oddsBttsYes ?? null,
-      input.oddsBttsNo ?? null,
-      input.overUnderLine ?? 2.5,
-      input.homeScore ?? null,
-      input.awayScore ?? null,
-      input.liveMinute ?? null,
-    ]
-  );
-  const sport = input.sport;
-  const oddsExtras =
-    input.correctScoreOdds || input.doubleChanceOdds
-      ? input
-      : sport === "football"
-        ? {
-            ...input,
-            ...buildDefaultCorrectScoreForSport(
-              sport,
-              input.oddsHome ?? 1.5,
-              input.oddsDraw ?? null,
-              input.oddsAway ?? 2.5
-            ),
-          }
-        : input;
-  await syncOddsForMatch(id, oddsExtras);
+
+  try {
+    await db.query(
+      `INSERT INTO matches (
+        id, home_team, away_team, league, sport, start_time, is_live, match_status,
+        is_featured, betting_suspended, is_simulated, created_at,
+        odds_home, odds_draw, odds_away,
+        odds_over, odds_under, odds_btts_yes, odds_btts_no, over_under_line,
+        home_score, away_score, live_minute
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        input.homeTeam,
+        input.awayTeam,
+        input.league,
+        input.sport,
+        input.startTime || new Date().toISOString(),
+        boolVal(db, live.is_live),
+        live.match_status,
+        boolVal(db, !!input.isFeatured),
+        boolVal(db, !!input.bettingSuspended),
+        boolVal(db, !!input.isSimulated),
+        new Date().toISOString(),
+        input.oddsHome ?? 1.5,
+        input.oddsDraw ?? null,
+        input.oddsAway ?? 2.5,
+        input.oddsOver ?? null,
+        input.oddsUnder ?? null,
+        input.oddsBttsYes ?? null,
+        input.oddsBttsNo ?? null,
+        input.overUnderLine ?? 2.5,
+        input.homeScore ?? null,
+        input.awayScore ?? null,
+        input.liveMinute ?? null,
+      ]
+    );
+
+    const sport = input.sport;
+    const oddsExtras =
+      input.correctScoreOdds || input.doubleChanceOdds
+        ? input
+        : sport === "football"
+          ? {
+              ...input,
+              ...buildDefaultCorrectScoreForSport(
+                sport,
+                input.oddsHome ?? 1.5,
+                input.oddsDraw ?? null,
+                input.oddsAway ?? 2.5
+              ),
+            }
+          : input;
+    await syncOddsForMatch(id, oddsExtras);
+  } catch (err) {
+    try {
+      await deleteOddsForMatch(id);
+      await db.query(`DELETE FROM matches WHERE id = ?`, [id]);
+    } catch {
+      // best-effort rollback
+    }
+    throw err;
+  }
 }
 
 export async function updateMatchRecord(id: string, input: Partial<MatchInput>) {

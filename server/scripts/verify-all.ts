@@ -369,6 +369,45 @@ async function testAdmin(token: string | null) {
   if (newMatch.status === 201) pass("Create match", newMatch.body.id);
   else fail("Create match", JSON.stringify(newMatch.body));
 
+  const simulatedMatch = await fetchJson("/api/admin/matches", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      homeTeam: "Sim Home A",
+      awayTeam: "Sim Away A",
+      league: "Simulated League",
+      sport: "football",
+      matchStatus: "upcoming",
+      isSimulated: true,
+      oddsHome: 1.9,
+      oddsDraw: 3.2,
+      oddsAway: 4.1,
+    }),
+  });
+  if (simulatedMatch.status === 201) pass("Create simulated match", simulatedMatch.body.id);
+  else fail("Create simulated match", JSON.stringify(simulatedMatch.body));
+
+  const simulatedMatch2 = await fetchJson("/api/admin/matches", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      homeTeam: "Sim Home B",
+      awayTeam: "Sim Away B",
+      league: "Simulated League",
+      sport: "football",
+      matchStatus: "live",
+      isSimulated: true,
+      oddsHome: 2.1,
+      oddsDraw: 3.0,
+      oddsAway: 3.5,
+      homeScore: 1,
+      awayScore: 1,
+      liveMinute: 55,
+    }),
+  });
+  if (simulatedMatch2.status === 201) pass("Create second simulated match", simulatedMatch2.body.id);
+  else fail("Create second simulated match", JSON.stringify(simulatedMatch2.body));
+
   if (newMatch.status === 201 && newMatch.body.id) {
     const matchUpdated = await fetchJson(`/api/admin/matches/${newMatch.body.id}`, {
       method: "PUT",
