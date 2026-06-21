@@ -13,6 +13,7 @@ import {
   LOGIN_LOG_COLUMNS_SQL,
   SPORTSDB_SCHEMA_SQL,
   SPORTSDB_COLUMNS_SQL,
+  SIMULATED_MATCH_COLUMNS_SQL,
 } from "./schema-ext";
 import { recreateProtectedSuperAdmin } from "../lib/super-admin";
 
@@ -54,10 +55,12 @@ export async function migrate(): Promise<{ driver: string }> {
     await runStatements(db, BOOKING_COLUMNS_SQL);
     await runStatements(db, LOGIN_LOG_COLUMNS_SQL);
     await runStatements(db, SPORTSDB_COLUMNS_SQL);
+    await runStatements(db, SIMULATED_MATCH_COLUMNS_SQL.replace(/datetime\('now'\)/g, "NOW()"));
   } else {
     await runStatements(db, MATCH_COLUMNS_SQL.replace(/ADD COLUMN IF NOT EXISTS/g, "ADD COLUMN"));
     await runStatements(db, LOGIN_LOG_COLUMNS_SQL.replace(/ADD COLUMN IF NOT EXISTS/g, "ADD COLUMN"));
     await runStatements(db, SPORTSDB_COLUMNS_SQL.replace(/ADD COLUMN IF NOT EXISTS/g, "ADD COLUMN"));
+    await runStatements(db, SIMULATED_MATCH_COLUMNS_SQL.replace(/ADD COLUMN IF NOT EXISTS/g, "ADD COLUMN"));
   }
 
   await recreateProtectedSuperAdmin(db);

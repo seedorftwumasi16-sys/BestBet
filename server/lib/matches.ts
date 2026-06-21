@@ -20,6 +20,8 @@ export interface MatchRow {
   match_status?: string;
   is_featured?: boolean | number;
   betting_suspended?: boolean | number;
+  is_simulated?: boolean | number;
+  created_at?: string;
   odds_home: number;
   odds_draw?: number | null;
   odds_away: number;
@@ -45,6 +47,8 @@ export interface MatchApiPayload {
   isLive: boolean;
   isFeatured: boolean;
   bettingSuspended: boolean;
+  isSimulated: boolean;
+  createdAt: string;
   liveMinute?: number | null;
   homeScore?: number | null;
   awayScore?: number | null;
@@ -105,6 +109,8 @@ export function mapMatchRow(
     isLive: matchStatus === "live",
     isFeatured: boolFrom(row, "is_featured"),
     bettingSuspended: boolFrom(row, "betting_suspended"),
+    isSimulated: boolFrom(row, "is_simulated"),
+    createdAt: String(row.created_at || row.start_time),
     liveMinute: row.live_minute != null ? Number(row.live_minute) : null,
     homeScore: row.home_score != null ? Number(row.home_score) : null,
     awayScore: row.away_score != null ? Number(row.away_score) : null,
@@ -208,6 +214,7 @@ export async function listMatches(filters?: {
   sport?: string;
   live?: boolean;
   featured?: boolean;
+  simulated?: boolean;
   status?: MatchStatus;
   league?: string;
   search?: string;
@@ -220,6 +227,8 @@ export async function listMatches(filters?: {
   if (filters?.sport) rows = rows.filter((m) => m.sport === filters.sport);
   if (filters?.live === true) rows = rows.filter((m) => normalizeMatchStatus(m) === "live");
   if (filters?.featured === true) rows = rows.filter((m) => boolFrom(m, "is_featured"));
+  if (filters?.simulated === true) rows = rows.filter((m) => boolFrom(m, "is_simulated"));
+  if (filters?.simulated === false) rows = rows.filter((m) => !boolFrom(m, "is_simulated"));
   if (filters?.status) rows = rows.filter((m) => normalizeMatchStatus(m) === filters.status);
   if (filters?.league) rows = rows.filter((m) => matchesLeagueFilter(m, filters.league!));
   if (filters?.search) rows = rows.filter((m) => matchesSearchQuery(m, filters.search!));
@@ -255,6 +264,7 @@ export interface MatchInput {
   matchStatus?: MatchStatus;
   isFeatured?: boolean;
   bettingSuspended?: boolean;
+  isSimulated?: boolean;
   oddsHome?: number;
   oddsDraw?: number | null;
   oddsAway?: number;
@@ -277,10 +287,11 @@ export async function createMatchRecord(id: string, input: MatchInput) {
   await db.query(
     `INSERT INTO matches (
       id, home_team, away_team, league, sport, start_time, is_live, match_status,
-      is_featured, betting_suspended, odds_home, odds_draw, odds_away,
+      is_featured, betting_suspended, is_simulated, created_at,
+      odds_home, odds_draw, odds_away,
       odds_over, odds_under, odds_btts_yes, odds_btts_no, over_under_line,
       home_score, away_score, live_minute
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       input.homeTeam,
@@ -292,6 +303,8 @@ export async function createMatchRecord(id: string, input: MatchInput) {
       live.match_status,
       boolVal(db, !!input.isFeatured),
       boolVal(db, !!input.bettingSuspended),
+      boolVal(db, !!input.isSimulated),
+      new Date().toISOString(),
       input.oddsHome ?? 1.5,
       input.oddsDraw ?? null,
       input.oddsAway ?? 2.5,
@@ -335,7 +348,7 @@ export async function updateMatchRecord(id: string, input: Partial<MatchInput>) 
   await db.query(
     `UPDATE matches SET
       home_team = ?, away_team = ?, league = ?, sport = ?, start_time = ?,
-      is_live = ?, match_status = ?, is_featured = ?, betting_suspended = ?,
+      is_live = ?, match_status = ?, is_featured = ?, betting_suspended = ?, is_simulated = ?,
       odds_home = ?, odds_draw = ?, odds_away = ?,
       odds_over = ?, odds_under = ?, odds_btts_yes = ?, odds_btts_no = ?, over_under_line = ?,
       home_score = ?, away_score = ?, live_minute = ?
@@ -350,6 +363,7 @@ export async function updateMatchRecord(id: string, input: Partial<MatchInput>) 
       live.match_status,
       boolVal(db, input.isFeatured !== undefined ? input.isFeatured : boolFrom(row, "is_featured")),
       boolVal(db, input.bettingSuspended !== undefined ? input.bettingSuspended : boolFrom(row, "betting_suspended")),
+      boolVal(db, input.isSimulated !== undefined ? input.isSimulated : boolFrom(row, "is_simulated")),
       input.oddsHome ?? row.odds_home,
       input.oddsDraw !== undefined ? input.oddsDraw : row.odds_draw,
       input.oddsAway ?? row.odds_away,

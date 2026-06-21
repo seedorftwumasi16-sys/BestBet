@@ -85,6 +85,8 @@ export interface Match {
   isLive: boolean;
   isFeatured?: boolean;
   bettingSuspended?: boolean;
+  isSimulated?: boolean;
+  createdAt?: Date;
   liveMinute?: number;
   homeScore?: number;
   awayScore?: number;

@@ -38,6 +38,7 @@ interface MatchFormState {
   startTime: string;
   matchStatus: MatchStatus;
   isFeatured: boolean;
+  isSimulated: boolean;
   bettingSuspended: boolean;
   oddsHome: string;
   oddsDraw: string;
@@ -60,6 +61,7 @@ const emptyForm = (): MatchFormState => ({
   startTime: new Date(Date.now() + 86400000).toISOString().slice(0, 16),
   matchStatus: "upcoming",
   isFeatured: false,
+  isSimulated: false,
   bettingSuspended: false,
   oddsHome: "1.85",
   oddsDraw: "3.40",
@@ -88,6 +90,7 @@ function formFromMatch(match: MatchApi): MatchFormState {
     startTime: local,
     matchStatus: match.matchStatus,
     isFeatured: match.isFeatured,
+    isSimulated: match.isSimulated,
     bettingSuspended: match.bettingSuspended,
     oddsHome: String(match.odds.home),
     oddsDraw: match.odds.draw != null ? String(match.odds.draw) : "",
@@ -116,6 +119,7 @@ function formToPayload(
     startTime: new Date(form.startTime).toISOString(),
     matchStatus: form.matchStatus,
     isFeatured: form.isFeatured,
+    isSimulated: form.isSimulated,
     bettingSuspended: form.bettingSuspended,
     oddsHome: Number(form.oddsHome),
     oddsDraw: form.oddsDraw ? Number(form.oddsDraw) : null,
@@ -150,7 +154,7 @@ export function AdminMatchesSection() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<MatchFormState>(emptyForm);
-  const [filter, setFilter] = useState<"all" | MatchStatus>("all");
+  const [filter, setFilter] = useState<"all" | MatchStatus | "simulated">("all");
   const [marketTab, setMarketTab] = useState<MarketTab>("main");
   const [correctScoreOdds, setCorrectScoreOdds] = useState<Record<string, string>>({});
   const [doubleChanceOdds, setDoubleChanceOdds] = useState<Record<string, string>>({});
@@ -173,9 +177,13 @@ export function AdminMatchesSection() {
     load();
   }, [load]);
 
-  const openCreate = () => {
+  const openCreate = (simulated = false) => {
     setEditingId(null);
-    setForm(emptyForm());
+    setForm({
+      ...emptyForm(),
+      isSimulated: simulated,
+      league: simulated ? "Simulated League" : "",
+    });
     setCorrectScoreOdds({});
     setDoubleChanceOdds({});
     setMarketTab("main");
@@ -259,7 +267,27 @@ export function AdminMatchesSection() {
     }
   };
 
-  const filtered = matches.filter((m) => filter === "all" || m.matchStatus === filter);
+  const setMatchStatus = async (match: MatchApi, matchStatus: MatchStatus) => {
+    try {
+      const payload: Record<string, unknown> = { matchStatus };
+      if (matchStatus === "live") {
+        payload.liveMinute = match.liveMinute && match.liveMinute > 0 ? match.liveMinute : 1;
+        payload.homeScore = match.homeScore ?? 0;
+        payload.awayScore = match.awayScore ?? 0;
+      }
+      const updated = await adminApi.updateMatch(match.id, payload);
+      setMatches((prev) => prev.map((m) => (m.id === match.id ? normalizeMatchApi(updated) : m)));
+      toast.success(matchStatus === "live" ? "Match is now live" : matchStatus === "finished" ? "Match stopped" : "Match set to upcoming");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update match status");
+    }
+  };
+
+  const filtered = matches.filter((m) => {
+    if (filter === "simulated") return m.isSimulated;
+    if (filter === "all") return true;
+    return m.matchStatus === filter;
+  });
 
   const setField = <K extends keyof MatchFormState>(key: K, value: MatchFormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -271,16 +299,21 @@ export function AdminMatchesSection() {
         <div>
           <h2 className="text-lg font-bold text-bestbet-yellow">Match Management</h2>
           <p className="text-sm text-bestbet-gray-muted">
-            Create fixtures, set markets, control live events, and feature matches on the homepage.
+            Create fixtures, manage simulated matches 24/7, set markets, control live events, and feature matches on the homepage.
           </p>
         </div>
-        <Button variant="primary" size="sm" onClick={openCreate}>
-          <Plus size={16} className="mr-1" /> New Match
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="primary" size="sm" onClick={() => openCreate(false)}>
+            <Plus size={16} className="mr-1" /> New Match
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => openCreate(true)}>
+            <Radio size={16} className="mr-1" /> New Simulated
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {(["all", "upcoming", "live", "finished"] as const).map((status) => (
+        {(["all", "simulated", "upcoming", "live", "finished"] as const).map((status) => (
           <button
             key={status}
             onClick={() => setFilter(status)}
@@ -290,7 +323,7 @@ export function AdminMatchesSection() {
                 : "bg-bestbet-gray/60 text-bestbet-gray-muted hover:text-bestbet-yellow"
             }`}
           >
-            {status === "all" ? "All Matches" : status}
+            {status === "all" ? "All Matches" : status === "simulated" ? "Simulated" : status}
           </button>
         ))}
       </div>
@@ -386,6 +419,15 @@ export function AdminMatchesSection() {
             <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input
                 type="checkbox"
+                checked={form.isSimulated}
+                onChange={(e) => setField("isSimulated", e.target.checked)}
+                className="rounded border-bestbet-yellow/30"
+              />
+              Simulated match (24/7 admin controlled)
+            </label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
                 checked={form.isFeatured}
                 onChange={(e) => setField("isFeatured", e.target.checked)}
                 className="rounded border-bestbet-yellow/30"
@@ -434,6 +476,7 @@ export function AdminMatchesSection() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2 mb-1">
                     {statusBadge(match.matchStatus)}
+                    {match.isSimulated && <Badge variant="warning">SIMULATED</Badge>}
                     {match.isFeatured && (
                       <Badge variant="warning">
                         <Star size={10} className="mr-0.5 fill-current" /> Featured
@@ -464,6 +507,16 @@ export function AdminMatchesSection() {
                 </div>
 
                 <div className="flex flex-wrap gap-1.5">
+                  {match.matchStatus !== "live" && match.matchStatus !== "finished" && (
+                    <Button size="sm" variant="primary" onClick={() => setMatchStatus(match, "live")} title="Start live">
+                      <Play size={14} />
+                    </Button>
+                  )}
+                  {match.matchStatus === "live" && (
+                    <Button size="sm" variant="secondary" onClick={() => setMatchStatus(match, "finished")} title="Stop match">
+                      <Pause size={14} />
+                    </Button>
+                  )}
                   <Button size="sm" variant="outline" onClick={() => openEdit(match)}>
                     <Pencil size={14} />
                   </Button>

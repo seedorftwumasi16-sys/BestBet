@@ -2,25 +2,21 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { HeroBanner, PromotionCards, PopularLeagues } from "@/components/home/HeroBanner";
-import { MatchCard, TrendingBetCard } from "@/components/betting/MatchCard";
+import { HeroBanner, PopularLeagues } from "@/components/home/HeroBanner";
+import { MatchCard } from "@/components/betting/MatchCard";
 import { MatchCardSkeleton } from "@/components/ui/Skeleton";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { FixturesToolbar } from "@/components/fixtures/FixturesToolbar";
 import { betsApi } from "@/lib/api";
 import type { Match } from "@/lib/constants";
 import { applyMatchFeed, toMatch } from "@/lib/match-utils";
 import {
-  filterMatchesByLeague,
-  filterMatchesBySearch,
   getLiveMatches,
-  getTodayMatches,
-  getTomorrowMatches,
+  getRealFootballMatches,
+  getRecentlyAddedMatches,
+  getSimulatedMatches,
   getUpcomingMatches,
 } from "@/lib/fixture-utils";
-import { trendingBets } from "@/lib/mock-data";
 import { useLiveOdds } from "@/hooks/useLiveOdds";
-import { WorldCupSpecials } from "@/components/home/WorldCupSpecials";
 import { motion } from "framer-motion";
 
 function EmptyMatches({ message }: { message: string }) {
@@ -42,22 +38,59 @@ function MatchList({ matches, showStats }: { matches: Match[]; showStats?: boole
   );
 }
 
-function isWorldCupOrInternational(match: Match): boolean {
-  const league = match.league.toLowerCase();
+function MatchSection({
+  id,
+  title,
+  subtitle,
+  matches,
+  loading,
+  emptyMessage,
+  showStats,
+  live,
+  actionLabel,
+  actionHref,
+  skeletonCount = 3,
+}: {
+  id: string;
+  title: string;
+  subtitle?: string;
+  matches: Match[];
+  loading: boolean;
+  emptyMessage: string;
+  showStats?: boolean;
+  live?: boolean;
+  actionLabel?: string;
+  actionHref?: string;
+  skeletonCount?: number;
+}) {
   return (
-    league.includes("world cup") ||
-    league.includes("international") ||
-    league.includes("fifa") ||
-    match.leagueId.includes("world-cup") ||
-    match.leagueId.includes("international")
+    <section aria-labelledby={id}>
+      <SectionHeader
+        id={id}
+        title={title}
+        live={live}
+        actionLabel={actionLabel}
+        actionHref={actionHref}
+      />
+      {subtitle && <p className="text-xs text-bestbet-gray-muted -mt-2 mb-4">{subtitle}</p>}
+      {loading ? (
+        <div className="space-y-3">
+          {Array.from({ length: skeletonCount }, (_, i) => (
+            <MatchCardSkeleton key={i} />
+          ))}
+        </div>
+      ) : matches.length > 0 ? (
+        <MatchList matches={matches} showStats={showStats} />
+      ) : (
+        <EmptyMatches message={emptyMessage} />
+      )}
+    </section>
   );
 }
 
 export default function HomePage() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
-  const [league, setLeague] = useState("all");
-  const [search, setSearch] = useState("");
 
   const loadMatches = useCallback(() => {
     setLoading(true);
@@ -93,32 +126,27 @@ export default function HomePage() {
     },
   });
 
-  const filtered = useMemo(() => {
-    let list = filterMatchesByLeague(matches, league);
-    list = filterMatchesBySearch(list, search);
-    return list;
-  }, [matches, league, search]);
-
-  const liveMatches = useMemo(() => getLiveMatches(filtered), [filtered]);
-  const todayMatches = useMemo(() => getTodayMatches(filtered), [filtered]);
-  const tomorrowMatches = useMemo(() => getTomorrowMatches(filtered), [filtered]);
-  const upcomingMatches = useMemo(() => getUpcomingMatches(filtered), [filtered]);
-  const featuredMatches = useMemo(
-    () => filtered.filter((m) => m.isFeatured && m.matchStatus !== "finished").slice(0, 8),
-    [filtered]
+  const realFootball = useMemo(() => getRealFootballMatches(matches), [matches]);
+  const simulatedMatches = useMemo(() => getSimulatedMatches(matches), [matches]);
+  const liveMatches = useMemo(() => getLiveMatches(realFootball), [realFootball]);
+  const upcomingMatches = useMemo(() => getUpcomingMatches(realFootball).slice(0, 12), [realFootball]);
+  const recentlyAdded = useMemo(() => getRecentlyAddedMatches(realFootball, 8), [realFootball]);
+  const liveSimulated = useMemo(
+    () => simulatedMatches.filter((m) => m.isLive || m.matchStatus === "live"),
+    [simulatedMatches]
   );
-
-  const worldCupMatches = useMemo(
-    () =>
-      matches
-        .filter(isWorldCupOrInternational)
-        .filter((m) => m.matchStatus !== "finished")
-        .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
-        .slice(0, 12),
+  const upcomingSimulated = useMemo(
+    () => simulatedMatches.filter((m) => m.matchStatus === "upcoming" && !m.isLive),
+    [simulatedMatches]
+  );
+  const simulatedDisplay = useMemo(
+    () => [...liveSimulated, ...upcomingSimulated].slice(0, 12),
+    [liveSimulated, upcomingSimulated]
+  );
+  const allLiveCount = useMemo(
+    () => getLiveMatches(matches).length,
     [matches]
   );
-
-  const allLiveCount = useMemo(() => getLiveMatches(matches).length, [matches]);
 
   return (
     <MainLayout>
@@ -126,130 +154,64 @@ export default function HomePage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.4 }}
-        className="p-4 md:p-6 pb-28 xl:pb-6 space-y-8 max-w-5xl mx-auto"
+        className="p-4 md:p-6 pb-28 xl:pb-6 space-y-6 max-w-5xl mx-auto"
       >
         <HeroBanner liveMatchCount={allLiveCount} />
 
-        <section aria-labelledby="wc-fixtures-heading">
-          <SectionHeader
-            id="wc-fixtures-heading"
-            title="World Cup & International Matches"
-            actionLabel="All WC Markets"
-            actionHref="/sports/football?league=4429"
-          />
-          {loading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <MatchCardSkeleton key={i} />
-              ))}
-            </div>
-          ) : worldCupMatches.length > 0 ? (
-            <MatchList matches={worldCupMatches} showStats />
-          ) : (
-            <EmptyMatches message="World Cup qualifiers and international fixtures will appear here after the next sync." />
-          )}
-        </section>
-
-        <WorldCupSpecials />
-
-        <section aria-labelledby="promotions-heading">
-          <SectionHeader id="promotions-heading" title="Promotions" />
-          <PromotionCards />
-        </section>
-
-        <FixturesToolbar
-          league={league}
-          search={search}
-          totalCount={filtered.length}
-          onLeagueChange={setLeague}
-          onSearchChange={setSearch}
+        <MatchSection
+          id="live-heading"
+          title="Live Football Matches"
+          matches={liveMatches}
+          loading={loading}
+          showStats
+          live
+          actionLabel="View All"
+          actionHref="/live"
+          emptyMessage="No live football matches right now. Fixtures sync from top leagues every 5 minutes."
+          skeletonCount={2}
         />
 
-        <section aria-labelledby="live-heading">
-          <SectionHeader id="live-heading" title="Live Now" live actionLabel="View All" actionHref="/live" />
-          {loading ? (
-            <div className="space-y-3">
-              {[1, 2].map((i) => (
-                <MatchCardSkeleton key={i} />
-              ))}
-            </div>
-          ) : liveMatches.length > 0 ? (
-            <MatchList matches={liveMatches} showStats />
-          ) : (
-            <EmptyMatches message="No live matches right now. Fixtures sync from multiple competitions every 5 minutes." />
-          )}
-        </section>
+        <MatchSection
+          id="upcoming-heading"
+          title="Upcoming Football Matches"
+          matches={upcomingMatches}
+          loading={loading}
+          actionLabel="All Football"
+          actionHref="/sports/football"
+          emptyMessage="Upcoming fixtures for the next 7 days will appear after the next sports data sync."
+          skeletonCount={4}
+        />
 
-        <section aria-labelledby="today-heading">
-          <SectionHeader id="today-heading" title="Today's Matches" />
-          {loading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <MatchCardSkeleton key={i} />
-              ))}
-            </div>
-          ) : todayMatches.length > 0 ? (
-            <MatchList matches={todayMatches} />
-          ) : (
-            <EmptyMatches message="No matches scheduled for today in the selected competition." />
-          )}
-        </section>
-
-        <section aria-labelledby="tomorrow-heading">
-          <SectionHeader id="tomorrow-heading" title="Tomorrow's Matches" />
-          {loading ? (
-            <div className="space-y-3">
-              {[1, 2].map((i) => (
-                <MatchCardSkeleton key={i} />
-              ))}
-            </div>
-          ) : tomorrowMatches.length > 0 ? (
-            <MatchList matches={tomorrowMatches} />
-          ) : (
-            <EmptyMatches message="No matches scheduled for tomorrow in the selected competition." />
-          )}
-        </section>
-
-        <section aria-labelledby="upcoming-heading">
+        <section aria-labelledby="leagues-heading">
           <SectionHeader
-            id="upcoming-heading"
-            title="Upcoming Matches"
+            id="leagues-heading"
+            title="Popular Leagues"
             actionLabel="All Football"
             actionHref="/sports/football"
           />
-          {loading ? (
-            <div className="space-y-3">
-              {[1, 2, 3, 4].map((i) => (
-                <MatchCardSkeleton key={i} />
-              ))}
-            </div>
-          ) : upcomingMatches.length > 0 ? (
-            <MatchList matches={upcomingMatches} />
-          ) : (
-            <EmptyMatches message="Upcoming fixtures for the next 7 days will appear after the next sports data sync." />
-          )}
-        </section>
-
-        <section aria-labelledby="leagues-heading">
-          <SectionHeader id="leagues-heading" title="Popular Leagues" />
           <PopularLeagues />
         </section>
 
-        {featuredMatches.length > 0 && (
-          <section aria-labelledby="featured-heading">
-            <SectionHeader id="featured-heading" title="Featured Matches" actionLabel="All Sports" actionHref="/sports/football" />
-            <MatchList matches={featuredMatches} />
-          </section>
-        )}
+        <MatchSection
+          id="recent-heading"
+          title="Recently Added Matches"
+          matches={recentlyAdded}
+          loading={loading}
+          emptyMessage="New fixtures from synced leagues will appear here shortly."
+          skeletonCount={3}
+        />
 
-        <section aria-labelledby="trending-heading">
-          <SectionHeader id="trending-heading" title="Trending Bets" />
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-            {trendingBets.map((bet) => (
-              <TrendingBetCard key={bet.id} {...bet} />
-            ))}
-          </div>
-        </section>
+        <MatchSection
+          id="simulated-heading"
+          title="Simulated Matches"
+          subtitle="Available 24/7 · Admin controlled · Clearly labeled for practice and demo betting"
+          matches={simulatedDisplay}
+          loading={loading}
+          showStats
+          live={liveSimulated.length > 0}
+          emptyMessage="No simulated matches are live right now. Admins can create and activate simulated fixtures from the admin panel."
+          skeletonCount={2}
+        />
       </motion.div>
     </MainLayout>
   );

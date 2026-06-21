@@ -513,18 +513,6 @@ body {
   text-shadow: 0 0 20px rgba(255, 215, 0, 0.45);
 }
 
-.wc-special-card {
-  background: linear-gradient(155deg, rgba(22, 22, 22, 0.98) 0%, rgba(10, 10, 10, 0.99) 100%);
-  border: 1px solid rgba(255, 215, 0, 0.12);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
-  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
-}
-
-.wc-special-card:hover {
-  border-color: rgba(255, 215, 0, 0.35);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55), 0 0 32px rgba(255, 215, 0, 0.08);
-}
-
 .contact-info-block {
   padding: 1rem 1.125rem;
   border-radius: 1rem;

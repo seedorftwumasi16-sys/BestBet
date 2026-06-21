@@ -6,17 +6,15 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { LEAGUES, FOOTBALL_COMPETITIONS, type Promotion } from "@/lib/constants";
+import { type Promotion } from "@/lib/constants";
 import { mockPromotions } from "@/lib/mock-data";
 import { contentApi } from "@/lib/api";
 import { DEFAULT_PROMOTION_IMAGE, resolvePromotionImage } from "@/lib/promotion-images";
 import { getLeagueBadgeUrl } from "@/lib/sports-assets";
-import { WorldCupHero } from "@/components/home/WorldCupHero";
-
-export { WorldCupHero };
+import { HomeHero } from "@/components/home/HomeHero";
 
 export function HeroBanner({ liveMatchCount = 0 }: { liveMatchCount?: number }) {
-  return <WorldCupHero liveMatchCount={liveMatchCount} />;
+  return <HomeHero liveMatchCount={liveMatchCount} />;
 }
 
 function PromotionCard({ promo }: { promo: Promotion }) {
@@ -87,35 +85,42 @@ export function PromotionCards() {
   );
 }
 
-export function PopularLeagues() {
-  const chips = FOOTBALL_COMPETITIONS.filter((c) => c.id !== "all").slice(0, 8);
+const TOP_LEAGUE_CHIPS = [
+  { sportsdbId: "4328", label: "Premier League", badgeId: "epl", country: "England" },
+  { sportsdbId: "4334", label: "La Liga", badgeId: "laliga", country: "Spain" },
+  { sportsdbId: "4332", label: "Serie A", badgeId: "seriea", country: "Italy" },
+  { sportsdbId: "4331", label: "Bundesliga", badgeId: "bundesliga", country: "Germany" },
+  { sportsdbId: "4480", label: "Champions League", badgeId: "ucl", country: "Europe" },
+  { sportsdbId: "4429", label: "World Cup Qualifiers", badgeId: "worldcup", country: "World" },
+  { sportsdbId: "4562", label: "International Friendlies", badgeId: "intl", country: "World" },
+] as const;
 
+export function PopularLeagues() {
   return (
-    <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-1 px-1">
-      {chips.map((comp) => {
-        const meta = LEAGUES.find((l) => "sportsdbId" in l && l.sportsdbId === comp.id);
-        return (
-          <Link
-            key={comp.id}
-            href={`/sports/football?league=${comp.id}`}
-            className="league-chip group"
-          >
-            <div className="relative w-10 h-10 shrink-0">
-              <Image
-                src={getLeagueBadgeUrl(meta?.id ?? comp.id)}
-                alt={comp.label}
-                fill
-                unoptimized
-                className="object-contain group-hover:scale-110 transition-transform"
-              />
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-bold whitespace-nowrap font-display">{comp.label}</p>
-              <p className="text-[11px] text-bestbet-gray-muted">{meta?.country ?? "Football"}</p>
-            </div>
-          </Link>
-        );
-      })}
+    <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1 snap-x snap-mandatory">
+      {TOP_LEAGUE_CHIPS.map((comp) => (
+        <Link
+          key={comp.sportsdbId}
+          href={`/sports/football?league=${comp.sportsdbId}`}
+          className="league-chip group snap-start min-w-[168px]"
+        >
+          <div className="relative w-10 h-10 shrink-0">
+            <Image
+              src={getLeagueBadgeUrl(comp.badgeId)}
+              alt={comp.label}
+              fill
+              unoptimized
+              className="object-contain group-hover:scale-110 transition-transform duration-300"
+            />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-bold whitespace-nowrap font-display group-hover:text-bestbet-yellow transition-colors">
+              {comp.label}
+            </p>
+            <p className="text-[11px] text-bestbet-gray-muted">{comp.country}</p>
+          </div>
+        </Link>
+      ))}
     </div>
   );
 }

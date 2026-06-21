@@ -22,7 +22,7 @@ function parseMatchInput(body: Record<string, unknown>): Partial<MatchInput> {
   if (body.sport !== undefined) input.sport = String(body.sport);
   if (body.startTime !== undefined) input.startTime = String(body.startTime);
   if (body.matchStatus !== undefined) input.matchStatus = body.matchStatus as MatchStatus;
-  if (body.isFeatured !== undefined) input.isFeatured = body.isFeatured === true || body.isFeatured === "true";
+  if (body.isSimulated !== undefined) input.isSimulated = body.isSimulated === true || body.isSimulated === "true";
   if (body.bettingSuspended !== undefined) {
     input.bettingSuspended = body.bettingSuspended === true || body.bettingSuspended === "true";
   }
@@ -70,6 +70,7 @@ router.post("/", async (req, res) => {
       matchStatus: input.matchStatus || "upcoming",
       isFeatured: input.isFeatured,
       bettingSuspended: input.bettingSuspended,
+      isSimulated: input.isSimulated,
       oddsHome: input.oddsHome,
       oddsDraw: input.oddsDraw,
       oddsAway: input.oddsAway,

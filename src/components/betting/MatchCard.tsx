@@ -97,6 +97,11 @@ export function MatchCard({ match, showStats = false }: MatchCardProps) {
           <span className="text-xs font-semibold text-bestbet-gray-muted truncate">{match.league}</span>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
+          {match.isSimulated && (
+            <Badge variant="warning" className="uppercase tracking-wide text-[9px]">
+              Simulated
+            </Badge>
+          )}
           {match.bettingSuspended && (
             <Badge variant="danger">Suspended</Badge>
           )}

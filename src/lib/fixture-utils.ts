@@ -95,3 +95,22 @@ export function getWeekMatches(matches: Match[]): Match[] {
     .filter((m) => m.startTime >= now && m.startTime <= weekEnd && m.matchStatus !== "finished")
     .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 }
+
+export function getRealFootballMatches(matches: Match[]): Match[] {
+  return matches.filter((m) => m.sport === "football" && !m.isSimulated);
+}
+
+export function getSimulatedMatches(matches: Match[]): Match[] {
+  return matches.filter((m) => m.isSimulated);
+}
+
+export function getRecentlyAddedMatches(matches: Match[], limit = 8): Match[] {
+  return getRealFootballMatches(matches)
+    .filter((m) => m.matchStatus !== "finished")
+    .sort((a, b) => {
+      const aTime = a.createdAt?.getTime() ?? a.startTime.getTime();
+      const bTime = b.createdAt?.getTime() ?? b.startTime.getTime();
+      return bTime - aTime;
+    })
+    .slice(0, limit);
+}

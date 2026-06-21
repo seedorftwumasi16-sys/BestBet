@@ -14,6 +14,8 @@ export function toMatch(m: MatchApi): Match {
     isLive: m.isLive,
     isFeatured: m.isFeatured,
     bettingSuspended: m.bettingSuspended,
+    isSimulated: m.isSimulated,
+    createdAt: m.createdAt ? new Date(m.createdAt) : new Date(m.startTime),
     liveMinute: m.liveMinute,
     homeScore: m.homeScore,
     awayScore: m.awayScore,

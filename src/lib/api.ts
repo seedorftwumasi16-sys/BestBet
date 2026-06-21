@@ -294,6 +294,8 @@ export interface MatchApi {
   isLive: boolean;
   isFeatured: boolean;
   bettingSuspended: boolean;
+  isSimulated: boolean;
+  createdAt: string;
   liveMinute?: number;
   homeScore?: number;
   awayScore?: number;
@@ -372,6 +374,7 @@ export interface AdminMatchInput {
   matchStatus?: "upcoming" | "live" | "finished";
   isFeatured?: boolean;
   bettingSuspended?: boolean;
+  isSimulated?: boolean;
   oddsHome?: number;
   oddsDraw?: number | null;
   oddsAway?: number;
