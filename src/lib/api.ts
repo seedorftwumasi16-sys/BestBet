@@ -1,7 +1,6 @@
-const API_BASE =
-  typeof window !== "undefined"
-    ? process.env.NEXT_PUBLIC_API_URL || ""
-    : process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000";
+import { getApiBaseUrl, RAILWAY_API_URL } from "./config";
+
+const API_BASE = getApiBaseUrl();
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -36,8 +35,8 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
     res = await fetch(`${API_BASE}${path}`, { ...options, headers, credentials: "include" });
   } catch {
     const hint =
-      typeof window !== "undefined" && !API_BASE
-        ? "API URL is not configured. Set NEXT_PUBLIC_API_URL on Vercel and redeploy."
+      process.env.NODE_ENV === "production" || process.env.VERCEL === "1"
+        ? `Unable to reach the BestBet API at ${API_BASE || RAILWAY_API_URL}. Check your connection or try again shortly.`
         : "Unable to reach the server. Start the app with `npm run dev`.";
     throw new ApiError(0, hint);
   }

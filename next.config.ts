@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
 
-const API_URL = process.env.API_URL || "http://127.0.0.1:5000";
-
+const RAILWAY_API_URL = "https://bestbet-api-production.up.railway.app";
+const API_URL =
+  process.env.API_URL ||
+  (process.env.NODE_ENV === "production" || process.env.VERCEL === "1"
+    ? RAILWAY_API_URL
+    : "http://127.0.0.1:5000");
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   output: "standalone",

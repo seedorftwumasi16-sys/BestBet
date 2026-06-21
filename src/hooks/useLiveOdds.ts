@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useCallback, useState } from "react";
 import { io, Socket } from "socket.io-client";
+import { getSocketUrl } from "@/lib/config";
 import type { MatchApi } from "@/lib/api";
 
 interface LiveOddsUpdate {
@@ -50,7 +51,7 @@ export function useLiveOdds({
   const connect = useCallback(() => {
     if (!enabled || typeof window === "undefined") return;
 
-    const url = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000";
+    const url = getSocketUrl();
     const socket = io(url, { path: "/socket.io", transports: ["websocket", "polling"] });
     socketRef.current = socket;
 
