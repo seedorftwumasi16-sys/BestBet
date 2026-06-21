@@ -16,7 +16,7 @@ import {
   PROTECTED_SUPER_ADMIN_EMAIL,
 } from "../lib/super-admin";
 
-const AUTH_LOGIN_BUILD = "ban-fix-v2";
+const AUTH_LOGIN_BUILD = "simulated-v3";
 
 const router = Router();
 
