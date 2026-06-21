@@ -22,8 +22,10 @@ export const apiLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: "Too many requests, please try again later" },
   skip: (req) => {
-    if (!req.headers.authorization) return false;
     const path = `${req.baseUrl || ""}${req.path || ""}`;
+    // Auth routes use dedicated authLimiter (avoid double-counting login attempts)
+    if (path.includes("/auth")) return true;
+    if (!req.headers.authorization) return false;
     return path.includes("/admin");
   },
 });
@@ -31,8 +33,24 @@ export const apiLimiter = rateLimit({
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
-  message: { error: "Too many auth attempts, please try again later" },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+  message: { error: "Too many login attempts, please try again in 15 minutes" },
+  handler: (_req, res) => {
+    res.status(429).json({ error: "Too many login attempts, please try again in 15 minutes" });
+  },
 });
+
+/** Clear auth rate-limit counter after a successful login/register. */
+export async function resetAuthRateLimit(req: { ip?: string; headers: Record<string, string | string[] | undefined> }) {
+  const ip = req.ip || (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || "unknown";
+  try {
+    await authLimiter.resetKey(ip);
+  } catch {
+    // non-fatal
+  }
+}
 
 export const depositLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,

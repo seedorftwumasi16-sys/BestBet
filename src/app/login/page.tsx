@@ -20,13 +20,18 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     setError("");
     try {
-      const user = await login(email, password);
+      const user = await login(email.trim(), password);
       router.push(getPostLoginPath(user.roleId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Login failed");
+      }
     } finally {
       setLoading(false);
     }
@@ -90,6 +95,7 @@ export default function LoginPage() {
           size="lg"
           className="w-full h-12 text-base font-bold mt-2"
           loading={loading}
+          disabled={loading}
         >
           Log In
         </Button>

@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import { getDb, getWalletBalance } from "../db";
 import { boolVal, getUserWithWallet } from "../db/helpers";
 import { signToken, authenticate, loadUserPermissions, logAudit } from "../middleware/auth";
-import { authLimiter } from "../middleware/security";
+import { authLimiter, resetAuthRateLimit } from "../middleware/security";
 import { createNotification } from "../services/notifications";
 
 const router = Router();
@@ -73,6 +73,7 @@ router.post("/register", authLimiter, async (req, res) => {
 
     await logAudit(userId, "register", `User registered: ${email}`);
     await logLogin(userId, email.toLowerCase(), true, req);
+    await resetAuthRateLimit(req);
 
     const permissions = await loadUserPermissions(userId);
     const user = { id: userId, email: email.toLowerCase(), name, roleId: "user", permissions };
@@ -124,6 +125,7 @@ router.post("/login", authLimiter, async (req, res) => {
     const token = signToken(user);
     await logAudit(user.id, "login", `User logged in: ${email}`);
     await logLogin(user.id, email.toLowerCase(), true, req);
+    await resetAuthRateLimit(req);
 
     const info = getClientInfo(req);
     await db.query(
