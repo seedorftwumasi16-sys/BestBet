@@ -446,17 +446,26 @@ body {
 /* ─── World Cup 2026 Hero ─── */
 
 .wc-hero-shell {
-  background: linear-gradient(145deg, #0a0a0a 0%, #121212 100%);
+  background-color: #0c120e;
+  background-image: url("/images/hero-football.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .wc-hero-overlay {
   background: linear-gradient(
     105deg,
-    rgba(0, 0, 0, 0.94) 0%,
-    rgba(0, 0, 0, 0.78) 42%,
-    rgba(10, 10, 10, 0.55) 70%,
-    rgba(0, 0, 0, 0.35) 100%
+    rgba(0, 0, 0, 0.58) 0%,
+    rgba(0, 0, 0, 0.52) 45%,
+    rgba(0, 0, 0, 0.55) 100%
   );
+}
+
+.hero-slide-bg {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .wc-hero-vignette {

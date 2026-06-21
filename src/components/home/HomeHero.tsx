@@ -5,10 +5,42 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, ArrowRight, Radio } from "lucide-react";
 import { heroSlides } from "@/lib/mock-data";
+import { HERO_FALLBACK_IMAGE, resolveHeroBackground } from "@/lib/hero-assets";
 import { cn } from "@/lib/utils";
 
 interface HomeHeroProps {
   liveMatchCount?: number;
+}
+
+function HeroSlideBackground({ src }: { src: string }) {
+  const preferred = resolveHeroBackground(src);
+  const [bgUrl, setBgUrl] = useState(preferred);
+
+  useEffect(() => {
+    const candidate = resolveHeroBackground(src);
+    setBgUrl(candidate);
+
+    const img = new window.Image();
+    img.onload = () => setBgUrl(candidate);
+    img.onerror = () => {
+      console.warn("[Hero] Background image failed to load:", candidate);
+      setBgUrl(HERO_FALLBACK_IMAGE);
+    };
+    img.src = candidate;
+  }, [src]);
+
+  return (
+    <div
+      className="hero-slide-bg absolute inset-0 scale-105"
+      style={{
+        backgroundImage: `url("${bgUrl}")`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }}
+      aria-hidden
+    />
+  );
 }
 
 function HeroSlide({ slide, liveMatchCount }: { slide: (typeof heroSlides)[number]; liveMatchCount: number }) {
@@ -65,10 +97,7 @@ export function HomeHero({ liveMatchCount = 0 }: HomeHeroProps) {
           transition={{ duration: 0.65, ease: "easeOut" }}
           className="absolute inset-0"
         >
-          <div
-            className="absolute inset-0 bg-cover bg-center scale-105"
-            style={{ backgroundImage: `url(${slide.background})` }}
-          />
+          <HeroSlideBackground src={slide.background} />
           <div className="wc-hero-overlay absolute inset-0" />
           <div className="wc-stadium-lights absolute inset-0 pointer-events-none" />
           <div className="wc-hero-vignette absolute inset-0 pointer-events-none" />

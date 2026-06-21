@@ -1,4 +1,5 @@
 import type { Match, Promotion, ActiveBet, Transaction, Notification, AdminStats } from "./constants";
+import { HERO_SLIDE_BACKGROUNDS } from "@/lib/hero-assets";
 
 const teams = {
   manCity: { id: "mci", name: "Manchester City", shortName: "MCI", logo: "🔵" },
@@ -238,7 +239,7 @@ export const heroSlides = [
     cta: "View Live",
     badge: "LIVE",
     href: "/live",
-    background: "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=1400&q=80",
+    background: HERO_SLIDE_BACKGROUNDS.live,
     gradient: "from-bestbet-dark-secondary via-bestbet-gray to-bestbet-live/30",
   },
   {
@@ -248,7 +249,7 @@ export const heroSlides = [
     cta: "Browse Football",
     badge: "FOOTBALL",
     href: "/sports/football",
-    background: "https://images.unsplash.com/photo-1459865269847-fa384af0a7f3?w=1600&q=80",
+    background: HERO_SLIDE_BACKGROUNDS.leagues,
     gradient: "from-bestbet-dark via-bestbet-gray to-bestbet-yellow/20",
   },
   {
@@ -258,7 +259,7 @@ export const heroSlides = [
     cta: "Join Now",
     badge: "NEW",
     href: "/register",
-    background: "https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1400&q=80",
+    background: HERO_SLIDE_BACKGROUNDS.bonus,
     gradient: "from-bestbet-dark via-bestbet-yellow/10 to-bestbet-yellow-secondary/25",
   },
 ];

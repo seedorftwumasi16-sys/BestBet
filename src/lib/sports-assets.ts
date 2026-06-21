@@ -202,9 +202,9 @@ export function getTeamInitials(name: string, shortName?: string): string {
 }
 
 export const HERO_BACKGROUNDS = [
-  "https://images.unsplash.com/photo-1574629810360-7efbc5411887?w=1400&q=80",
-  "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=1400&q=80",
-  "https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1400&q=80",
+  "/images/hero-football-live.jpg",
+  "/images/hero-football.jpg",
+  "/images/hero-football-bonus.jpg",
 ] as const;
 
 export const POPULAR_LEAGUE_CHIPS = [
