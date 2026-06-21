@@ -5,6 +5,7 @@ import { getDb } from "./index";
 import { migrate } from "./migrate";
 import { upsert, boolVal } from "./helpers";
 import { syncOddsForMatch, buildDefaultCorrectScoreForSport } from "../lib/odds";
+import { repairProtectedSuperAdmin, getProtectedSuperAdminEmail } from "../lib/super-admin";
 
 dotenv.config();
 
@@ -106,7 +107,7 @@ export async function seed(): Promise<void> {
     }
   }
 
-  const adminEmail = process.env.ADMIN_EMAIL || "admin@bestbet.gh";
+  const adminEmail = getProtectedSuperAdminEmail();
   const adminPassword = process.env.ADMIN_PASSWORD || "Admin@123";
   const adminId = "admin-001";
   const hash = await bcrypt.hash(adminPassword, 10);
@@ -121,8 +122,12 @@ export async function seed(): Promise<void> {
     await db.query(`INSERT INTO audit_logs (id, user_id, action, details) VALUES (?, ?, ?, ?)`, [uuidv4(), adminId, "seed", "Super admin account created"]);
   } else {
     const userId = (existing.rows[0].id as string) || adminId;
-    await db.query(`UPDATE users SET password_hash = ? WHERE id = ?`, [hash, userId]);
-    await db.query(`UPDATE users SET status = ? WHERE id = ?`, ["active", userId]);
+    await db.query(`UPDATE users SET password_hash = ?, role_id = ?, status = ? WHERE id = ?`, [
+      hash,
+      "super_admin",
+      "active",
+      userId,
+    ]);
     const wallet = await db.query(`SELECT id FROM wallets WHERE user_id = ?`, [userId]);
     if (wallet.rows.length === 0) {
       await db.query(`INSERT INTO wallets (id, user_id, balance, bonus_balance, locked_balance) VALUES (?, ?, ?, ?, ?)`, [
@@ -170,6 +175,8 @@ export async function seed(): Promise<void> {
       "active",
     ]);
   }
+
+  await repairProtectedSuperAdmin(db);
 
   for (const l of LEAGUES) {
     const exists = await db.query(`SELECT id FROM leagues WHERE id = ?`, [l.id]);

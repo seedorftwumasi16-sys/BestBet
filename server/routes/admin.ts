@@ -3,6 +3,8 @@ import { v4 as uuidv4 } from "uuid";
 import { getDb, getWalletBalance } from "../db";
 import { authenticate, requirePermission, requireRole, logAudit } from "../middleware/auth";
 import { createNotification } from "../services/notifications";
+import { getUserWithWallet } from "../db/helpers";
+import { canChangeUserStatus } from "../lib/super-admin";
 import adminMatchesRoutes from "./admin/matches";
 import adminAdminsRoutes from "./admin/admins";
 import adminBookingCodesRoutes from "./admin/booking-codes";
@@ -72,6 +74,15 @@ router.patch("/users/:id/status", authenticate, requirePermission("manage_users"
     return res.status(400).json({ error: "Invalid status" });
   }
   const db = await getDb();
+  const user = await getUserWithWallet(db, { id: req.params.id });
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  const guard = canChangeUserStatus(user.id, user.email, status);
+  if (!guard.allowed) {
+    console.warn(`[admin/users/status] Blocked ${user.email}: ${guard.reason}`);
+    return res.status(403).json({ error: guard.reason });
+  }
+
   await db.query(`UPDATE users SET status = ? WHERE id = ?`, [status, req.params.id]);
   await logAudit(req.user!.id, "update_user_status", `User ${req.params.id} set to ${status}`);
   await createNotification(req.params.id, "Account Update", `Your account status has been changed to ${status}`, status === "active" ? "success" : "warning");

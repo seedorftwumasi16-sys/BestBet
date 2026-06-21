@@ -206,3 +206,7 @@ ALTER TABLE booking_codes ADD COLUMN IF NOT EXISTS expires_at TEXT;
 ALTER TABLE booking_codes ADD COLUMN IF NOT EXISTS used_by TEXT;
 ALTER TABLE booking_codes ADD COLUMN IF NOT EXISTS used_at TEXT;
 `;
+
+export const LOGIN_LOG_COLUMNS_SQL = `
+ALTER TABLE login_logs ADD COLUMN IF NOT EXISTS failure_reason TEXT;
+`;

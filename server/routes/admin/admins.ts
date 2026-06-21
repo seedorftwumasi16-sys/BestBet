@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
 import { getDb } from "../../db";
 import { authenticate, requirePermission, logAudit } from "../../middleware/auth";
+import { isProtectedSuperAdmin, canChangeUserStatus } from "../../lib/super-admin";
 
 const router = Router();
 
@@ -103,6 +104,10 @@ router.put("/:id", async (req, res) => {
     const nextRole = role === "super_admin" ? "super_admin" : role === "sub_admin" ? "sub_admin" : String(row.role);
     const nextStatus = status && ["active", "suspended"].includes(status) ? status : String(row.status || "active");
 
+    if (isProtectedSuperAdmin(userId, String(row.email)) && nextStatus !== "active") {
+      return res.status(403).json({ error: "The primary super admin account cannot be suspended" });
+    }
+
     if (name || email || password || role) {
       const updates: string[] = [];
       const params: unknown[] = [];
@@ -137,6 +142,10 @@ router.put("/:id", async (req, res) => {
     ]);
 
     if (status) {
+      const guard = canChangeUserStatus(userId, String(row.email), nextStatus === "suspended" ? "suspended" : "active");
+      if (!guard.allowed) {
+        return res.status(403).json({ error: guard.reason });
+      }
       await db.query(`UPDATE users SET status = ? WHERE id = ?`, [
         nextStatus === "suspended" ? "suspended" : "active",
         userId,
@@ -166,6 +175,12 @@ router.delete("/:id", async (req, res) => {
     const admin = existing.rows[0];
     if (String(admin.user_id) === req.user!.id) {
       return res.status(400).json({ error: "You cannot delete your own admin account" });
+    }
+
+    const owner = await db.query(`SELECT email FROM users WHERE id = ?`, [admin.user_id]);
+    const ownerEmail = owner.rows[0]?.email ? String(owner.rows[0].email) : "";
+    if (isProtectedSuperAdmin(String(admin.user_id), ownerEmail)) {
+      return res.status(403).json({ error: "The primary super admin account cannot be removed" });
     }
 
     if (String(admin.role) === "super_admin") {

@@ -110,6 +110,12 @@ export interface User {
 
 export const ADMIN_ROLE_IDS = ["super_admin", "sub_admin"] as const;
 
+export const PROTECTED_SUPER_ADMIN_EMAIL = "admin@bestbet.gh";
+
+export function isProtectedAdminEmail(email?: string): boolean {
+  return (email || "").toLowerCase() === PROTECTED_SUPER_ADMIN_EMAIL;
+}
+
 export function isAdminRole(roleId?: string): boolean {
   return !!roleId && ADMIN_ROLE_IDS.includes(roleId as (typeof ADMIN_ROLE_IDS)[number]);
 }

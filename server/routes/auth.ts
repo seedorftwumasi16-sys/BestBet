@@ -7,6 +7,11 @@ import { boolVal, getUserWithWallet } from "../db/helpers";
 import { signToken, authenticate, loadUserPermissions, logAudit } from "../middleware/auth";
 import { authLimiter, resetAuthRateLimit } from "../middleware/security";
 import { createNotification } from "../services/notifications";
+import {
+  isProtectedSuperAdmin,
+  repairProtectedSuperAdmin,
+  canChangeUserStatus,
+} from "../lib/super-admin";
 
 const router = Router();
 
@@ -22,13 +27,41 @@ function getClientInfo(req: { ip?: string; headers: Record<string, string | stri
   };
 }
 
-async function logLogin(userId: string | null, email: string, success: boolean, req: Parameters<typeof getClientInfo>[0]) {
+async function logLogin(
+  userId: string | null,
+  email: string,
+  success: boolean,
+  req: Parameters<typeof getClientInfo>[0],
+  failureReason?: string
+) {
   const db = await getDb();
   const info = getClientInfo(req);
-  await db.query(
-    `INSERT INTO login_logs (id, user_id, email, ip_address, user_agent, device_id, success) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [uuidv4(), userId, email, info.ip, info.userAgent, info.deviceId, boolVal(db, success)]
-  );
+  try {
+    await db.query(
+      `INSERT INTO login_logs (id, user_id, email, ip_address, user_agent, device_id, success, failure_reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        uuidv4(),
+        userId,
+        email,
+        info.ip,
+        info.userAgent,
+        info.deviceId,
+        boolVal(db, success),
+        failureReason || null,
+      ]
+    );
+  } catch {
+    await db.query(
+      `INSERT INTO login_logs (id, user_id, email, ip_address, user_agent, device_id, success) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [uuidv4(), userId, email, info.ip, info.userAgent, info.deviceId, boolVal(db, success)]
+    );
+  }
+
+  if (!success) {
+    console.warn(
+      `[auth/login] FAILED email=${email} userId=${userId ?? "none"} reason=${failureReason ?? "unknown"} ip=${info.ip}`
+    );
+  }
 }
 
 router.post("/register", authLimiter, async (req, res) => {
@@ -96,22 +129,39 @@ router.post("/login", authLimiter, async (req, res) => {
       return res.status(400).json({ error: "Email and password are required" });
     }
 
+    const normalizedEmail = String(email).toLowerCase().trim();
     const db = await getDb();
-    const row = await getUserWithWallet(db, { email });
+    await repairProtectedSuperAdmin(db);
+    const row = await getUserWithWallet(db, { email: normalizedEmail });
 
     if (!row) {
-      await logLogin(null, email.toLowerCase(), false, req);
+      await logLogin(null, normalizedEmail, false, req, "invalid_credentials");
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    if (row.status === "banned" || row.status === "suspended") {
-      return res.status(403).json({ error: `Account is ${row.status}` });
+    const accountStatus = (row.status || "active").toLowerCase();
+
+    if (isProtectedSuperAdmin(row.id, row.email)) {
+      if (accountStatus !== "active") {
+        await repairProtectedSuperAdmin(db);
+        row.status = "active";
+      }
+    } else if (accountStatus === "banned" || accountStatus === "suspended") {
+      await logLogin(row.id, normalizedEmail, false, req, `account_${accountStatus}`);
+      return res.status(403).json({ error: `Account is ${accountStatus}` });
     }
 
     const valid = await bcrypt.compare(password, row.password_hash);
     if (!valid) {
-      await logLogin(row.id, email.toLowerCase(), false, req);
+      await logLogin(row.id, normalizedEmail, false, req, "invalid_password");
       return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    if (row.role_id !== "super_admin" && row.role_id !== "sub_admin") {
+      const adminLink = await db.query(`SELECT role, status FROM admins WHERE user_id = ?`, [row.id]);
+      if (adminLink.rows.length > 0 && String(adminLink.rows[0].status) === "active") {
+        row.role_id = String(adminLink.rows[0].role);
+      }
     }
 
     const permissions = await loadUserPermissions(row.id);
@@ -123,8 +173,8 @@ router.post("/login", authLimiter, async (req, res) => {
       permissions,
     };
     const token = signToken(user);
-    await logAudit(user.id, "login", `User logged in: ${email}`);
-    await logLogin(user.id, email.toLowerCase(), true, req);
+    await logAudit(user.id, "login", `User logged in: ${normalizedEmail}`);
+    await logLogin(user.id, normalizedEmail, true, req);
     await resetAuthRateLimit(req);
 
     const info = getClientInfo(req);

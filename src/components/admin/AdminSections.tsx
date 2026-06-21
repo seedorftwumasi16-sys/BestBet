@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { adminApi, contentApi, type AdminStatsApi, type UserAdminApi, type DepositAdminApi, type WithdrawalAdminApi } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
+import { isProtectedAdminEmail } from "@/lib/constants";
 import { normalizeAdminStats } from "@/lib/admin-utils";
 import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
@@ -90,10 +91,10 @@ export function AdminUsersSection() {
                 <Badge variant={u.status === "active" ? "success" : "danger"}>{u.status}</Badge>
               </td>
               <td className="flex flex-wrap gap-1">
-                {u.status !== "suspended" && (
+                {!isProtectedAdminEmail(u.email) && u.status !== "suspended" && (
                   <Button size="sm" variant="outline" onClick={() => updateStatus(u.id, "suspended")}>Suspend</Button>
                 )}
-                {u.status !== "banned" && (
+                {!isProtectedAdminEmail(u.email) && u.status !== "banned" && (
                   <Button size="sm" variant="danger" onClick={() => updateStatus(u.id, "banned")}>Ban</Button>
                 )}
                 {u.status !== "active" && (
