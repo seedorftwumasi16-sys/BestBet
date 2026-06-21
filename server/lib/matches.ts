@@ -2,7 +2,8 @@ import { getDb } from "../db";
 import { boolFrom, boolVal } from "../db/helpers";
 import { cacheInvalidatePrefix } from "../services/redis";
 import { getSocketServer } from "../services/notifications";
-import { syncOddsForMatch, deleteOddsForMatch } from "./odds";
+import { syncOddsForMatch, deleteOddsForMatch, getOddsForMatch, buildDefaultCorrectScoreForSport } from "./odds";
+import { settleMatchBets } from "./settlement";
 
 export type MatchStatus = "upcoming" | "live" | "finished";
 
@@ -54,6 +55,8 @@ export interface MatchApiPayload {
     bttsYes?: number;
     bttsNo?: number;
     overUnderLine?: number;
+    correctScore?: Record<string, number>;
+    doubleChance?: Record<string, number>;
   };
 }
 
@@ -73,7 +76,10 @@ export function syncLiveFields(status: MatchStatus) {
   };
 }
 
-export function mapMatchRow(row: Record<string, unknown>): MatchApiPayload {
+export function mapMatchRow(
+  row: Record<string, unknown>,
+  extra?: { correctScore?: Record<string, number>; doubleChance?: Record<string, number> }
+): MatchApiPayload {
   const matchStatus = normalizeMatchStatus(row);
   return {
     id: String(row.id),
@@ -107,15 +113,26 @@ export function mapMatchRow(row: Record<string, unknown>): MatchApiPayload {
       bttsYes: row.odds_btts_yes != null ? Number(row.odds_btts_yes) : undefined,
       bttsNo: row.odds_btts_no != null ? Number(row.odds_btts_no) : undefined,
       overUnderLine: row.over_under_line != null ? Number(row.over_under_line) : undefined,
+      correctScore: extra?.correctScore,
+      doubleChance: extra?.doubleChance,
     },
   };
+}
+
+async function enrichMatch(row: Record<string, unknown>): Promise<MatchApiPayload> {
+  const id = String(row.id);
+  const { correctScore, doubleChance } = await getOddsForMatch(id);
+  return mapMatchRow(row, {
+    correctScore: Object.keys(correctScore).length ? correctScore : undefined,
+    doubleChance: Object.keys(doubleChance).length ? doubleChance : undefined,
+  });
 }
 
 export async function getMatchById(id: string): Promise<MatchApiPayload | null> {
   const db = await getDb();
   const result = await db.query(`SELECT * FROM matches WHERE id = ?`, [id]);
   if (result.rows.length === 0) return null;
-  return mapMatchRow(result.rows[0]);
+  return enrichMatch(result.rows[0]);
 }
 
 export async function listMatches(filters?: {
@@ -133,7 +150,7 @@ export async function listMatches(filters?: {
   if (filters?.featured === true) rows = rows.filter((m) => boolFrom(m, "is_featured"));
   if (filters?.status) rows = rows.filter((m) => normalizeMatchStatus(m) === filters.status);
 
-  return rows.map((row) => mapMatchRow(row));
+  return Promise.all(rows.map((row) => enrichMatch(row)));
 }
 
 export async function invalidateMatchCache(): Promise<void> {
@@ -174,6 +191,8 @@ export interface MatchInput {
   homeScore?: number | null;
   awayScore?: number | null;
   liveMinute?: number | null;
+  correctScoreOdds?: Record<string, number>;
+  doubleChanceOdds?: Record<string, number>;
 }
 
 export async function createMatchRecord(id: string, input: MatchInput) {
@@ -211,7 +230,22 @@ export async function createMatchRecord(id: string, input: MatchInput) {
       input.liveMinute ?? null,
     ]
   );
-  await syncOddsForMatch(id, input);
+  const sport = input.sport;
+  const oddsExtras =
+    input.correctScoreOdds || input.doubleChanceOdds
+      ? input
+      : sport === "football"
+        ? {
+            ...input,
+            ...buildDefaultCorrectScoreForSport(
+              sport,
+              input.oddsHome ?? 1.5,
+              input.oddsDraw ?? null,
+              input.oddsAway ?? 2.5
+            ),
+          }
+        : input;
+  await syncOddsForMatch(id, oddsExtras);
 }
 
 export async function updateMatchRecord(id: string, input: Partial<MatchInput>) {
@@ -257,6 +291,11 @@ export async function updateMatchRecord(id: string, input: Partial<MatchInput>) 
   );
 
   await syncOddsForMatch(id, input, row);
+
+  if (status === "finished" && normalizeMatchStatus(row) !== "finished") {
+    await settleMatchBets(id);
+  }
+
   return getMatchById(id);
 }
 

@@ -71,6 +71,8 @@ export interface Match {
     bttsYes?: number;
     bttsNo?: number;
     overUnderLine?: number;
+    correctScore?: Record<string, number>;
+    doubleChance?: Record<string, number>;
   };
   stats?: {
     possession: [number, number];
@@ -162,5 +164,6 @@ export const ADMIN_SECTIONS = [
   { id: "deposits", name: "Deposits", icon: "ArrowDownToLine" },
   { id: "withdrawals", name: "Withdrawals", icon: "ArrowUpFromLine" },
   { id: "betting-history", name: "Betting History", icon: "TrendingUp" },
+  { id: "booking-codes", name: "Booking Codes", icon: "Ticket" },
   { id: "settings", name: "Settings", icon: "Settings" },
 ] as const;

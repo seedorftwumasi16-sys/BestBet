@@ -4,14 +4,17 @@ import { getDb, getWalletBalance } from "../db";
 import { authenticate, requirePermission, logAudit } from "../middleware/auth";
 import { boolFrom } from "../db/helpers";
 import { listMatches, normalizeMatchStatus } from "../lib/matches";
+import {
+  saveBookingCodeRecord,
+  loadBookingCodeRecord,
+  markBookingCodeUsed,
+  generateShareBookingCode,
+} from "../lib/booking-codes";
 
 const router = Router();
 
-function generateBookingCode(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let code = "BB-";
-  for (let i = 0; i < 6; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
-  return code;
+function generateBetBookingCode(): string {
+  return generateShareBookingCode();
 }
 
 router.get("/matches", async (req, res) => {
@@ -55,16 +58,20 @@ router.get("/history", authenticate, async (req, res) => {
 
 router.post("/place", authenticate, requirePermission("place_bets"), async (req, res) => {
   try {
-    const { type, stake, selections } = req.body as {
+    const { type, stake, selections, savedBookingCode } = req.body as {
       type: "single" | "multi";
       stake: number;
       selections: { matchId: string; market: string; selection: string; odds: number }[];
+      savedBookingCode?: string;
     };
 
     if (!type || !stake || !selections?.length) {
       return res.status(400).json({ error: "Type, stake, and selections are required" });
     }
     if (stake <= 0) return res.status(400).json({ error: "Stake must be positive" });
+    if (type === "single" && selections.length !== 1) {
+      return res.status(400).json({ error: "Single bets must have exactly one selection" });
+    }
 
     const db = await getDb();
     const userStatus = await db.query(`SELECT status FROM users WHERE id = ?`, [req.user!.id]);
@@ -90,7 +97,7 @@ router.post("/place", authenticate, requirePermission("place_bets"), async (req,
     const totalOdds = selections.reduce((acc, s) => acc * s.odds, 1);
     const potentialWin = stake * totalOdds;
     const betId = uuidv4();
-    const bookingCode = generateBookingCode();
+    const bookingCode = generateBetBookingCode();
     const cashoutValue = stake * totalOdds * 0.85;
 
     await db.query(
@@ -107,6 +114,10 @@ router.post("/place", authenticate, requirePermission("place_bets"), async (req,
 
     await db.query(`UPDATE wallets SET balance = balance - ? WHERE user_id = ?`, [stake, req.user!.id]);
     await logAudit(req.user!.id, "place_bet", `Bet ${betId} placed, stake: ${stake}`);
+
+    if (savedBookingCode) {
+      await markBookingCodeUsed(savedBookingCode, req.user!.id, betId);
+    }
 
     const newBalance = await getWalletBalance(req.user!.id);
 
@@ -144,37 +155,62 @@ router.post("/:id/cashout", authenticate, async (req, res) => {
 });
 
 router.post("/booking-code/save", authenticate, async (req, res) => {
-  const { payload } = req.body;
-  if (!payload) return res.status(400).json({ error: "Payload is required" });
+  try {
+    const { selections, stake, betType, payload } = req.body as {
+      selections?: unknown[];
+      stake?: number;
+      betType?: "single" | "multi";
+      payload?: { selections?: unknown[]; stake?: number; betType?: "single" | "multi" };
+    };
 
-  const code = generateBookingCode();
-  const db = await getDb();
-  await db.query(
-    `INSERT INTO booking_codes (id, code, user_id, payload) VALUES (?, ?, ?, ?)`,
-    [uuidv4(), code, req.user!.id, JSON.stringify(payload)]
-  );
-  await db.query(
-    `INSERT INTO booking_logs (id, user_id, code, action, details) VALUES (?, ?, ?, ?, ?)`,
-    [uuidv4(), req.user!.id, code, "save", JSON.stringify({ selectionCount: payload.selections?.length || 0 })]
-  );
-  await logAudit(req.user!.id, "book_bet", `Booking code saved: ${code}`);
+    const slipSelections = selections || payload?.selections;
+    const slipStake = stake ?? payload?.stake ?? 10;
+    const slipType = betType || payload?.betType || "single";
 
-  res.json({ code });
+    if (!slipSelections?.length) {
+      return res.status(400).json({ error: "At least one selection is required" });
+    }
+
+    const totalOdds = (slipSelections as { odds: number }[]).reduce((acc, s) => acc * Number(s.odds || 1), 1);
+    const potentialWin = slipStake * totalOdds;
+
+    const record = await saveBookingCodeRecord({
+      userId: req.user!.id,
+      selections: slipSelections,
+      stake: slipStake,
+      betType: slipType,
+      totalOdds,
+      potentialWin,
+    });
+
+    await logAudit(req.user!.id, "book_bet", `Booking code saved: ${record.code}`);
+    res.json(record);
+  } catch (err) {
+    console.error("[booking-code/save]", err);
+    res.status(500).json({ error: "Failed to save booking code" });
+  }
 });
 
 router.get("/booking-code/:code", async (req, res) => {
-  const db = await getDb();
-  const result = await db.query(`SELECT payload, user_id FROM booking_codes WHERE code = ?`, [req.params.code]);
-  if (result.rows.length === 0) {
-    return res.status(404).json({ error: "Booking code not found" });
+  try {
+    const userId = req.headers.authorization ? undefined : null;
+    const result = await loadBookingCodeRecord(req.params.code, userId);
+    if (!result) return res.status(404).json({ error: "Booking code not found" });
+    if ("error" in result) return res.status(410).json({ error: result.error });
+
+    res.json({
+      code: result.code,
+      payload: result.payload,
+      createdAt: result.createdAt,
+      expiresAt: result.expiresAt,
+      status: result.status,
+      creatorName: result.creatorName,
+      creatorEmail: result.creatorEmail,
+    });
+  } catch (err) {
+    console.error("[booking-code/load]", err);
+    res.status(500).json({ error: "Failed to load booking code" });
   }
-
-  await db.query(
-    `INSERT INTO booking_logs (id, user_id, code, action) VALUES (?, ?, ?, ?)`,
-    [uuidv4(), null, req.params.code, "load"]
-  );
-
-  res.json({ payload: JSON.parse(result.rows[0].payload as string) });
 });
 
 export default router;

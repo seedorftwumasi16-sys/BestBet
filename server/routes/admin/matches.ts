@@ -37,6 +37,12 @@ function parseMatchInput(body: Record<string, unknown>): Partial<MatchInput> {
   if (body.homeScore !== undefined) input.homeScore = Number(body.homeScore);
   if (body.awayScore !== undefined) input.awayScore = Number(body.awayScore);
   if (body.liveMinute !== undefined) input.liveMinute = Number(body.liveMinute);
+  if (body.correctScoreOdds !== undefined && typeof body.correctScoreOdds === "object") {
+    input.correctScoreOdds = body.correctScoreOdds as Record<string, number>;
+  }
+  if (body.doubleChanceOdds !== undefined && typeof body.doubleChanceOdds === "object") {
+    input.doubleChanceOdds = body.doubleChanceOdds as Record<string, number>;
+  }
   return input;
 }
 
@@ -75,6 +81,8 @@ router.post("/", async (req, res) => {
       homeScore: input.homeScore,
       awayScore: input.awayScore,
       liveMinute: input.liveMinute,
+      correctScoreOdds: input.correctScoreOdds,
+      doubleChanceOdds: input.doubleChanceOdds,
     });
     const match = await getMatchById(id);
     await logAudit(req.user!.id, "create_match", `Created ${input.homeTeam} vs ${input.awayTeam}`);

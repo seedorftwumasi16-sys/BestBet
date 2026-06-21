@@ -96,16 +96,32 @@ export const betsApi = {
     return api<MatchApi[]>(`/api/bets/matches${q ? `?${q}` : ""}`);
   },
   getHistory: () => api<BetHistoryItem[]>("/api/bets/history"),
-  place: (data: { type: string; stake: number; selections: unknown[] }) =>
+  place: (data: { type: string; stake: number; selections: unknown[]; savedBookingCode?: string }) =>
     api<{ id: string; bookingCode: string; stake: number; potentialWin: number; balance: number; cashoutValue: number }>(
       "/api/bets/place",
       { method: "POST", body: JSON.stringify(data) }
     ),
   cashout: (betId: string) =>
     api<{ message: string; amount: number; balance: number }>(`/api/bets/${betId}/cashout`, { method: "POST" }),
-  saveBookingCode: (payload: unknown) =>
-    api<{ code: string }>("/api/bets/booking-code/save", { method: "POST", body: JSON.stringify({ payload }) }),
-  loadBookingCode: (code: string) => api<{ payload: unknown }>(`/api/bets/booking-code/${code}`),
+  saveBookingCode: (data: { selections: unknown[]; stake: number; betType: "single" | "multi" }) =>
+    api<BookingCodeApi>("/api/bets/booking-code/save", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  loadBookingCode: (code: string) =>
+    api<{
+      code: string;
+      payload: {
+        selections: BetHistoryItem["selections"];
+        stake: number;
+        betType: "single" | "multi";
+        totalOdds: number;
+        potentialWin: number;
+      };
+      createdAt?: string;
+      expiresAt?: string;
+      status?: string;
+    }>(`/api/bets/booking-code/${encodeURIComponent(code)}`),
 };
 
 export const walletsApi = {
@@ -172,6 +188,12 @@ export const adminApi = {
     api<AdminAccountApi>(`/api/admin/admins/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteAdmin: (id: string) =>
     api<{ message: string }>(`/api/admin/admins/${id}`, { method: "DELETE" }),
+  getBookingCodes: (search?: string) => {
+    const q = search ? `?q=${encodeURIComponent(search)}` : "";
+    return api<{ codes: BookingCodeAdminApi[]; logs: unknown[] }>(`/api/admin/booking-codes${q}`);
+  },
+  deleteBookingCode: (id: string) =>
+    api<{ message: string }>(`/api/admin/booking-codes/${id}`, { method: "DELETE" }),
 };
 
 export const contentApi = {
@@ -225,7 +247,42 @@ export interface MatchApi {
     bttsYes?: number;
     bttsNo?: number;
     overUnderLine?: number;
+    correctScore?: Record<string, number>;
+    doubleChance?: Record<string, number>;
   };
+}
+
+export interface BookingCodeApi {
+  id: string;
+  code: string;
+  stake: number;
+  totalOdds: number;
+  potentialWin: number;
+  betType: "single" | "multi";
+  selections: unknown[];
+  createdAt: string;
+  expiresAt: string;
+  status: string;
+}
+
+export interface BookingCodeAdminApi {
+  id: string;
+  code: string;
+  userId: string;
+  creatorEmail?: string;
+  creatorName?: string;
+  stake: number;
+  totalOdds: number;
+  potentialWin: number;
+  betType: string;
+  status: string;
+  createdAt: string;
+  expiresAt?: string;
+  usedBy?: string;
+  usedByEmail?: string;
+  usedByName?: string;
+  usedAt?: string;
+  selectionCount: number;
 }
 
 export interface AdminAccountInput {
@@ -267,6 +324,8 @@ export interface AdminMatchInput {
   homeScore?: number;
   awayScore?: number;
   liveMinute?: number;
+  correctScoreOdds?: Record<string, number>;
+  doubleChanceOdds?: Record<string, number>;
 }
 
 export interface BetHistoryItem {

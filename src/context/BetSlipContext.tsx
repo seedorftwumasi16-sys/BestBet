@@ -8,6 +8,7 @@ interface BetSlipContextType {
   stake: number;
   betType: "single" | "multi";
   bookingCode: string;
+  savedBookingCode: string;
   isOpen: boolean;
   addSelection: (selection: BetSelection) => void;
   removeSelection: (id: string) => void;
@@ -17,6 +18,7 @@ interface BetSlipContextType {
   setIsOpen: (open: boolean) => void;
   generateCode: () => string;
   loadFromCode: (code: string, payload?: { selections?: BetSelection[]; stake?: number; betType?: "single" | "multi" }) => void;
+  clearSavedBookingCode: () => void;
   totalOdds: number;
   potentialWin: number;
 }
@@ -28,6 +30,7 @@ export function BetSlipProvider({ children }: { children: React.ReactNode }) {
   const [stake, setStake] = useState(10);
   const [betType, setBetType] = useState<"single" | "multi">("single");
   const [bookingCode, setBookingCode] = useState("");
+  const [savedBookingCode, setSavedBookingCode] = useState("");
   const [isOpen, setIsOpen] = useState(false);
 
   const totalOdds = selections.reduce((acc, s) => acc * s.odds, selections.length ? 1 : 0);
@@ -54,6 +57,11 @@ export function BetSlipProvider({ children }: { children: React.ReactNode }) {
     setSelections([]);
     setStake(10);
     setBookingCode("");
+    setSavedBookingCode("");
+  }, []);
+
+  const clearSavedBookingCode = useCallback(() => {
+    setSavedBookingCode("");
   }, []);
 
   const generateCode = useCallback(() => {
@@ -68,9 +76,11 @@ export function BetSlipProvider({ children }: { children: React.ReactNode }) {
 
   const loadFromCode = useCallback((code: string, payload?: { selections?: BetSelection[]; stake?: number; betType?: "single" | "multi" }) => {
     setBookingCode(code);
+    setSavedBookingCode(code);
     if (payload?.selections) setSelections(payload.selections);
     if (payload?.stake) setStake(payload.stake);
     if (payload?.betType) setBetType(payload.betType);
+    setIsOpen(true);
   }, []);
 
   return (
@@ -80,6 +90,7 @@ export function BetSlipProvider({ children }: { children: React.ReactNode }) {
         stake,
         betType,
         bookingCode,
+        savedBookingCode,
         isOpen,
         addSelection,
         removeSelection,
@@ -89,6 +100,7 @@ export function BetSlipProvider({ children }: { children: React.ReactNode }) {
         setIsOpen,
         generateCode,
         loadFromCode,
+        clearSavedBookingCode,
         totalOdds,
         potentialWin,
       }}

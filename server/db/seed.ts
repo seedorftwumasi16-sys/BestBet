@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 import { getDb } from "./index";
 import { migrate } from "./migrate";
 import { upsert, boolVal } from "./helpers";
-import { syncOddsForMatch } from "../lib/odds";
+import { syncOddsForMatch, buildDefaultCorrectScoreForSport } from "../lib/odds";
 
 dotenv.config();
 
@@ -190,12 +190,18 @@ export async function seed(): Promise<void> {
         oddsHome: m.oh,
         oddsDraw: m.od ?? null,
         oddsAway: m.oa,
+        ...(m.sport === "football"
+          ? buildDefaultCorrectScoreForSport("football", m.oh, m.od ?? null, m.oa)
+          : {}),
       });
     } else {
       await syncOddsForMatch(m.id, {
         oddsHome: m.oh,
         oddsDraw: m.od ?? null,
         oddsAway: m.oa,
+        ...(m.sport === "football"
+          ? buildDefaultCorrectScoreForSport("football", m.oh, m.od ?? null, m.oa)
+          : {}),
       });
     }
   }

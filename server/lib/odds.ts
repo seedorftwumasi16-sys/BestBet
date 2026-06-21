@@ -1,6 +1,12 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDb } from "../db";
 import type { MatchInput } from "./matches";
+import {
+  CORRECT_SCORE_SCORES,
+  CORRECT_SCORE_SPECIALS,
+  defaultCorrectScoreOdds,
+  defaultDoubleChanceOdds,
+} from "./markets";
 
 interface OddsRow {
   market: string;
@@ -8,7 +14,12 @@ interface OddsRow {
   odds_value: number;
 }
 
-function buildOddsRows(matchId: string, input: Partial<MatchInput>, row?: Record<string, unknown>): OddsRow[] {
+function buildOddsRows(
+  input: Partial<MatchInput>,
+  row?: Record<string, unknown>,
+  existingCorrect?: Record<string, number>,
+  existingDouble?: Record<string, number>
+): OddsRow[] {
   const home = input.oddsHome ?? row?.odds_home;
   const draw = input.oddsDraw !== undefined ? input.oddsDraw : row?.odds_draw;
   const away = input.oddsAway ?? row?.odds_away;
@@ -26,7 +37,55 @@ function buildOddsRows(matchId: string, input: Partial<MatchInput>, row?: Record
   if (under != null) rows.push({ market: "over_under", selection: `under_${line}`, odds_value: Number(under) });
   if (bttsYes != null) rows.push({ market: "btts", selection: "yes", odds_value: Number(bttsYes) });
   if (bttsNo != null) rows.push({ market: "btts", selection: "no", odds_value: Number(bttsNo) });
+
+  const correctScore = input.correctScoreOdds ?? existingCorrect;
+  if (correctScore) {
+    for (const [selection, value] of Object.entries(correctScore)) {
+      if (value != null && Number(value) > 0) {
+        rows.push({ market: "correct_score", selection, odds_value: Number(value) });
+      }
+    }
+  }
+
+  const doubleChance = input.doubleChanceOdds ?? existingDouble;
+  if (doubleChance) {
+    for (const [selection, value] of Object.entries(doubleChance)) {
+      if (value != null && Number(value) > 0) {
+        rows.push({ market: "double_chance", selection, odds_value: Number(value) });
+      }
+    }
+  }
+
   return rows;
+}
+
+export async function getOddsForMatch(matchId: string) {
+  const db = await getDb();
+  const result = await db.query(`SELECT market, selection, odds_value FROM odds WHERE match_id = ?`, [matchId]);
+
+  const correctScore: Record<string, number> = {};
+  const doubleChance: Record<string, number> = {};
+
+  for (const row of result.rows) {
+    const market = String(row.market);
+    const selection = String(row.selection);
+    const value = Number(row.odds_value);
+    if (market === "correct_score") correctScore[selection] = value;
+    if (market === "double_chance") doubleChance[selection] = value;
+  }
+
+  return { correctScore, doubleChance };
+}
+
+export async function seedDefaultFootballOdds(
+  matchId: string,
+  oddsHome: number,
+  oddsDraw: number | null,
+  oddsAway: number
+) {
+  const correctScore = defaultCorrectScoreOdds();
+  const doubleChance = defaultDoubleChanceOdds(oddsHome, oddsDraw ?? 3.2, oddsAway);
+  await syncOddsForMatch(matchId, { correctScoreOdds: correctScore, doubleChanceOdds: doubleChance });
 }
 
 export async function syncOddsForMatch(
@@ -35,7 +94,8 @@ export async function syncOddsForMatch(
   existingRow?: Record<string, unknown>
 ): Promise<void> {
   const db = await getDb();
-  const rows = buildOddsRows(matchId, input, existingRow);
+  const existing = await getOddsForMatch(matchId);
+  const rows = buildOddsRows(input, existingRow, existing.correctScore, existing.doubleChance);
 
   await db.query(`DELETE FROM odds WHERE match_id = ?`, [matchId]);
 
@@ -47,7 +107,30 @@ export async function syncOddsForMatch(
   }
 }
 
+export async function syncCorrectScoreOdds(matchId: string, correctScoreOdds: Record<string, number>) {
+  const db = await getDb();
+  await db.query(`DELETE FROM odds WHERE match_id = ? AND market = 'correct_score'`, [matchId]);
+  for (const [selection, value] of Object.entries(correctScoreOdds)) {
+    if (value > 0) {
+      await db.query(
+        `INSERT INTO odds (id, match_id, market, selection, odds_value) VALUES (?, ?, ?, ?, ?)`,
+        [uuidv4(), matchId, "correct_score", selection, value]
+      );
+    }
+  }
+}
+
 export async function deleteOddsForMatch(matchId: string): Promise<void> {
   const db = await getDb();
   await db.query(`DELETE FROM odds WHERE match_id = ?`, [matchId]);
 }
+
+export function buildDefaultCorrectScoreForSport(sport: string, home: number, draw: number | null, away: number) {
+  if (sport !== "football") return {};
+  return {
+    correctScoreOdds: defaultCorrectScoreOdds(),
+    doubleChanceOdds: defaultDoubleChanceOdds(home, draw ?? 3.2, away),
+  };
+}
+
+export const ALL_CORRECT_SCORE_KEYS = [...CORRECT_SCORE_SCORES, ...CORRECT_SCORE_SPECIALS];

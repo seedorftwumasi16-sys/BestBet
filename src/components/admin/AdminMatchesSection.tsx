@@ -19,6 +19,13 @@ import { adminApi, type MatchApi } from "@/lib/api";
 import { SPORTS } from "@/lib/constants";
 import { formatMatchDate, formatMatchTime } from "@/lib/utils";
 import { useToast } from "@/context/ToastContext";
+import {
+  AdminMatchMarketsEditor,
+  initCorrectScoreFromMatch,
+  initDoubleChanceFromMatch,
+  oddsRecordFromStrings,
+} from "@/components/admin/AdminMatchMarketsEditor";
+import type { MarketTab } from "@/lib/markets";
 
 type MatchStatus = "upcoming" | "live" | "finished";
 
@@ -95,7 +102,11 @@ function formFromMatch(match: MatchApi): MatchFormState {
   };
 }
 
-function formToPayload(form: MatchFormState) {
+function formToPayload(
+  form: MatchFormState,
+  correctScoreOdds: Record<string, string>,
+  doubleChanceOdds: Record<string, string>
+) {
   return {
     homeTeam: form.homeTeam.trim(),
     awayTeam: form.awayTeam.trim(),
@@ -116,6 +127,7 @@ function formToPayload(form: MatchFormState) {
     homeScore: Number(form.homeScore),
     awayScore: Number(form.awayScore),
     liveMinute: Number(form.liveMinute),
+    ...oddsRecordFromStrings(correctScoreOdds, doubleChanceOdds),
   };
 }
 
@@ -134,6 +146,9 @@ export function AdminMatchesSection() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<MatchFormState>(emptyForm);
   const [filter, setFilter] = useState<"all" | MatchStatus>("all");
+  const [marketTab, setMarketTab] = useState<MarketTab>("main");
+  const [correctScoreOdds, setCorrectScoreOdds] = useState<Record<string, string>>({});
+  const [doubleChanceOdds, setDoubleChanceOdds] = useState<Record<string, string>>({});
 
   const load = useCallback(() => {
     setLoading(true);
@@ -151,12 +166,18 @@ export function AdminMatchesSection() {
   const openCreate = () => {
     setEditingId(null);
     setForm(emptyForm());
+    setCorrectScoreOdds({});
+    setDoubleChanceOdds({});
+    setMarketTab("main");
     setShowForm(true);
   };
 
   const openEdit = (match: MatchApi) => {
     setEditingId(match.id);
     setForm(formFromMatch(match));
+    setCorrectScoreOdds(initCorrectScoreFromMatch(match.odds.correctScore));
+    setDoubleChanceOdds(initDoubleChanceFromMatch(match.odds.doubleChance));
+    setMarketTab("main");
     setShowForm(true);
   };
 
@@ -164,6 +185,8 @@ export function AdminMatchesSection() {
     setShowForm(false);
     setEditingId(null);
     setForm(emptyForm());
+    setCorrectScoreOdds({});
+    setDoubleChanceOdds({});
   };
 
   const saveMatch = async () => {
@@ -174,7 +197,7 @@ export function AdminMatchesSection() {
 
     setSaving(true);
     try {
-      const payload = formToPayload(form);
+      const payload = formToPayload(form, correctScoreOdds, doubleChanceOdds);
       if (editingId) {
         const updated = await adminApi.updateMatch(editingId, payload);
         setMatches((prev) => prev.map((m) => (m.id === editingId ? updated : m)));
@@ -309,37 +332,30 @@ export function AdminMatchesSection() {
             </label>
           </div>
 
-          <div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-bestbet-gray-muted mb-3">
-              1X2 Markets
-            </h4>
-            <div className="grid grid-cols-3 gap-3">
-              <Input label="Home Win" type="number" step="0.01" value={form.oddsHome} onChange={(e) => setField("oddsHome", e.target.value)} />
-              <Input label="Draw" type="number" step="0.01" value={form.oddsDraw} onChange={(e) => setField("oddsDraw", e.target.value)} />
-              <Input label="Away Win" type="number" step="0.01" value={form.oddsAway} onChange={(e) => setField("oddsAway", e.target.value)} />
-            </div>
-          </div>
-
-          <div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-bestbet-gray-muted mb-3">
-              Over / Under
-            </h4>
-            <div className="grid grid-cols-3 gap-3">
-              <Input label="Line" type="number" step="0.5" value={form.overUnderLine} onChange={(e) => setField("overUnderLine", e.target.value)} />
-              <Input label="Over Odds" type="number" step="0.01" value={form.oddsOver} onChange={(e) => setField("oddsOver", e.target.value)} />
-              <Input label="Under Odds" type="number" step="0.01" value={form.oddsUnder} onChange={(e) => setField("oddsUnder", e.target.value)} />
-            </div>
-          </div>
-
-          <div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-bestbet-gray-muted mb-3">
-              Both Teams To Score
-            </h4>
-            <div className="grid grid-cols-2 gap-3">
-              <Input label="BTTS Yes" type="number" step="0.01" value={form.oddsBttsYes} onChange={(e) => setField("oddsBttsYes", e.target.value)} />
-              <Input label="BTTS No" type="number" step="0.01" value={form.oddsBttsNo} onChange={(e) => setField("oddsBttsNo", e.target.value)} />
-            </div>
-          </div>
+          <AdminMatchMarketsEditor
+            marketTab={marketTab}
+            setMarketTab={setMarketTab}
+            correctScoreOdds={correctScoreOdds}
+            setCorrectScoreOdds={setCorrectScoreOdds}
+            doubleChanceOdds={doubleChanceOdds}
+            setDoubleChanceOdds={setDoubleChanceOdds}
+            oddsHome={form.oddsHome}
+            setOddsHome={(v) => setField("oddsHome", v)}
+            oddsDraw={form.oddsDraw}
+            setOddsDraw={(v) => setField("oddsDraw", v)}
+            oddsAway={form.oddsAway}
+            setOddsAway={(v) => setField("oddsAway", v)}
+            oddsOver={form.oddsOver}
+            setOddsOver={(v) => setField("oddsOver", v)}
+            oddsUnder={form.oddsUnder}
+            setOddsUnder={(v) => setField("oddsUnder", v)}
+            overUnderLine={form.overUnderLine}
+            setOverUnderLine={(v) => setField("overUnderLine", v)}
+            oddsBttsYes={form.oddsBttsYes}
+            setOddsBttsYes={(v) => setField("oddsBttsYes", v)}
+            oddsBttsNo={form.oddsBttsNo}
+            setOddsBttsNo={(v) => setField("oddsBttsNo", v)}
+          />
 
           {(form.matchStatus === "live" || editingId) && (
             <div>

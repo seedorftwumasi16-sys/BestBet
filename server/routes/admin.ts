@@ -5,11 +5,13 @@ import { authenticate, requirePermission, requireRole, logAudit } from "../middl
 import { createNotification } from "../services/notifications";
 import adminMatchesRoutes from "./admin/matches";
 import adminAdminsRoutes from "./admin/admins";
+import adminBookingCodesRoutes from "./admin/booking-codes";
 
 const router = Router();
 
 router.use("/matches", adminMatchesRoutes);
 router.use("/admins", adminAdminsRoutes);
+router.use("/booking-codes", adminBookingCodesRoutes);
 
 router.get("/stats", authenticate, requireRole("super_admin", "sub_admin"), async (_req, res) => {
   const db = await getDb();

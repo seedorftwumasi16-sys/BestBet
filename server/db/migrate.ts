@@ -9,6 +9,7 @@ import {
   WITHDRAWAL_COLUMNS_SQL,
   BET_COLUMNS_SQL,
   MATCH_COLUMNS_SQL,
+  BOOKING_COLUMNS_SQL,
 } from "./schema-ext";
 
 async function runStatements(db: Awaited<ReturnType<typeof getDb>>, sql: string) {
@@ -44,6 +45,7 @@ export async function migrate(): Promise<{ driver: string }> {
     await runStatements(db, WITHDRAWAL_COLUMNS_SQL);
     await runStatements(db, BET_COLUMNS_SQL);
     await runStatements(db, MATCH_COLUMNS_SQL);
+    await runStatements(db, BOOKING_COLUMNS_SQL);
   } else {
     await runStatements(db, MATCH_COLUMNS_SQL.replace(/ADD COLUMN IF NOT EXISTS/g, "ADD COLUMN"));
   }

@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Star, BarChart3, Clock } from "lucide-react";
+import { Star, BarChart3, Clock, ChevronDown } from "lucide-react";
+import { CorrectScorePanel } from "@/components/betting/CorrectScorePanel";
+import { MatchMarkets } from "@/components/betting/MatchMarkets";
 import Image from "next/image";
 import { Badge } from "@/components/ui/Badge";
 import { TeamLogo } from "@/components/ui/TeamLogo";
@@ -20,6 +22,7 @@ interface MatchCardProps {
 export function MatchCard({ match, showStats = false }: MatchCardProps) {
   const { addSelection, selections } = useBetSlip();
   const [favorited, setFavorited] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [flashOdds, setFlashOdds] = useState<Record<string, "up" | "down" | null>>({});
   const leagueBadge = getLeagueBadgeUrl(match.leagueId, match.league);
 
@@ -170,13 +173,28 @@ export function MatchCard({ match, showStats = false }: MatchCardProps) {
       )}
 
       {/* Odds */}
-      <div className="px-4 pb-4 flex gap-2">
+      <div className="px-4 pb-2 flex gap-2">
         <OddsButton label={match.homeTeam.name} odds={match.odds.home} type="home" shortLabel="1" />
         {match.odds.draw && (
           <OddsButton label="Draw" odds={match.odds.draw} type="draw" shortLabel="X" />
         )}
         <OddsButton label={match.awayTeam.name} odds={match.odds.away} type="away" shortLabel="2" />
       </div>
+
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full px-4 pb-3 flex items-center justify-center gap-1 text-[11px] font-semibold text-bestbet-yellow/80 hover:text-bestbet-yellow transition-colors"
+      >
+        {expanded ? "Hide Markets" : "More Markets"}
+        <ChevronDown size={14} className={cn("transition-transform", expanded && "rotate-180")} />
+      </button>
+
+      {expanded && (
+        <>
+          <MatchMarkets match={match} />
+          {match.sport === "football" && <CorrectScorePanel match={match} />}
+        </>
+      )}
     </motion.article>
   );
 }

@@ -23,6 +23,7 @@ export function BetSlipPanel({ className, floating = false }: BetSlipPanelProps)
     stake,
     betType,
     bookingCode,
+    savedBookingCode,
     isOpen,
     removeSelection,
     clearSelections,
@@ -37,6 +38,7 @@ export function BetSlipPanel({ className, floating = false }: BetSlipPanelProps)
   const { isLoggedIn, refreshUser } = useAuth();
   const [codeInput, setCodeInput] = useState("");
   const [showBooking, setShowBooking] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
   const [placed, setPlaced] = useState(false);
   const [betError, setBetError] = useState("");
@@ -55,6 +57,7 @@ export function BetSlipPanel({ className, floating = false }: BetSlipPanelProps)
           selection: s.selection,
           odds: s.odds,
         })),
+        savedBookingCode: savedBookingCode || undefined,
       });
       await refreshUser();
       setTimeout(() => {
@@ -67,16 +70,34 @@ export function BetSlipPanel({ className, floating = false }: BetSlipPanelProps)
     }
   };
 
-  const handleCopyCode = async () => {
+  const handleGenerateCode = async () => {
+    if (!isLoggedIn || selections.length === 0) return;
+    setGenerating(true);
+    setBetError("");
     try {
-      const { code } = await betsApi.saveBookingCode({ selections, stake, betType });
-      generateCode();
-      navigator.clipboard.writeText(code);
+      const record = await betsApi.saveBookingCode({
+        selections,
+        stake,
+        betType,
+      });
+      loadFromCode(record.code, {
+        selections,
+        stake: record.stake,
+        betType: record.betType,
+      });
+      navigator.clipboard.writeText(record.code);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      const code = bookingCode || generateCode();
-      navigator.clipboard.writeText(code);
+    } catch (err) {
+      setBetError(err instanceof Error ? err.message : "Failed to generate booking code");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleCopyCode = async () => {
+    if (bookingCode) {
+      navigator.clipboard.writeText(bookingCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -85,8 +106,11 @@ export function BetSlipPanel({ className, floating = false }: BetSlipPanelProps)
   const handleLoadCode = async () => {
     if (!codeInput.trim()) return;
     try {
-      const { payload } = await betsApi.loadBookingCode(codeInput.trim());
-      loadFromCode(codeInput.trim(), payload as { selections?: typeof selections; stake?: number; betType?: typeof betType });
+      const { payload, code } = await betsApi.loadBookingCode(codeInput.trim());
+      loadFromCode(code, {
+        ...payload,
+        selections: payload.selections as typeof selections,
+      });
       setCodeInput("");
     } catch {
       loadFromCode(codeInput.trim());
@@ -266,7 +290,7 @@ export function BetSlipPanel({ className, floating = false }: BetSlipPanelProps)
                   </button>
                 </div>
               ) : (
-                <Button variant="outline" size="sm" className="w-full" onClick={generateCode}>
+                <Button variant="outline" size="sm" className="w-full" loading={generating} onClick={handleGenerateCode}>
                   Generate Booking Code
                 </Button>
               )}
@@ -275,7 +299,7 @@ export function BetSlipPanel({ className, floating = false }: BetSlipPanelProps)
 
               <div className="flex gap-2">
                 <Input
-                  placeholder="Enter code (e.g. BB-8X7K2M)"
+                  placeholder="Enter code (e.g. BB12345678)"
                   value={codeInput}
                   onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
                   className="flex-1 text-xs"

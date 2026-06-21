@@ -266,13 +266,26 @@ async function testBetting(token: string | null) {
   const saveCode = await fetchJson("/api/bets/booking-code/save", {
     method: "POST",
     headers,
-    body: JSON.stringify({ payload: { selections: [], stake: 25 } }),
+    body: JSON.stringify({
+      selections: [
+        {
+          matchId: "m1",
+          matchName: "Manchester City vs Arsenal",
+          market: "Match Result",
+          selection: "Manchester City",
+          odds: 1.85,
+        },
+      ],
+      stake: 25,
+      betType: "single",
+    }),
   });
   if (saveCode.status === 200 && saveCode.body.code) {
     pass("Booking code generation", saveCode.body.code);
     const loadCode = await fetchJson(`/api/bets/booking-code/${saveCode.body.code}`);
-    if (loadCode.status === 200) pass("Booking code retrieval", "Payload loaded");
-    else fail("Booking code retrieval", `Status ${loadCode.status}`);
+    if (loadCode.status === 200 && loadCode.body.payload?.selections?.length) {
+      pass("Booking code retrieval", "Payload loaded");
+    } else fail("Booking code retrieval", `Status ${loadCode.status}`);
   } else fail("Booking code generation", JSON.stringify(saveCode.body));
 
   const history = await fetchJson("/api/bets/history", { headers });
@@ -375,6 +388,11 @@ async function testAdmin(token: string | null) {
   const perms = await fetchJson("/api/admin/permissions", { headers });
   if (perms.status === 200) pass("Permissions system", `${perms.body.permissions.length} permissions`);
   else fail("Permissions system", `Status ${perms.status}`);
+
+  const bookingCodes = await fetchJson("/api/admin/booking-codes", { headers });
+  if (bookingCodes.status === 200 && Array.isArray(bookingCodes.body.codes)) {
+    pass("Admin booking codes", `${bookingCodes.body.codes.length} code(s)`);
+  } else fail("Admin booking codes", `Status ${bookingCodes.status}`);
 
   const logs = await fetchJson("/api/admin/audit-logs", { headers });
   if (logs.status === 200 && Array.isArray(logs.body) && logs.body.length > 0) {
