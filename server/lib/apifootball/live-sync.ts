@@ -1,5 +1,5 @@
-import { getDb } from "../db";
-import { boolFrom, boolVal } from "../db/helpers";
+import { getDb } from "../../db";
+import { boolFrom, boolVal } from "../../db/helpers";
 import {
   emitMatchChange,
   getMatchById,

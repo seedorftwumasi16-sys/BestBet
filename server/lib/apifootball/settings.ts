@@ -1,4 +1,4 @@
-import { getDb } from "../db";
+import { getDb } from "../../db";
 
 export const APIFOOTBALL_SETTINGS = {
   apiKey: "apifootball_api_key",
