@@ -59,14 +59,16 @@ export function AdminBookingCodesSection() {
         <p className="text-sm text-bestbet-gray-muted">View, search, and manage saved bet slips.</p>
       </div>
 
-      <div className="flex gap-2 max-w-md">
+      <div className="flex items-end gap-2 max-w-md">
         <Input
           placeholder="Search code, email, name..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+          icon={<Search size={18} />}
+          wrapperClassName="flex-1 min-w-0"
         />
-        <Button variant="primary" size="sm" onClick={handleSearch}>
+        <Button variant="primary" size="md" className="h-14 shrink-0 px-5" onClick={handleSearch}>
           <Search size={16} />
         </Button>
       </div>

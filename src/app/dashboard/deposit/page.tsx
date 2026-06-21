@@ -9,8 +9,8 @@ import { Badge } from "@/components/ui/Badge";
 import { useAuth } from "@/context/AuthContext";
 import { walletsApi } from "@/lib/api";
 import { DEFAULT_MOMO_INFO } from "@/lib/momo";
-import { ArrowLeft, Smartphone, Upload, Copy, CheckCircle2, User } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { ArrowLeft, Smartphone, Upload, Copy, CheckCircle2, User, Hash } from "lucide-react";
+import { formatCurrency, CURRENCY_SYMBOL } from "@/lib/utils";
 
 export default function DepositPage() {
   const { isLoggedIn, refreshUser } = useAuth();
@@ -180,21 +180,24 @@ export default function DepositPage() {
         <form onSubmit={handleSubmit} className="card-premium p-5 md:p-6 space-y-4">
           <h2 className="text-sm font-bold font-display">Submit Payment Proof</h2>
           <Input
-            label="Deposit Amount (GH₵)"
+            label="Deposit Amount"
             type="number"
             min="5"
             step="0.01"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
+            inputPrefix={CURRENCY_SYMBOL}
+            placeholder="0.00"
             required
           />
           <Input
-            label="Amount Sent (GH₵)"
+            label="Amount Sent"
             type="number"
             min="5"
             step="0.01"
             value={amountSent}
             onChange={(e) => setAmountSent(e.target.value)}
+            inputPrefix={CURRENCY_SYMBOL}
             placeholder="Same as deposit amount"
           />
           <Input
@@ -202,6 +205,7 @@ export default function DepositPage() {
             value={paymentReference}
             onChange={(e) => setPaymentReference(e.target.value)}
             placeholder="Transaction ID from MoMo"
+            icon={<Hash size={18} />}
             required
           />
 

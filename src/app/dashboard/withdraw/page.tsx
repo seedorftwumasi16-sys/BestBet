@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { useAuth } from "@/context/AuthContext";
 import { walletsApi } from "@/lib/api";
-import { ArrowLeft } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { ArrowLeft, Smartphone } from "lucide-react";
+import { formatCurrency, CURRENCY_SYMBOL } from "@/lib/utils";
 
 export default function WithdrawPage() {
   const { isLoggedIn, user, refreshUser } = useAuth();
@@ -70,13 +70,23 @@ export default function WithdrawPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="card-premium p-6 space-y-4">
-          <Input label="Amount (GH₵)" type="number" min="10" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required />
+          <Input
+            label="Withdrawal Amount"
+            type="number"
+            min="10"
+            step="0.01"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            inputPrefix={CURRENCY_SYMBOL}
+            placeholder="0.00"
+            required
+          />
           <div>
             <label className="block text-sm font-medium mb-2">Method</label>
             <select
               value={method}
               onChange={(e) => setMethod(e.target.value)}
-              className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-sm"
+              className="h-14 w-full rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 text-sm transition-all duration-300 focus:border-bestbet-yellow focus:outline-none focus:ring-2 focus:ring-bestbet-yellow/30"
             >
               <option value="mobile_money">Mobile Money</option>
               <option value="bank_transfer">Bank Transfer</option>
@@ -87,6 +97,7 @@ export default function WithdrawPage() {
             value={accountDetails}
             onChange={(e) => setAccountDetails(e.target.value)}
             placeholder={method === "mobile_money" ? "024XXXXXXX" : "Bank name, account number"}
+            icon={<Smartphone size={18} />}
             required
           />
           {error && <p className="text-sm text-bestbet-danger">{error}</p>}

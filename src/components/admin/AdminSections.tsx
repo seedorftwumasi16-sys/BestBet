@@ -10,6 +10,7 @@ import { isProtectedAdminEmail } from "@/lib/constants";
 import { normalizeAdminStats } from "@/lib/admin-utils";
 import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
+import { Smartphone, User } from "lucide-react";
 
 export function AdminUsersSection() {
   const toast = useToast();
@@ -381,8 +382,8 @@ export function AdminSettingsSection() {
     <div className="space-y-6 max-w-lg">
       <div className="card-premium p-5 space-y-4">
         <h3 className="text-sm font-bold font-display text-bestbet-yellow">Mobile Money Deposits</h3>
-        <Input label="Phone Number" value={momoNumber} onChange={(e) => setMomoNumber(e.target.value)} />
-        <Input label="Recipient Name" value={momoRecipient} onChange={(e) => setMomoRecipient(e.target.value)} />
+        <Input label="Phone Number" value={momoNumber} onChange={(e) => setMomoNumber(e.target.value)} icon={<Smartphone size={18} />} />
+        <Input label="Recipient Name" value={momoRecipient} onChange={(e) => setMomoRecipient(e.target.value)} icon={<User size={18} />} />
         <Button variant="primary" size="sm" loading={saving} onClick={saveMomoSettings}>
           Save MoMo Settings
         </Button>

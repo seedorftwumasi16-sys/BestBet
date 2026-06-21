@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Mail, Lock, User } from "lucide-react";
+import { Mail, Lock, User, Phone, Ticket } from "lucide-react";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -45,7 +45,7 @@ export default function RegisterPage() {
     >
       <form onSubmit={handleSubmit} className="space-y-5">
         {error && (
-          <div className="rounded-xl border border-bestbet-danger/30 bg-bestbet-danger/10 px-4 py-3 text-sm text-bestbet-danger">
+          <div className="rounded-xl border border-bestbet-danger/30 bg-bestbet-danger/10 px-4 py-3.5 text-sm text-bestbet-danger">
             {error}
           </div>
         )}
@@ -77,7 +77,7 @@ export default function RegisterPage() {
           placeholder="024XXXXXXX"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          icon={<User size={18} />}
+          icon={<Phone size={18} />}
           autoComplete="tel"
         />
 
@@ -86,6 +86,7 @@ export default function RegisterPage() {
           placeholder="BBXXXXXX"
           value={referralCode}
           onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+          icon={<Ticket size={18} />}
         />
 
         <Input
@@ -101,7 +102,7 @@ export default function RegisterPage() {
           required
         />
 
-        <label className="flex items-start gap-3 text-xs text-bestbet-gray-muted cursor-pointer pt-1">
+        <label className="flex cursor-pointer items-start gap-3 pt-1 text-xs text-bestbet-gray-muted">
           <input
             type="checkbox"
             className="mt-0.5 h-4 w-4 shrink-0 rounded border-[var(--border)] accent-bestbet-yellow"
@@ -123,7 +124,7 @@ export default function RegisterPage() {
           type="submit"
           variant="primary"
           size="lg"
-          className="w-full h-12 text-base font-bold mt-2"
+          className="mt-1 h-14 w-full text-base font-black shadow-lg shadow-bestbet-yellow/15 transition-all duration-300 hover:scale-[1.01] hover:shadow-bestbet-yellow/30"
           loading={loading}
         >
           Create Account

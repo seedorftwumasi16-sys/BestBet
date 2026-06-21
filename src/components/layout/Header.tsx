@@ -25,6 +25,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { useBetSlip } from "@/context/BetSlipContext";
 import { formatCurrency, cn } from "@/lib/utils";
+import { SearchInput } from "@/components/ui/SearchInput";
 
 const NAV_LINKS = [
   { href: "/sports/football", label: "Football", match: (p: string) => p.startsWith("/sports/football") },
@@ -217,15 +218,10 @@ export function Header() {
               className="overflow-hidden border-t border-white/5"
             >
               <div className="py-3">
-                <div className="relative">
-                  <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-bestbet-gray-muted" />
-                  <input
-                    type="search"
-                    placeholder="Search teams, leagues, matches..."
-                    className="w-full pl-11 pr-4 py-3 glass-panel rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-bestbet-yellow/40 placeholder:text-bestbet-gray-muted"
-                    autoFocus
-                  />
-                </div>
+                <SearchInput
+                  placeholder="Search teams, leagues, matches..."
+                  autoFocus
+                />
               </div>
             </motion.div>
           )}

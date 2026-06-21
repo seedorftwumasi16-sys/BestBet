@@ -76,6 +76,7 @@ export default function BookingPage() {
             placeholder="BB12345678"
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
+            icon={<Ticket size={18} />}
           />
           <Button variant="primary" className="w-full" onClick={handleLoad}>
             <Search size={16} className="mr-1" /> Load Bet Slip

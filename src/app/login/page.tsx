@@ -59,9 +59,9 @@ export default function LoginPage() {
       footerLinkText="Register"
       footerLinkHref="/register"
     >
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
-          <div className="rounded-xl border border-bestbet-danger/30 bg-bestbet-danger/10 px-4 py-3 text-sm text-bestbet-danger">
+          <div className="rounded-xl border border-bestbet-danger/30 bg-bestbet-danger/10 px-4 py-3.5 text-sm text-bestbet-danger">
             {error}
           </div>
         )}
@@ -89,15 +89,15 @@ export default function LoginPage() {
           required
         />
 
-        <div className="flex items-center justify-between text-sm pt-1">
-          <label className="flex items-center gap-2.5 cursor-pointer">
+        <div className="flex items-center justify-between gap-3 text-sm pt-1">
+          <label className="flex cursor-pointer items-center gap-2.5">
             <input
               type="checkbox"
               className="h-4 w-4 rounded border-[var(--border)] accent-bestbet-yellow"
             />
             <span className="text-bestbet-gray-muted">Remember me</span>
           </label>
-          <Link href="#" className="font-medium text-bestbet-yellow hover:underline">
+          <Link href="#" className="font-semibold text-bestbet-yellow transition-colors hover:text-bestbet-yellow-secondary hover:underline">
             Forgot password?
           </Link>
         </div>
@@ -106,7 +106,7 @@ export default function LoginPage() {
           type="submit"
           variant="primary"
           size="lg"
-          className="w-full h-12 text-base font-bold mt-2"
+          className="mt-1 h-14 w-full text-base font-black shadow-lg shadow-bestbet-yellow/15 transition-all duration-300 hover:scale-[1.01] hover:shadow-bestbet-yellow/30"
           loading={loading}
           disabled={loading}
         >

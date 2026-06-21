@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/Input";
 import { useBetSlip } from "@/context/BetSlipContext";
 import { useAuth } from "@/context/AuthContext";
 import { CURRENCY_SYMBOL, formatCurrency, formatOdds } from "@/lib/utils";
+import { inputFieldClasses, inputIconLeftClass } from "@/lib/input-styles";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { betsApi } from "@/lib/api";
@@ -197,12 +198,14 @@ export function BetSlipPanel({ className, floating = false }: BetSlipPanelProps)
           <div>
             <label className="text-xs font-medium text-bestbet-gray-muted mb-1.5 block">Stake</label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-bestbet-gray-muted">{CURRENCY_SYMBOL}</span>
+              <span className={cn(inputIconLeftClass, "w-auto text-sm font-bold tabular-nums")} aria-hidden="true">
+                {CURRENCY_SYMBOL}
+              </span>
               <input
                 type="number"
                 value={stake}
                 onChange={(e) => setStake(Math.max(0, Number(e.target.value)))}
-                className="w-full pl-12 pr-4 py-2.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-sm font-bold focus:outline-none focus:ring-2 focus:ring-bestbet-yellow/50"
+                className={inputFieldClasses({ hasLeading: true, className: "text-sm font-bold" })}
                 min={1}
               />
             </div>
@@ -297,12 +300,14 @@ export function BetSlipPanel({ className, floating = false }: BetSlipPanelProps)
 
               {copied && <p className="text-xs text-bestbet-success text-center">Copied to clipboard!</p>}
 
-              <div className="flex gap-2">
+              <div className="flex items-end gap-2">
                 <Input
                   placeholder="Enter code (e.g. BB12345678)"
                   value={codeInput}
                   onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
-                  className="flex-1 text-xs"
+                  icon={<Ticket size={16} />}
+                  wrapperClassName="flex-1 min-w-0"
+                  className="text-xs"
                 />
                 <Button variant="secondary" size="sm" onClick={handleLoadCode}>
                   Load
