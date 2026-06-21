@@ -7,7 +7,7 @@ import { FadeIn, StaggerContainer, StaggerItem } from "@/components/ui/Skeleton"
 import { Badge } from "@/components/ui/Badge";
 import { betsApi } from "@/lib/api";
 import type { Match } from "@/lib/constants";
-import { applyMatchFeed, toMatch } from "@/lib/match-utils";
+import { applyMatchFeed, applyOddsUpdate, toMatch } from "@/lib/match-utils";
 import { getLiveMatches } from "@/lib/fixture-utils";
 import { useLiveOdds } from "@/hooks/useLiveOdds";
 import { useAuth } from "@/context/AuthContext";
@@ -39,17 +39,7 @@ export default function LivePage() {
     },
     onUpdate: (update) => {
       setLiveMatches((prev) =>
-        prev.map((m) =>
-          m.id === update.matchId
-            ? {
-                ...m,
-                odds: { ...m.odds, home: update.odds.home, away: update.odds.away },
-                homeScore: update.homeScore ?? m.homeScore,
-                awayScore: update.awayScore ?? m.awayScore,
-                liveMinute: update.liveMinute ?? m.liveMinute,
-              }
-            : m
-        )
+        prev.map((m) => (m.id === update.matchId ? applyOddsUpdate(m, update) : m))
       );
     },
   });

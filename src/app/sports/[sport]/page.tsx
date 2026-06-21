@@ -9,7 +9,7 @@ import { FadeIn, Skeleton } from "@/components/ui/Skeleton";
 import { betsApi } from "@/lib/api";
 import type { Match } from "@/lib/constants";
 import { SPORTS } from "@/lib/constants";
-import { applyMatchFeed, toMatch } from "@/lib/match-utils";
+import { applyMatchFeed, applyOddsUpdate, toMatch } from "@/lib/match-utils";
 import { filterMatchesByLeague, filterMatchesBySearch } from "@/lib/fixture-utils";
 import { useLiveOdds } from "@/hooks/useLiveOdds";
 
@@ -56,17 +56,7 @@ function SportPageContent({ sport }: { sport: string }) {
     },
     onUpdate: (update) => {
       setMatches((prev) =>
-        prev.map((m) =>
-          m.id === update.matchId
-            ? {
-                ...m,
-                odds: { ...m.odds, home: update.odds.home, away: update.odds.away },
-                homeScore: update.homeScore ?? m.homeScore,
-                awayScore: update.awayScore ?? m.awayScore,
-                liveMinute: update.liveMinute ?? m.liveMinute,
-              }
-            : m
-        )
+        prev.map((m) => (m.id === update.matchId ? applyOddsUpdate(m, update) : m))
       );
     },
   });

@@ -8,7 +8,7 @@ import { MatchCardSkeleton } from "@/components/ui/Skeleton";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { betsApi } from "@/lib/api";
 import type { Match } from "@/lib/constants";
-import { applyMatchFeed, mergeApiMatches, toMatch } from "@/lib/match-utils";
+import { applyMatchFeed, mergeApiMatches, applyOddsUpdate, toMatch } from "@/lib/match-utils";
 import { prefetchLeagueBadges } from "@/lib/sports-assets";
 import {
   getLiveMatches,
@@ -120,17 +120,7 @@ export default function HomePage() {
     },
     onUpdate: (update) => {
       setMatches((prev) =>
-        prev.map((m) =>
-          m.id === update.matchId
-            ? {
-                ...m,
-                odds: { ...m.odds, home: update.odds.home, away: update.odds.away },
-                homeScore: update.homeScore ?? m.homeScore,
-                awayScore: update.awayScore ?? m.awayScore,
-                liveMinute: update.liveMinute ?? m.liveMinute,
-              }
-            : m
-        )
+        prev.map((m) => (m.id === update.matchId ? applyOddsUpdate(m, update) : m))
       );
     },
   });

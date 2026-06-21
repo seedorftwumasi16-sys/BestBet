@@ -45,6 +45,10 @@ export function normalizeMatchApi(match: MatchApi): MatchApi {
     isFeatured: Boolean(match.isFeatured),
     bettingSuspended: Boolean(match.bettingSuspended),
     isSimulated: Boolean(match.isSimulated),
+    timerPaused: Boolean(match.timerPaused),
+    minuteTickAt: match.minuteTickAt ?? null,
+    liveMinute: match.liveMinute != null ? Number(match.liveMinute) : undefined,
+    liveMinuteDisplay: match.liveMinuteDisplay,
     createdAt: match.createdAt ?? match.startTime ?? new Date().toISOString(),
     odds: {
       home: Number(odds.home ?? 0),

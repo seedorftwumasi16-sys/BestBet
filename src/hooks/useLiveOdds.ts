@@ -11,6 +11,11 @@ interface LiveOddsUpdate {
   homeScore?: number;
   awayScore?: number;
   liveMinute?: number;
+  liveMinuteDisplay?: string;
+  timerPaused?: boolean;
+  minuteTickAt?: string | null;
+  matchStatus?: "upcoming" | "live" | "finished";
+  bettingSuspended?: boolean;
 }
 
 export interface MatchFeedUpdate {

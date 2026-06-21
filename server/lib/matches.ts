@@ -8,6 +8,7 @@ import { TRACKED_LEAGUES, leagueSlugFromName } from "./sportsdb/leagues";
 import { resolveLeagueBadgeUrl } from "./sportsdb/badges";
 import { resolveTeamLogo } from "./team-logos";
 import { ensureMatchSchema } from "../db/schema-verify";
+import { computeEffectiveLiveMinute, timerFieldsForStatusChange, FULL_TIME_MINUTE } from "./match-timer";
 
 export type MatchStatus = "upcoming" | "live" | "finished";
 export type FixtureWindow = "live" | "today" | "tomorrow" | "upcoming" | "week";
@@ -54,6 +55,9 @@ export interface MatchApiPayload {
   isSimulated: boolean;
   createdAt: string;
   liveMinute?: number | null;
+  liveMinuteDisplay?: string;
+  timerPaused?: boolean;
+  minuteTickAt?: string | null;
   homeScore?: number | null;
   awayScore?: number | null;
   odds: {
@@ -114,6 +118,7 @@ export function mapMatchRow(
     homeLogoRaw.startsWith("http") || homeLogoRaw.startsWith("/") ? homeLogoRaw : "⚽";
   const awayLogo =
     awayLogoRaw.startsWith("http") || awayLogoRaw.startsWith("/") ? awayLogoRaw : "⚽";
+  const timer = computeEffectiveLiveMinute(row);
   return {
     id: String(row.id),
     homeTeam: {
@@ -137,7 +142,10 @@ export function mapMatchRow(
     bettingSuspended: boolFrom(row, "betting_suspended"),
     isSimulated: boolFrom(row, "is_simulated"),
     createdAt: String(row.created_at || row.start_time),
-    liveMinute: row.live_minute != null ? Number(row.live_minute) : null,
+    liveMinute: timer.minute,
+    liveMinuteDisplay: timer.display,
+    timerPaused: timer.paused,
+    minuteTickAt: row.minute_tick_at ? String(row.minute_tick_at) : null,
     homeScore: row.home_score != null ? Number(row.home_score) : null,
     awayScore: row.away_score != null ? Number(row.away_score) : null,
     odds: {
@@ -337,6 +345,10 @@ export async function createMatchRecord(id: string, input: MatchInput) {
   const status = input.matchStatus || "upcoming";
   const live = syncLiveFields(status);
   const statusOverride = status === "live" || !!input.isSimulated;
+  const timerInit =
+    status === "live"
+      ? timerFieldsForStatusChange("live", input.liveMinute ?? 0, input.liveMinute ?? 0)
+      : { minuteTickAt: null as string | null, timerPaused: false, liveMinute: input.liveMinute ?? 0 };
   const createdAt = new Date().toISOString();
   const leagueBadge = resolveLeagueBadgeUrl(input.league, leagueSlugFromName(input.league));
   const [homeLogo, awayLogo] = await Promise.all([
@@ -367,7 +379,7 @@ export async function createMatchRecord(id: string, input: MatchInput) {
     input.overUnderLine ?? 2.5,
     input.homeScore ?? null,
     input.awayScore ?? null,
-    input.liveMinute ?? null,
+    timerInit.liveMinute ?? input.liveMinute ?? null,
     homeLogo.startsWith("http") || homeLogo.startsWith("/") ? homeLogo : null,
     awayLogo.startsWith("http") || awayLogo.startsWith("/") ? awayLogo : null,
     leagueBadge,
@@ -404,6 +416,19 @@ export async function createMatchRecord(id: string, input: MatchInput) {
       );
     } else {
       throw err;
+    }
+  }
+
+  if (status === "live") {
+    try {
+      await db.query(`UPDATE matches SET timer_paused = ?, minute_tick_at = ?, status_override = ? WHERE id = ?`, [
+        boolVal(db, timerInit.timerPaused ?? false),
+        timerInit.minuteTickAt,
+        boolVal(db, statusOverride),
+        id,
+      ]);
+    } catch (err) {
+      console.warn("[matches] Could not init match timer columns:", err instanceof Error ? err.message : err);
     }
   }
 
@@ -447,6 +472,36 @@ export async function updateMatchRecord(id: string, input: Partial<MatchInput>) 
   const statusOverride =
     input.matchStatus !== undefined ? true : boolFrom(row, "status_override");
 
+  const timerInit =
+    input.matchStatus === "live"
+      ? timerFieldsForStatusChange(
+          "live",
+          input.liveMinute !== undefined ? input.liveMinute : Number(row.live_minute ?? 0),
+          row.live_minute
+        )
+      : input.matchStatus === "finished"
+        ? timerFieldsForStatusChange("finished", FULL_TIME_MINUTE, row.live_minute)
+        : input.liveMinute !== undefined
+          ? timerFieldsForStatusChange("live", input.liveMinute, row.live_minute)
+          : status !== "live"
+            ? { minuteTickAt: null as string | null, timerPaused: false }
+            : {};
+
+  const resolvedLiveMinute =
+    timerInit.liveMinute !== undefined
+      ? timerInit.liveMinute
+      : input.liveMinute !== undefined
+        ? input.liveMinute
+        : row.live_minute;
+  const resolvedTimerPaused =
+    timerInit.timerPaused !== undefined ? timerInit.timerPaused : boolFrom(row, "timer_paused");
+  const resolvedMinuteTickAt =
+    timerInit.minuteTickAt !== undefined
+      ? timerInit.minuteTickAt
+      : input.liveMinute !== undefined
+        ? new Date().toISOString()
+        : row.minute_tick_at ?? null;
+
   await db.query(
     `UPDATE matches SET
       home_team = ?, away_team = ?, league = ?, sport = ?, start_time = ?,
@@ -454,7 +509,7 @@ export async function updateMatchRecord(id: string, input: Partial<MatchInput>) 
       status_override = ?,
       odds_home = ?, odds_draw = ?, odds_away = ?,
       odds_over = ?, odds_under = ?, odds_btts_yes = ?, odds_btts_no = ?, over_under_line = ?,
-      home_score = ?, away_score = ?, live_minute = ?
+      home_score = ?, away_score = ?, live_minute = ?, timer_paused = ?, minute_tick_at = ?
      WHERE id = ?`,
     [
       input.homeTeam ?? row.home_team,
@@ -465,7 +520,14 @@ export async function updateMatchRecord(id: string, input: Partial<MatchInput>) 
       boolVal(db, live.is_live),
       live.match_status,
       boolVal(db, input.isFeatured !== undefined ? input.isFeatured : boolFrom(row, "is_featured")),
-      boolVal(db, input.bettingSuspended !== undefined ? input.bettingSuspended : boolFrom(row, "betting_suspended")),
+      boolVal(
+        db,
+        status === "finished"
+          ? true
+          : input.bettingSuspended !== undefined
+            ? input.bettingSuspended
+            : boolFrom(row, "betting_suspended")
+      ),
       boolVal(db, input.isSimulated !== undefined ? input.isSimulated : boolFrom(row, "is_simulated")),
       boolVal(db, statusOverride),
       input.oddsHome ?? row.odds_home,
@@ -478,7 +540,9 @@ export async function updateMatchRecord(id: string, input: Partial<MatchInput>) 
       input.overUnderLine !== undefined ? input.overUnderLine : row.over_under_line ?? 2.5,
       input.homeScore !== undefined ? input.homeScore : row.home_score,
       input.awayScore !== undefined ? input.awayScore : row.away_score,
-      input.liveMinute !== undefined ? input.liveMinute : row.live_minute,
+      resolvedLiveMinute,
+      boolVal(db, resolvedTimerPaused),
+      resolvedMinuteTickAt,
       id,
     ]
   );

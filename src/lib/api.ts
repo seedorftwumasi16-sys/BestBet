@@ -317,6 +317,9 @@ export interface MatchApi {
   isSimulated: boolean;
   createdAt: string;
   liveMinute?: number;
+  liveMinuteDisplay?: string;
+  timerPaused?: boolean;
+  minuteTickAt?: string | null;
   homeScore?: number;
   awayScore?: number;
   odds: {

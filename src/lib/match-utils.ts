@@ -19,8 +19,36 @@ export function mergeApiMatches(...lists: MatchApi[][]): MatchApi[] {
   );
 }
 
-export function toMatch(m: MatchApi): Match {
+export function applyOddsUpdate(
+  match: Match,
+  update: {
+    odds: { home: number; away: number };
+    homeScore?: number;
+    awayScore?: number;
+    liveMinute?: number;
+    liveMinuteDisplay?: string;
+    timerPaused?: boolean;
+    minuteTickAt?: string | null;
+    matchStatus?: Match["matchStatus"];
+    bettingSuspended?: boolean;
+  }
+): Match {
   return {
+    ...match,
+    odds: { ...match.odds, home: update.odds.home, away: update.odds.away },
+    homeScore: update.homeScore ?? match.homeScore,
+    awayScore: update.awayScore ?? match.awayScore,
+    liveMinute: update.liveMinute ?? match.liveMinute,
+    liveMinuteDisplay: update.liveMinuteDisplay ?? match.liveMinuteDisplay,
+    timerPaused: update.timerPaused ?? match.timerPaused,
+    minuteTickAt: update.minuteTickAt !== undefined ? update.minuteTickAt : match.minuteTickAt,
+    matchStatus: update.matchStatus ?? match.matchStatus,
+    isLive: update.matchStatus ? update.matchStatus === "live" : match.isLive,
+    bettingSuspended: update.bettingSuspended ?? match.bettingSuspended,
+  };
+}
+
+export function toMatch(m: MatchApi): Match {  return {
     id: m.id,
     homeTeam: { id: m.id + "-h", ...m.homeTeam },
     awayTeam: { id: m.id + "-a", ...m.awayTeam },
@@ -36,6 +64,9 @@ export function toMatch(m: MatchApi): Match {
     isSimulated: m.isSimulated,
     createdAt: m.createdAt ? new Date(m.createdAt) : new Date(m.startTime),
     liveMinute: m.liveMinute,
+    liveMinuteDisplay: m.liveMinuteDisplay,
+    timerPaused: m.timerPaused,
+    minuteTickAt: m.minuteTickAt,
     homeScore: m.homeScore,
     awayScore: m.awayScore,
     odds: m.odds,

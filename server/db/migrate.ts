@@ -15,6 +15,8 @@ import {
   SPORTSDB_COLUMNS_SQL,
   SIMULATED_MATCH_COLUMNS_SQL,
   PG_SIMULATED_MATCH_COLUMNS_SQL,
+  STATUS_OVERRIDE_COLUMNS_SQL,
+  MATCH_TIMER_COLUMNS_SQL,
 } from "./schema-ext";
 import { recreateProtectedSuperAdmin } from "../lib/super-admin";
 import { ensureMatchSchema } from "./schema-verify";
@@ -59,11 +61,15 @@ export async function migrate(): Promise<{ driver: string }> {
     await runStatements(db, LOGIN_LOG_COLUMNS_SQL);
     await runStatements(db, SPORTSDB_COLUMNS_SQL);
     await runStatements(db, PG_SIMULATED_MATCH_COLUMNS_SQL);
+    await runStatements(db, STATUS_OVERRIDE_COLUMNS_SQL);
+    await runStatements(db, MATCH_TIMER_COLUMNS_SQL);
   } else {
     await runStatements(db, MATCH_COLUMNS_SQL.replace(/ADD COLUMN IF NOT EXISTS/g, "ADD COLUMN"));
     await runStatements(db, LOGIN_LOG_COLUMNS_SQL.replace(/ADD COLUMN IF NOT EXISTS/g, "ADD COLUMN"));
     await runStatements(db, SPORTSDB_COLUMNS_SQL.replace(/ADD COLUMN IF NOT EXISTS/g, "ADD COLUMN"));
     await runStatements(db, SIMULATED_MATCH_COLUMNS_SQL.replace(/ADD COLUMN IF NOT EXISTS/g, "ADD COLUMN"));
+    await runStatements(db, STATUS_OVERRIDE_COLUMNS_SQL.replace(/ADD COLUMN IF NOT EXISTS/g, "ADD COLUMN"));
+    await runStatements(db, MATCH_TIMER_COLUMNS_SQL.replace(/ADD COLUMN IF NOT EXISTS/g, "ADD COLUMN"));
   }
 
   const schemaCheck = await ensureMatchSchema(db);

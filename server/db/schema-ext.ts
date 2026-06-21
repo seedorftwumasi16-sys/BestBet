@@ -261,3 +261,8 @@ UPDATE matches SET created_at = COALESCE(created_at, start_time, NOW()::TEXT);
 export const STATUS_OVERRIDE_COLUMNS_SQL = `
 ALTER TABLE matches ADD COLUMN IF NOT EXISTS status_override BOOLEAN DEFAULT FALSE;
 `;
+
+export const MATCH_TIMER_COLUMNS_SQL = `
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS minute_tick_at TEXT;
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS timer_paused BOOLEAN DEFAULT FALSE;
+`;

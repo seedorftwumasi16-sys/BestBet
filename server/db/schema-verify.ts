@@ -11,6 +11,8 @@ const REQUIRED_MATCH_COLUMNS = [
   "is_featured",
   "betting_suspended",
   "status_override",
+  "minute_tick_at",
+  "timer_paused",
 ] as const;
 
 async function pgColumnExists(db: Database, table: string, column: string): Promise<boolean> {
@@ -66,6 +68,8 @@ export async function ensureMatchSchema(db: Database): Promise<{ ok: boolean; mi
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS is_featured BOOLEAN DEFAULT FALSE;
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS betting_suspended BOOLEAN DEFAULT FALSE;
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS status_override BOOLEAN DEFAULT FALSE;
+        ALTER TABLE matches ADD COLUMN IF NOT EXISTS minute_tick_at TEXT;
+        ALTER TABLE matches ADD COLUMN IF NOT EXISTS timer_paused BOOLEAN DEFAULT FALSE;
       `);
 
       const recheck = await listPgColumns(db, "matches");

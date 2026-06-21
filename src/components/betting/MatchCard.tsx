@@ -10,6 +10,7 @@ import { TeamLogo } from "@/components/ui/TeamLogo";
 import { LeagueLogo } from "@/components/ui/LeagueLogo";
 import { useBetSlip } from "@/context/BetSlipContext";
 import { formatOdds, formatMatchTime, formatMatchDate, cn } from "@/lib/utils";
+import { useLiveMatchMinute } from "@/hooks/useLiveMatchMinute";
 import type { Match } from "@/lib/constants";
 
 interface MatchCardProps {
@@ -23,6 +24,8 @@ export function MatchCard({ match, showStats = false }: MatchCardProps) {
   const [favorited, setFavorited] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [flashOdds, setFlashOdds] = useState<Record<string, "up" | "down" | null>>({});
+  const liveTimer = useLiveMatchMinute(match);
+  const finished = match.matchStatus === "finished";
 
   useEffect(() => {
     if (!match.isLive) return;
@@ -40,7 +43,7 @@ export function MatchCard({ match, showStats = false }: MatchCardProps) {
     selections.some((s) => s.matchId === match.id && s.selection === type);
 
   const handleOddsClick = (type: string, odds: number, label: string) => {
-    if (match.bettingSuspended) return;
+    if (match.bettingSuspended || finished) return;
     const id = `${match.id}-${type}`;
     if (isSelected(label)) {
       removeSelection(id);
@@ -69,13 +72,14 @@ export function MatchCard({ match, showStats = false }: MatchCardProps) {
   }) => (
     <button
       onClick={() => handleOddsClick(type, odds, label)}
-      disabled={match.bettingSuspended}
+      disabled={match.bettingSuspended || finished}
       className={cn(
         "odds-btn",
         isSelected(label) && "odds-btn-selected",
         flashOdds[type] === "up" && "odds-flash-up",
         flashOdds[type] === "down" && "odds-flash-down",
-        match.bettingSuspended && "opacity-40 cursor-not-allowed"
+        match.bettingSuspended && "opacity-40 cursor-not-allowed",
+        finished && "opacity-40 cursor-not-allowed"
       )}
       aria-label={`${label} at ${formatOdds(odds)}`}
     >
@@ -115,7 +119,11 @@ export function MatchCard({ match, showStats = false }: MatchCardProps) {
           {match.isLive ? (
             <Badge variant="live" className="text-[10px] px-1.5 py-0">
               <Clock size={9} className="mr-0.5" />
-              {match.liveMinute}&apos;
+              {liveTimer.display}
+            </Badge>
+          ) : finished ? (
+            <Badge variant="default" className="text-[10px] px-1.5 py-0">
+              FT
             </Badge>
           ) : (
             <span className="text-[10px] sm:text-[11px] font-medium text-bestbet-gray-muted whitespace-nowrap">

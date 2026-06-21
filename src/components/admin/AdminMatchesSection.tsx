@@ -284,7 +284,7 @@ export function AdminMatchesSection() {
     try {
       const payload: Record<string, unknown> = { matchStatus };
       if (matchStatus === "live") {
-        payload.liveMinute = match.liveMinute && match.liveMinute > 0 ? match.liveMinute : 1;
+        payload.liveMinute = match.liveMinute != null && match.liveMinute >= 0 ? match.liveMinute : 0;
         payload.homeScore = match.homeScore ?? 0;
         payload.awayScore = match.awayScore ?? 0;
       }
@@ -293,6 +293,21 @@ export function AdminMatchesSection() {
       toast.success(matchStatus === "live" ? "Match is now live" : matchStatus === "finished" ? "Match stopped" : "Match set to upcoming");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update match status");
+    }
+  };
+
+  const resumeSecondHalf = async (match: MatchApi) => {
+    try {
+      const updated = await adminApi.updateMatch(match.id, {
+        matchStatus: "live",
+        liveMinute: 46,
+        homeScore: match.homeScore ?? 0,
+        awayScore: match.awayScore ?? 0,
+      });
+      setMatches((prev) => prev.map((m) => (m.id === match.id ? normalizeMatchApi(updated) : m)));
+      toast.success("Second half started at 46'");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to resume match");
     }
   };
 
@@ -507,7 +522,10 @@ export function AdminMatchesSection() {
                   </p>
                   {match.matchStatus === "live" && (
                     <p className="text-sm font-bold text-bestbet-yellow mt-1 tabular-nums">
-                      {match.homeScore ?? 0} - {match.awayScore ?? 0} · {match.liveMinute ?? 0}&apos;
+                      {match.homeScore ?? 0} - {match.awayScore ?? 0} ·{" "}
+                      {match.timerPaused || match.liveMinute === 45
+                        ? "HT"
+                        : match.liveMinuteDisplay ?? `${match.liveMinute ?? 0}'`}
                     </p>
                   )}
                   <p className="text-xs text-bestbet-gray-muted mt-2 tabular-nums">
@@ -528,6 +546,11 @@ export function AdminMatchesSection() {
                   {match.matchStatus === "live" && (
                     <Button size="sm" variant="secondary" onClick={() => setMatchStatus(match, "finished")} title="Stop match">
                       <Pause size={14} />
+                    </Button>
+                  )}
+                  {match.matchStatus === "live" && (match.timerPaused || match.liveMinute === 45) && (
+                    <Button size="sm" variant="primary" onClick={() => resumeSecondHalf(match)} title="Resume 2nd half (46')">
+                      2H
                     </Button>
                   )}
                   <Button size="sm" variant="outline" onClick={() => openEdit(match)}>

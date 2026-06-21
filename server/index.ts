@@ -22,6 +22,8 @@ import contentRoutes from "./routes/content";
 import supportRoutes from "./routes/support";
 import sportsRoutes from "./routes/sports";
 import { startSportsSyncScheduler } from "./services/sports-sync";
+import { startMatchTimerScheduler } from "./services/match-timer";
+import { computeEffectiveLiveMinute } from "./lib/match-timer";
 
 dotenv.config();
 
@@ -109,7 +111,11 @@ async function broadcastLiveUpdates() {
     );
 
     for (const match of result.rows) {
-      if (boolFrom(match, "betting_suspended")) continue;
+      if (boolFrom(match, "betting_suspended") || String(match.match_status || "").toLowerCase() === "finished") {
+        continue;
+      }
+
+      const timer = computeEffectiveLiveMinute(match);
 
       const oddsChange = {
         home: +(Number(match.odds_home) + (Math.random() - 0.5) * 0.1).toFixed(2),
@@ -123,7 +129,12 @@ async function broadcastLiveUpdates() {
         odds: oddsChange,
         homeScore: match.home_score,
         awayScore: match.away_score,
-        liveMinute: match.live_minute,
+        liveMinute: Number(match.live_minute ?? 0),
+        liveMinuteDisplay: timer.display,
+        timerPaused: timer.paused,
+        minuteTickAt: match.minute_tick_at ? String(match.minute_tick_at) : null,
+        matchStatus: match.match_status,
+        bettingSuspended: boolFrom(match, "betting_suspended"),
       });
     }
   } catch (err) {
@@ -145,6 +156,7 @@ async function start() {
     });
 
     setInterval(broadcastLiveUpdates, 5000);
+    startMatchTimerScheduler();
     startSportsSyncScheduler();
   } catch (err) {
     console.error("[Server] Failed to start:", err);

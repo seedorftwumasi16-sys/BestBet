@@ -91,6 +91,9 @@ export interface Match {
   isSimulated?: boolean;
   createdAt?: Date;
   liveMinute?: number;
+  liveMinuteDisplay?: string;
+  timerPaused?: boolean;
+  minuteTickAt?: string | null;
   homeScore?: number;
   awayScore?: number;
   odds: {
