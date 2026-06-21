@@ -16,7 +16,7 @@ export default function LivePage() {
   const [liveMatches, setLiveMatches] = useState<Match[]>([]);
 
   const loadMatches = useCallback(() => {
-    betsApi.getMatches(undefined, true).then((data) => setLiveMatches(data.map(toMatch))).catch(() => {});
+    betsApi.getMatches({ live: true, sport: "football" }).then((data) => setLiveMatches(data.map(toMatch))).catch(() => {});
   }, []);
 
   useEffect(() => {

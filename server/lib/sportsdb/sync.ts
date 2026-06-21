@@ -6,13 +6,13 @@ import { invalidateMatchCache, emitMatchChange, getMatchById, syncLiveFields } f
 import { syncOddsForMatch, buildDefaultCorrectScoreForSport } from "../odds";
 import { settleMatchBets } from "../settlement";
 import {
-  TRACKED_LEAGUE_IDS,
+  TRACKED_LEAGUES,
   fetchAllLeagues,
   fetchTeamsByLeagueName,
-  fetchNextFixtures,
-  fetchTodayFixtures,
   pingSportsApi,
+  sleep,
 } from "./client";
+import { collectFixturesFromAllSources } from "./fixtures";
 import type { SportsDbEvent, SportsSyncResult } from "./types";
 import type { MatchStatus } from "../matches";
 
@@ -260,47 +260,37 @@ export async function syncSportsData(): Promise<SportsSyncResult> {
 
   try {
     const allLeagues = await fetchAllLeagues();
-    const tracked = allLeagues.filter((l) => TRACKED_LEAGUE_IDS.includes(String(l.idLeague)));
+    const trackedFromApi = allLeagues.filter((l) =>
+      TRACKED_LEAGUES.some((t) => t.id === String(l.idLeague))
+    );
 
-    for (const league of tracked) {
+    for (const league of TRACKED_LEAGUES) {
+      const fromApi = trackedFromApi.find((l) => String(l.idLeague) === league.id);
       await upsertLeague(db, {
-        id: String(league.idLeague),
-        name: league.strLeague,
-        sport: mapSport(league.strSport),
+        id: league.id,
+        name: fromApi?.strLeague || league.name,
+        sport: "football",
       });
       leaguesSynced += 1;
 
-      const teams = await fetchTeamsByLeagueName(league.strLeague);
-      for (const team of teams.slice(0, 25)) {
+      const teams = await fetchTeamsByLeagueName(fromApi?.strLeague || league.name);
+      for (const team of teams.slice(0, 30)) {
         await upsertTeam(db, {
           externalId: String(team.idTeam),
           name: team.strTeam,
           shortName: team.strTeamShort,
           badge: team.strBadge,
-          leagueId: String(league.idLeague),
-          leagueName: league.strLeague,
-          sport: mapSport(team.strSport || league.strSport),
+          leagueId: league.id,
+          leagueName: fromApi?.strLeague || league.name,
+          sport: mapSport(team.strSport || "Soccer"),
           country: team.strCountry,
         });
         teamsSynced += 1;
       }
+      await sleep(80);
     }
 
-    const todayEvents = await fetchTodayFixtures(new Date(), "Soccer");
-    const eventMap = new Map<string, SportsDbEvent>();
-
-    for (const e of todayEvents) {
-      if (TRACKED_LEAGUE_IDS.includes(String(e.idLeague))) {
-        eventMap.set(String(e.idEvent), e);
-      }
-    }
-
-    for (const leagueId of TRACKED_LEAGUE_IDS) {
-      const fixtures = await fetchNextFixtures(leagueId);
-      for (const e of fixtures) {
-        eventMap.set(String(e.idEvent), e);
-      }
-    }
+    const { eventMap, logs, totalTracked } = await collectFixturesFromAllSources();
 
     for (const event of eventMap.values()) {
       await upsertEvent(db, event);
@@ -310,11 +300,29 @@ export async function syncSportsData(): Promise<SportsSyncResult> {
 
     await invalidateMatchCache();
 
-    const message = `Synced ${leaguesSynced} leagues, ${teamsSynced} teams, ${eventsSynced} events (${liveUpdated} live)`;
+    const message = `Imported ${eventsSynced} fixtures from ${leaguesSynced} competitions (${liveUpdated} live). ${totalTracked >= 50 ? "Target met." : `Only ${totalTracked} available from API.`}`;
     console.log(`[sports-sync] ${message}`);
-    await logSync(db, { ok: true, leaguesSynced, teamsSynced, eventsSynced, liveUpdated, message, usedFallback: false });
+    await logSync(db, {
+      ok: true,
+      leaguesSynced,
+      teamsSynced,
+      eventsSynced,
+      liveUpdated,
+      message,
+      usedFallback: false,
+    });
 
-    return { ok: true, leaguesSynced, teamsSynced, eventsSynced, liveUpdated, message, usedFallback: false };
+    return {
+      ok: true,
+      leaguesSynced,
+      teamsSynced,
+      eventsSynced,
+      liveUpdated,
+      message,
+      usedFallback: false,
+      fetchLogs: logs,
+      fixturesImported: eventsSynced,
+    };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Sports sync failed";
     console.error("[sports-sync]", err);

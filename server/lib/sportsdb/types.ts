@@ -45,4 +45,6 @@ export interface SportsSyncResult {
   liveUpdated: number;
   message: string;
   usedFallback: boolean;
+  fetchLogs?: string[];
+  fixturesImported?: number;
 }

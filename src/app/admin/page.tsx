@@ -70,6 +70,7 @@ import { AdminAdminsSection } from "@/components/admin/AdminAdminsSection";
 
 import { AdminBettingHistorySection } from "@/components/admin/AdminBettingHistorySection";
 import { AdminBookingCodesSection } from "@/components/admin/AdminBookingCodesSection";
+import { AdminSportsSyncStatus } from "@/components/admin/AdminSportsSyncStatus";
 import { AdminErrorBoundary } from "@/components/admin/AdminErrorBoundary";
 import { normalizeAdminStats, safeFormatCount } from "@/lib/admin-utils";
 
@@ -362,6 +363,10 @@ export default function AdminPage() {
                 ))}
 
               </div>
+
+
+
+              <AdminSportsSyncStatus />
 
 
 

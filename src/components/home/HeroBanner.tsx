@@ -6,7 +6,7 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { LEAGUES, type Promotion } from "@/lib/constants";
+import { LEAGUES, FOOTBALL_COMPETITIONS, type Promotion } from "@/lib/constants";
 import { heroSlides, mockPromotions } from "@/lib/mock-data";
 import { contentApi } from "@/lib/api";
 import { DEFAULT_PROMOTION_IMAGE, resolvePromotionImage } from "@/lib/promotion-images";
@@ -171,29 +171,34 @@ export function PromotionCards() {
 }
 
 export function PopularLeagues() {
+  const chips = FOOTBALL_COMPETITIONS.filter((c) => c.id !== "all").slice(0, 8);
+
   return (
     <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-1 px-1">
-      {LEAGUES.map((league) => (
-        <Link
-          key={league.id}
-          href={`/sports/${league.sport}?league=${league.id}`}
-          className="league-chip group"
-        >
-          <div className="relative w-10 h-10 shrink-0">
-            <Image
-              src={getLeagueBadgeUrl(league.id)}
-              alt={league.name}
-              fill
-              unoptimized
-              className="object-contain group-hover:scale-110 transition-transform"
-            />
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-bold whitespace-nowrap font-display">{league.name}</p>
-            <p className="text-[11px] text-bestbet-gray-muted">{league.country}</p>
-          </div>
-        </Link>
-      ))}
+      {chips.map((comp) => {
+        const meta = LEAGUES.find((l) => "sportsdbId" in l && l.sportsdbId === comp.id);
+        return (
+          <Link
+            key={comp.id}
+            href={`/sports/football?league=${comp.id}`}
+            className="league-chip group"
+          >
+            <div className="relative w-10 h-10 shrink-0">
+              <Image
+                src={getLeagueBadgeUrl(meta?.id ?? comp.id)}
+                alt={comp.label}
+                fill
+                unoptimized
+                className="object-contain group-hover:scale-110 transition-transform"
+              />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-bold whitespace-nowrap font-display">{comp.label}</p>
+              <p className="text-[11px] text-bestbet-gray-muted">{meta?.country ?? "Football"}</p>
+            </div>
+          </Link>
+        );
+      })}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import type { SportsDbEvent, SportsDbLeague, SportsDbTeam } from "./types";
+import { TRACKED_LEAGUE_IDS } from "./leagues";
 
 const BASE_URL = "https://www.thesportsdb.com/api/v1/json";
 
@@ -20,7 +21,8 @@ async function fetchJson<T>(path: string, timeoutMs = 12000): Promise<T | null> 
       console.warn(`[sportsdb] HTTP ${res.status} for ${path}`);
       return null;
     }
-    return (await res.json()) as T;
+    const data = (await res.json()) as T;
+    return data;
   } catch (err) {
     console.warn(`[sportsdb] Request failed for ${path}:`, err instanceof Error ? err.message : err);
     return null;
@@ -29,16 +31,7 @@ async function fetchJson<T>(path: string, timeoutMs = 12000): Promise<T | null> 
   }
 }
 
-/** Tracked soccer leagues — IDs from TheSportsDB. */
-export const TRACKED_LEAGUE_IDS = [
-  "4328", // English Premier League
-  "4331", // German Bundesliga
-  "4332", // Italian Serie A
-  "4334", // Spanish La Liga
-  "4335", // French Ligue 1
-  "4480", // UEFA Champions League
-  "4429", // FIFA World Cup
-];
+export { TRACKED_LEAGUE_IDS, TRACKED_LEAGUES } from "./leagues";
 
 export async function fetchAllLeagues(): Promise<SportsDbLeague[]> {
   const data = await fetchJson<{ leagues?: SportsDbLeague[] | null }>("all_leagues.php");
@@ -57,6 +50,18 @@ export async function fetchTeamsByLeagueName(leagueName: string): Promise<Sports
 export async function fetchNextFixtures(leagueId: string): Promise<SportsDbEvent[]> {
   const data = await fetchJson<{ events?: SportsDbEvent[] | null }>(`eventsnextleague.php?id=${leagueId}`);
   const events = data?.events;
+  const count = Array.isArray(events) ? events.length : 0;
+  console.log(`[sportsdb] eventsnextleague.php?id=${leagueId} → ${count} events`);
+  return Array.isArray(events) ? events : [];
+}
+
+export async function fetchSeasonFixtures(leagueId: string, season: string): Promise<SportsDbEvent[]> {
+  const data = await fetchJson<{ events?: SportsDbEvent[] | null }>(
+    `eventsseason.php?id=${leagueId}&s=${encodeURIComponent(season)}`
+  );
+  const events = data?.events;
+  const count = Array.isArray(events) ? events.length : 0;
+  console.log(`[sportsdb] eventsseason.php?id=${leagueId}&s=${season} → ${count} events`);
   return Array.isArray(events) ? events : [];
 }
 
@@ -66,6 +71,8 @@ export async function fetchTodayFixtures(date: Date, sport = "Soccer"): Promise<
     `eventsday.php?d=${d}&s=${encodeURIComponent(sport)}`
   );
   const events = data?.events;
+  const count = Array.isArray(events) ? events.length : 0;
+  console.log(`[sportsdb] eventsday.php?d=${d}&s=${sport} → ${count} events`);
   return Array.isArray(events) ? events : [];
 }
 
@@ -78,4 +85,15 @@ export async function fetchLiveScoresViaToday(): Promise<SportsDbEvent[]> {
 export async function pingSportsApi(): Promise<boolean> {
   const data = await fetchJson<{ leagues?: unknown[] }>("all_leagues.php", 8000);
   return Array.isArray(data?.leagues);
+}
+
+export function currentFootballSeasons(): string[] {
+  const year = new Date().getFullYear();
+  const month = new Date().getMonth();
+  const primary = month >= 6 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
+  return [primary, String(year), `${year}-${year + 1}`, `${year - 1}-${year}`];
+}
+
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

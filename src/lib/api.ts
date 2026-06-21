@@ -101,12 +101,30 @@ export const authApi = {
     }),
 };
 
+export type FixtureWindow = "live" | "today" | "tomorrow" | "upcoming" | "week";
+
+export interface MatchQueryOptions {
+  sport?: string;
+  live?: boolean;
+  featured?: boolean;
+  league?: string;
+  search?: string;
+  window?: FixtureWindow;
+}
+
 export const betsApi = {
-  getMatches: (sport?: string, live?: boolean, featured?: boolean) => {
+  getMatches: (opts?: MatchQueryOptions | string, live?: boolean, featured?: boolean) => {
+    const options: MatchQueryOptions =
+      typeof opts === "string" || opts === undefined
+        ? { sport: typeof opts === "string" ? opts : undefined, live, featured }
+        : opts;
     const params = new URLSearchParams();
-    if (sport) params.set("sport", sport);
-    if (live) params.set("live", "true");
-    if (featured) params.set("featured", "true");
+    if (options.sport) params.set("sport", options.sport);
+    if (options.live) params.set("live", "true");
+    if (options.featured) params.set("featured", "true");
+    if (options.league && options.league !== "all") params.set("league", options.league);
+    if (options.search) params.set("search", options.search);
+    if (options.window) params.set("window", options.window);
     const q = params.toString();
     return api<MatchApi[]>(`/api/bets/matches${q ? `?${q}` : ""}`);
   },
@@ -236,6 +254,32 @@ export const supportApi = {
 
 export const healthApi = {
   check: () => api<{ status: string }>("/api/health"),
+};
+
+export interface SportsSyncStatus {
+  provider: string;
+  apiReachable: boolean;
+  lastSync: {
+    status: string;
+    message: string;
+    leaguesSynced: number;
+    teamsSynced: number;
+    eventsSynced: number;
+    at: string;
+  } | null;
+  cached: {
+    leagues: number;
+    teams: number;
+    syncedMatches: number;
+  };
+}
+
+export const sportsApi = {
+  getStatus: () => api<SportsSyncStatus>("/api/sports/status"),
+  getLeagues: () =>
+    api<Array<{ id: string; external_id: string; name: string; sport: string; badge_url?: string }>>(
+      "/api/sports/leagues"
+    ),
 };
 
 export interface MatchApi {

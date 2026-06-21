@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { getDb, getWalletBalance } from "../db";
 import { authenticate, requirePermission, logAudit } from "../middleware/auth";
 import { boolFrom } from "../db/helpers";
-import { listMatches, normalizeMatchStatus } from "../lib/matches";
+import { listMatches, type FixtureWindow } from "../lib/matches";
 import {
   saveBookingCodeRecord,
   loadBookingCodeRecord,
@@ -19,11 +19,15 @@ function generateBetBookingCode(): string {
 }
 
 router.get("/matches", async (req, res) => {
-  const { sport, live, featured } = req.query;
+  const { sport, live, featured, league, search, window } = req.query;
+  const validWindows = new Set(["live", "today", "tomorrow", "upcoming", "week"]);
   const matches = await listMatches({
     sport: sport ? String(sport) : undefined,
     live: live === "true" ? true : undefined,
     featured: featured === "true" ? true : undefined,
+    league: league ? String(league) : undefined,
+    search: search ? String(search) : undefined,
+    window: window && validWindows.has(String(window)) ? (String(window) as FixtureWindow) : undefined,
   });
   res.json(matches);
 });

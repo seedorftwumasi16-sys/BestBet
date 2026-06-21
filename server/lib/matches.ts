@@ -4,8 +4,10 @@ import { cacheInvalidatePrefix } from "../services/redis";
 import { getSocketServer } from "../services/notifications";
 import { syncOddsForMatch, deleteOddsForMatch, getOddsForMatch, buildDefaultCorrectScoreForSport } from "./odds";
 import { settleMatchBets } from "./settlement";
+import { TRACKED_LEAGUES, leagueSlugFromName } from "./sportsdb/leagues";
 
 export type MatchStatus = "upcoming" | "live" | "finished";
+export type FixtureWindow = "live" | "today" | "tomorrow" | "upcoming" | "week";
 
 export interface MatchRow {
   id: string;
@@ -96,7 +98,7 @@ export function mapMatchRow(
       logo: awayLogo,
     },
     league: String(row.league),
-    leagueId: String(row.league).toLowerCase().replace(/\s+/g, "-"),
+    leagueId: leagueSlugFromName(String(row.league)),
     sport: String(row.sport),
     startTime: String(row.start_time),
     matchStatus,
@@ -137,11 +139,79 @@ export async function getMatchById(id: string): Promise<MatchApiPayload | null> 
   return enrichMatch(result.rows[0]);
 }
 
+function isSameCalendarDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function matchesFixtureWindow(row: Record<string, unknown>, window: FixtureWindow): boolean {
+  const status = normalizeMatchStatus(row);
+  const start = new Date(String(row.start_time));
+  const now = new Date();
+
+  if (window === "live") return status === "live";
+
+  if (window === "today") {
+    return isSameCalendarDay(start, now) && status !== "finished";
+  }
+
+  if (window === "tomorrow") {
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return isSameCalendarDay(start, tomorrow) && status !== "finished";
+  }
+
+  if (window === "upcoming") {
+    const end = new Date(now);
+    end.setDate(end.getDate() + 7);
+    end.setHours(23, 59, 59, 999);
+    return status === "upcoming" && start >= now && start <= end;
+  }
+
+  if (window === "week") {
+    const end = new Date(now);
+    end.setDate(end.getDate() + 7);
+    end.setHours(23, 59, 59, 999);
+    return start >= now && start <= end && status !== "finished";
+  }
+
+  return true;
+}
+
+function matchesLeagueFilter(row: Record<string, unknown>, league: string): boolean {
+  const q = league.toLowerCase().trim();
+  if (!q || q === "all") return true;
+
+  const leagueName = String(row.league ?? "").toLowerCase();
+  const slug = leagueSlugFromName(String(row.league ?? ""));
+
+  if (slug === q || leagueName.includes(q)) return true;
+
+  const tracked = TRACKED_LEAGUES.find((l) => l.id === league || l.slug === q);
+  if (tracked) {
+    return leagueName.includes(tracked.name.toLowerCase()) || tracked.name.toLowerCase().includes(leagueName);
+  }
+
+  return false;
+}
+
+function matchesSearchQuery(row: Record<string, unknown>, search: string): boolean {
+  const q = search.toLowerCase().trim();
+  if (!q) return true;
+  return (
+    String(row.home_team ?? "").toLowerCase().includes(q) ||
+    String(row.away_team ?? "").toLowerCase().includes(q) ||
+    String(row.league ?? "").toLowerCase().includes(q)
+  );
+}
+
 export async function listMatches(filters?: {
   sport?: string;
   live?: boolean;
   featured?: boolean;
   status?: MatchStatus;
+  league?: string;
+  search?: string;
+  window?: FixtureWindow;
 }): Promise<MatchApiPayload[]> {
   const db = await getDb();
   const result = await db.query(`SELECT * FROM matches ORDER BY is_live DESC, start_time ASC`);
@@ -151,6 +221,9 @@ export async function listMatches(filters?: {
   if (filters?.live === true) rows = rows.filter((m) => normalizeMatchStatus(m) === "live");
   if (filters?.featured === true) rows = rows.filter((m) => boolFrom(m, "is_featured"));
   if (filters?.status) rows = rows.filter((m) => normalizeMatchStatus(m) === filters.status);
+  if (filters?.league) rows = rows.filter((m) => matchesLeagueFilter(m, filters.league!));
+  if (filters?.search) rows = rows.filter((m) => matchesSearchQuery(m, filters.search!));
+  if (filters?.window) rows = rows.filter((m) => matchesFixtureWindow(m, filters.window!));
 
   return Promise.all(rows.map((row) => enrichMatch(row)));
 }
