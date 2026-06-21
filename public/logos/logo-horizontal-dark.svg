@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 40" fill="none">
+  <defs>
+    <linearGradient id="shield" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFE566"/>
+      <stop offset="50%" stop-color="#FFD700"/>
+      <stop offset="100%" stop-color="#FFC107"/>
+    </linearGradient>
+  </defs>
+  <path d="M20 2L4 8v10c0 9.6 6.4 18.6 16 21.3 9.6-2.7 16-11.7 16-21.3V8L20 2z" fill="url(#shield)"/>
+  <text x="20" y="26" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-weight="900" font-size="16" fill="#000000">B</text>
+  <text x="52" y="18" font-family="Inter, Arial, sans-serif" font-weight="900" font-size="16" fill="#FFFFFF">BEST</text>
+  <text x="52" y="34" font-family="Inter, Arial, sans-serif" font-weight="900" font-size="16" fill="#FFD700">BET</text>
+  <text x="110" y="26" font-family="Inter, Arial, sans-serif" font-weight="500" font-size="10" fill="#BDBDBD">Bet Smarter. Win Bigger.</text>
+</svg>

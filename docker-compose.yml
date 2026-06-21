@@ -1,0 +1,69 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: bestbet-postgres
+    environment:
+      POSTGRES_USER: bestbet
+      POSTGRES_PASSWORD: bestbet123
+      POSTGRES_DB: bestbet
+    ports:
+      - "5432:5432"
+    volumes:
+      - bestbet_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bestbet -d bestbet"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: bestbet-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - bestbet_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build: .
+    container_name: bestbet-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      PORT: 5000
+      DATABASE_URL: postgresql://bestbet:bestbet123@postgres:5432/bestbet
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      MOMO_NUMBER: "0245680115"
+      ADMIN_EMAIL: admin@bestbet.gh
+      ADMIN_PASSWORD: Admin@123456
+    ports:
+      - "5000:5000"
+    volumes:
+      - bestbet_uploads:/app/uploads
+
+  frontend:
+    build: .
+    container_name: bestbet-frontend
+    depends_on:
+      - api
+    environment:
+      API_URL: http://api:5000
+      NEXT_PUBLIC_API_URL: http://127.0.0.1:5000
+    ports:
+      - "3000:3000"
+
+volumes:
+  bestbet_pg_data:
+  bestbet_redis_data:
+  bestbet_uploads:

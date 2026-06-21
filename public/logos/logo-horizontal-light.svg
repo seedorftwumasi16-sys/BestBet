@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 48" fill="none">
+  <defs>
+    <linearGradient id="shieldGradHL" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFD000"/>
+      <stop offset="100%" stop-color="#E6BB00"/>
+    </linearGradient>
+  </defs>
+  <path d="M24 2L6 10v12c0 11.5 7.7 22.3 18 26 10.3-3.7 18-14.5 18-26V10L24 2z" fill="url(#shieldGradHL)"/>
+  <path d="M24 6L10 12.5v9.5c0 9.2 6.2 17.8 14 21 7.8-3.2 14-11.8 14-21v-9.5L24 6z" fill="#FFFFFF"/>
+  <text x="24" y="30" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-weight="900" font-size="18" fill="#FFD000">B</text>
+  <text x="58" y="32" font-family="Inter, Arial, sans-serif" font-weight="900" font-size="24" fill="#121212" letter-spacing="2">BEST</text>
+  <text x="148" y="32" font-family="Inter, Arial, sans-serif" font-weight="900" font-size="24" fill="#FFD000" letter-spacing="2">BET</text>
+</svg>

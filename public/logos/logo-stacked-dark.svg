@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 120" fill="none">
+  <defs>
+    <linearGradient id="shieldGradS" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFD000"/>
+      <stop offset="100%" stop-color="#E6BB00"/>
+    </linearGradient>
+  </defs>
+  <path d="M80 10L30 30v30c0 28.8 19.2 55.8 50 65 30.8-9.2 50-36.2 50-65V30L80 10z" fill="url(#shieldGradS)"/>
+  <path d="M80 18L38 34v24c0 23 15.5 44.5 42 52 26.5-7.5 42-29 42-52V34L80 18z" fill="#121212"/>
+  <text x="80" y="72" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-weight="900" font-size="42" fill="#FFD000">B</text>
+  <text x="80" y="105" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-weight="900" font-size="18" fill="#FFFFFF" letter-spacing="3">BESTBET</text>
+</svg>
