@@ -2,10 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Star, TrendingUp } from "lucide-react";
+import { Star, BarChart3, Clock } from "lucide-react";
+import Image from "next/image";
 import { Badge } from "@/components/ui/Badge";
+import { TeamLogo } from "@/components/ui/TeamLogo";
 import { useBetSlip } from "@/context/BetSlipContext";
 import { formatOdds, formatMatchTime, formatMatchDate, cn } from "@/lib/utils";
+import { getLeagueBadgeUrl } from "@/lib/sports-assets";
 import type { Match } from "@/lib/constants";
 
 interface MatchCardProps {
@@ -14,10 +17,11 @@ interface MatchCardProps {
   showStats?: boolean;
 }
 
-export function MatchCard({ match, compact = false, showStats = false }: MatchCardProps) {
+export function MatchCard({ match, showStats = false }: MatchCardProps) {
   const { addSelection, selections } = useBetSlip();
   const [favorited, setFavorited] = useState(false);
   const [flashOdds, setFlashOdds] = useState<Record<string, "up" | "down" | null>>({});
+  const leagueBadge = getLeagueBadgeUrl(match.leagueId, match.league);
 
   useEffect(() => {
     if (!match.isLive) return;
@@ -45,12 +49,6 @@ export function MatchCard({ match, compact = false, showStats = false }: MatchCa
     });
   };
 
-  const simulateOddsChange = (key: string) => {
-    const direction = Math.random() > 0.5 ? "up" : "down";
-    setFlashOdds((prev) => ({ ...prev, [key]: direction }));
-    setTimeout(() => setFlashOdds((prev) => ({ ...prev, [key]: null })), 800);
-  };
-
   const OddsButton = ({
     label,
     odds,
@@ -65,88 +63,99 @@ export function MatchCard({ match, compact = false, showStats = false }: MatchCa
     <button
       onClick={() => handleOddsClick(type, odds, label)}
       className={cn(
-        "flex-1 flex flex-col items-center justify-center py-2.5 px-2 rounded-lg transition-all duration-200",
-        "hover:bg-bestbet-yellow hover:text-bestbet-black active:scale-95",
-        isSelected(label)
-          ? "bg-bestbet-yellow text-bestbet-black ring-2 ring-bestbet-yellow/50"
-          : "bg-[var(--odds-bg)] text-[var(--odds-text)]",
+        "odds-btn",
+        isSelected(label) && "odds-btn-selected",
         flashOdds[type] === "up" && "odds-flash-up",
         flashOdds[type] === "down" && "odds-flash-down"
       )}
       aria-label={`${label} at ${formatOdds(odds)}`}
     >
-      <span className="text-[10px] text-bestbet-gray-muted mb-0.5">{shortLabel}</span>
-      <span className="text-sm font-bold">{formatOdds(odds)}</span>
+      <span className="text-[10px] font-medium opacity-70">{shortLabel}</span>
+      <span className="text-sm font-extrabold tabular-nums">{formatOdds(odds)}</span>
     </button>
   );
 
   return (
-    <motion.div
-      whileHover={{ y: -2 }}
-      transition={{ duration: 0.2 }}
-      className="card-premium overflow-hidden group"
+    <motion.article
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="match-card-premium group"
     >
-      <div className="px-4 pt-3 pb-2 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      {/* Header */}
+      <div className="px-4 pt-3.5 pb-2 flex items-center justify-between border-b border-white/5">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="relative w-6 h-6 shrink-0">
+            <Image src={leagueBadge} alt={match.league} fill unoptimized className="object-contain" />
+          </div>
+          <span className="text-xs font-semibold text-bestbet-gray-muted truncate">{match.league}</span>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
           {match.isLive ? (
-            <Badge variant="live">Live {match.liveMinute}&apos;</Badge>
+            <Badge variant="live">
+              <Clock size={10} className="mr-0.5" />
+              {match.liveMinute}&apos;
+            </Badge>
           ) : (
-            <span className="text-xs text-bestbet-gray-muted">
+            <span className="text-[11px] font-medium text-bestbet-gray-muted">
               {formatMatchDate(match.startTime)} · {formatMatchTime(match.startTime)}
             </span>
           )}
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-bestbet-gray-muted">{match.league}</span>
           <button
             onClick={() => setFavorited(!favorited)}
-            className="p-1 rounded hover:bg-[var(--card-hover)] transition-colors"
+            className="p-1.5 rounded-lg hover:bg-white/5 transition-colors"
             aria-label={favorited ? "Remove from favorites" : "Add to favorites"}
           >
             <Star
-              size={14}
+              size={15}
               className={favorited ? "fill-bestbet-yellow text-bestbet-yellow" : "text-bestbet-gray-muted"}
             />
           </button>
+          {showStats && match.isLive && (
+            <button className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" aria-label="Match stats">
+              <BarChart3 size={15} className="text-bestbet-gray-muted" />
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="px-4 py-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 flex-1 min-w-0">
-            <span className="text-2xl shrink-0">{match.homeTeam.logo}</span>
-            <span className="text-sm font-semibold truncate">{match.homeTeam.name}</span>
+      {/* Teams & score */}
+      <div className="px-4 py-4">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <TeamLogo name={match.homeTeam.name} shortName={match.homeTeam.shortName} logo={match.homeTeam.logo} size="lg" />
+            <span className="text-sm font-bold truncate leading-tight">{match.homeTeam.name}</span>
           </div>
 
           <div className="text-center shrink-0 px-2">
             {match.isLive && match.homeScore !== undefined ? (
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-black">{match.homeScore}</span>
-                <span className="text-bestbet-gray-muted text-xs">-</span>
-                <span className="text-lg font-black">{match.awayScore}</span>
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/40 border border-white/10">
+                <span className="text-xl font-black tabular-nums">{match.homeScore}</span>
+                <span className="text-bestbet-gray-muted text-xs font-bold">:</span>
+                <span className="text-xl font-black tabular-nums">{match.awayScore}</span>
               </div>
             ) : (
-              <span className="text-xs font-bold text-bestbet-gray-muted">VS</span>
+              <span className="text-xs font-bold text-bestbet-yellow/80 tracking-widest">VS</span>
             )}
           </div>
 
-          <div className="flex items-center gap-2.5 flex-1 min-w-0 justify-end">
-            <span className="text-sm font-semibold truncate text-right">{match.awayTeam.name}</span>
-            <span className="text-2xl shrink-0">{match.awayTeam.logo}</span>
+          <div className="flex items-center gap-2.5 min-w-0 justify-end">
+            <span className="text-sm font-bold truncate text-right leading-tight">{match.awayTeam.name}</span>
+            <TeamLogo name={match.awayTeam.name} shortName={match.awayTeam.shortName} logo={match.awayTeam.logo} size="lg" />
           </div>
         </div>
       </div>
 
       {showStats && match.stats && match.isLive && (
-        <div className="px-4 pb-2 grid grid-cols-3 gap-2 text-center">
+        <div className="px-4 pb-3 grid grid-cols-3 gap-2">
           {[
             { label: "Possession", values: match.stats.possession, suffix: "%" },
             { label: "Shots", values: match.stats.shots },
             { label: "Corners", values: match.stats.corners },
           ].map((stat) => (
-            <div key={stat.label} className="text-[10px]">
-              <p className="text-bestbet-gray-muted mb-0.5">{stat.label}</p>
-              <p className="font-bold">
+            <div key={stat.label} className="text-center py-2 rounded-lg bg-white/[0.03] border border-white/5">
+              <p className="text-[10px] text-bestbet-gray-muted mb-0.5 uppercase tracking-wide">{stat.label}</p>
+              <p className="text-xs font-bold tabular-nums">
                 {stat.values[0]}{stat.suffix || ""} - {stat.values[1]}{stat.suffix || ""}
               </p>
             </div>
@@ -154,14 +163,15 @@ export function MatchCard({ match, compact = false, showStats = false }: MatchCa
         </div>
       )}
 
-      <div className="px-4 pb-3 flex gap-2">
+      {/* Odds */}
+      <div className="px-4 pb-4 flex gap-2">
         <OddsButton label={match.homeTeam.name} odds={match.odds.home} type="home" shortLabel="1" />
         {match.odds.draw && (
           <OddsButton label="Draw" odds={match.odds.draw} type="draw" shortLabel="X" />
         )}
         <OddsButton label={match.awayTeam.name} odds={match.odds.away} type="away" shortLabel="2" />
       </div>
-    </motion.div>
+    </motion.article>
   );
 }
 
@@ -177,17 +187,12 @@ export function TrendingBetCard({
   bets: number;
 }) {
   return (
-    <motion.div
-      whileHover={{ scale: 1.02 }}
-      className="card-premium p-3 cursor-pointer"
-    >
-      <p className="text-sm font-semibold truncate">{selection}</p>
-      <p className="text-xs text-bestbet-gray-muted truncate mt-0.5">{match}</p>
-      <div className="flex items-center justify-between mt-2">
-        <span className="text-sm font-bold text-bestbet-yellow">{formatOdds(odds)}</span>
-        <span className="text-[10px] text-bestbet-gray-muted flex items-center gap-1">
-          <TrendingUp size={10} /> {bets.toLocaleString()} bets
-        </span>
+    <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }} className="promo-card-premium cursor-pointer">
+      <p className="relative text-sm font-bold truncate">{selection}</p>
+      <p className="relative text-xs text-bestbet-gray-muted truncate mt-1">{match}</p>
+      <div className="relative flex items-center justify-between mt-3 pt-3 border-t border-white/5">
+        <span className="text-base font-extrabold text-bestbet-yellow tabular-nums">{formatOdds(odds)}</span>
+        <span className="text-[10px] text-bestbet-gray-muted">{bets.toLocaleString()} bets</span>
       </div>
     </motion.div>
   );

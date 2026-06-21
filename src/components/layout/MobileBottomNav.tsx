@@ -20,10 +20,10 @@ export function MobileBottomNav() {
 
   return (
     <nav
-      className="xl:hidden fixed bottom-0 left-0 right-0 z-50 bg-bestbet-dark/95 border-t border-[var(--border)] backdrop-blur-md safe-area-bottom"
+      className="xl:hidden fixed bottom-4 left-4 right-4 z-50 safe-area-bottom"
       aria-label="Mobile navigation"
     >
-      <div className="flex items-center justify-around h-16 px-2">
+      <div className="floating-nav flex items-center justify-around h-[4.25rem] px-2">
         {navItems.map((item) => {
           const isActive = item.match(pathname);
           const Icon = item.icon;
@@ -33,14 +33,21 @@ export function MobileBottomNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                "relative flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-colors",
-                isActive ? "mobile-nav-active text-bestbet-yellow" : "text-bestbet-gray-muted hover:text-bestbet-yellow"
+                "relative flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-all duration-200",
+                isActive ? "nav-tab-active" : "text-bestbet-gray-muted hover:text-white"
               )}
             >
-              <Icon size={20} />
-              <span className="text-[10px] font-medium">{item.label}</span>
+              <span
+                className={cn(
+                  "nav-tab-icon flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-200",
+                  isActive && "nav-tab-icon"
+                )}
+              >
+                <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+              </span>
+              <span className="text-[10px] font-semibold font-display">{item.label}</span>
               {item.label === "Sports" && selections.length > 0 && (
-                <span className="absolute -top-0.5 right-1 w-4 h-4 bg-bestbet-yellow text-bestbet-black text-[9px] font-bold rounded-full flex items-center justify-center">
+                <span className="absolute top-0 right-1 min-w-[16px] h-4 px-1 bg-bestbet-yellow text-bestbet-black text-[9px] font-extrabold rounded-full flex items-center justify-center shadow-lg">
                   {selections.length}
                 </span>
               )}

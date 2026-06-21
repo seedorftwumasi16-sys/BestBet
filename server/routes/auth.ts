@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { v4 as uuidv4 } from "uuid";
 import { getDb, getWalletBalance } from "../db";
-import { getUserWithWallet } from "../db/helpers";
+import { boolVal, getUserWithWallet } from "../db/helpers";
 import { signToken, authenticate, loadUserPermissions, logAudit } from "../middleware/auth";
 import { authLimiter } from "../middleware/security";
 import { createNotification } from "../services/notifications";
@@ -27,7 +27,7 @@ async function logLogin(userId: string | null, email: string, success: boolean, 
   const info = getClientInfo(req);
   await db.query(
     `INSERT INTO login_logs (id, user_id, email, ip_address, user_agent, device_id, success) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [uuidv4(), userId, email, info.ip, info.userAgent, info.deviceId, success ? 1 : 0]
+    [uuidv4(), userId, email, info.ip, info.userAgent, info.deviceId, boolVal(db, success)]
   );
 }
 

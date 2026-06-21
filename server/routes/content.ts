@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { getDb } from "../db";
 import { authenticate, requireRole, logAudit } from "../middleware/auth";
 import { boolFrom } from "../db/helpers";
+import { resolvePromotionImage } from "../lib/promotion-images";
 
 const router = Router();
 
@@ -13,7 +14,7 @@ router.get("/promotions", async (_req, res) => {
     id: p.id,
     title: p.title,
     description: p.description,
-    image: p.image_url || "/banners/promo-default.jpg",
+    image: resolvePromotionImage(String(p.id), p.image_url as string | null),
     cta: p.cta || "Claim Now",
     badge: p.badge,
   })));

@@ -5,6 +5,15 @@ const API_URL = process.env.API_URL || "http://127.0.0.1:5000";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   output: "standalone",
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "crests.football-data.org" },
+      { protocol: "https", hostname: "cdn.nba.com" },
+      { protocol: "https", hostname: "www.mlbstatic.com" },
+      { protocol: "https", hostname: "flagcdn.com" },
+      { protocol: "https", hostname: "images.unsplash.com" },
+    ],
+  },
   async rewrites() {
     return [
       {

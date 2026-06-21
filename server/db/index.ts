@@ -325,6 +325,72 @@ function createJsonDb(filePath: string): Database {
   return db;
 }
 
+const PG_BOOL_COLUMNS = new Set([
+  "success",
+  "used",
+  "revoked",
+  "phone_verified",
+  "read",
+  "is_live",
+  "active",
+  "cashout_available",
+]);
+
+function normalizePgSql(sql: string): string {
+  return sql
+    .replace(/is_live\s*=\s*1\s+OR\s+is_live\s*=\s*true/gi, "is_live = TRUE")
+    .replace(/active\s*=\s*1\s+OR\s+active\s*=\s*true/gi, "active = TRUE")
+    .replace(/\bused\s*=\s*0\b/gi, "used = FALSE")
+    .replace(/\bused\s*=\s*1\b/gi, "used = TRUE")
+    .replace(/\brevoked\s*=\s*0\b/gi, "revoked = FALSE")
+    .replace(/\brevoked\s*=\s*1\b/gi, "revoked = TRUE")
+    .replace(/\bphone_verified\s*=\s*1\b/gi, "phone_verified = TRUE")
+    .replace(/\bread\s*=\s*1\b/gi, "read = TRUE")
+    .replace(/\bcashout_available\s*=\s*0\b/gi, "cashout_available = FALSE")
+    .replace(/\bcashout_available\s*=\s*1\b/gi, "cashout_available = TRUE");
+}
+
+function normalizePgParams(sql: string, params: unknown[]): unknown[] {
+  const insertMatch = sql.match(/insert\s+into\s+\w+\s*\(([^)]+)\)\s*values/i);
+  if (insertMatch) {
+    const columns = insertMatch[1].split(",").map((col) => col.trim().toLowerCase());
+    return params.map((param, index) => {
+      const column = columns[index];
+      if (column && PG_BOOL_COLUMNS.has(column) && (param === 0 || param === 1)) {
+        return param === 1;
+      }
+      return param;
+    });
+  }
+
+  const setMatch = sql.match(/set\s+(.+?)(?:\s+where|\s*$)/i);
+  if (setMatch) {
+    const assignments = setMatch[1].split(",").map((part) => part.trim());
+    const boolParamIndexes: number[] = [];
+    let paramIndex = 0;
+
+    for (const assignment of assignments) {
+      const columnMatch = assignment.match(/^(\w+)\s*=\s*\?/i);
+      if (columnMatch) {
+        const column = columnMatch[1].toLowerCase();
+        if (PG_BOOL_COLUMNS.has(column)) boolParamIndexes.push(paramIndex);
+        paramIndex += 1;
+      }
+    }
+
+    if (boolParamIndexes.length > 0) {
+      return params.map((param, index) => {
+        if (boolParamIndexes.includes(index) && (param === 0 || param === 1)) {
+          return param === 1;
+        }
+        return param;
+      });
+    }
+  }
+
+  return params;
+}
+
 async function createPostgresDb(connectionString: string): Promise<Database | null> {
   try {
     const { Pool } = await import("pg");
@@ -334,9 +400,11 @@ async function createPostgresDb(connectionString: string): Promise<Database | nu
     return {
       driver: "postgresql",
       async query(sql: string, params: unknown[] = []) {
+        const normalizedSql = normalizePgSql(sql);
         let paramIndex = 0;
-        const convertedSql = sql.replace(/\?/g, () => `$${++paramIndex}`);
-        const result = await pool.query(convertedSql, params);
+        const convertedSql = normalizedSql.replace(/\?/g, () => `$${++paramIndex}`);
+        const normalizedParams = normalizePgParams(normalizedSql, params);
+        const result = await pool.query(convertedSql, normalizedParams);
         return { rows: result.rows, rowCount: result.rowCount ?? 0 };
       },
       async exec(sql: string) {

@@ -125,6 +125,7 @@ CREATE TABLE IF NOT EXISTS responsible_gaming (
 
 export const PG_SCHEMA_EXT_SQL = SCHEMA_EXT_SQL
   .replace(/datetime\('now'\)/g, "NOW()")
+  .replace(/INTEGER NOT NULL DEFAULT 0/g, "BOOLEAN NOT NULL DEFAULT FALSE")
   .replace(/INTEGER NOT NULL DEFAULT 1/g, "BOOLEAN NOT NULL DEFAULT TRUE")
   .replace(/active INTEGER/g, "active BOOLEAN")
   .replace(/success INTEGER/g, "success BOOLEAN")

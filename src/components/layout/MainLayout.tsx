@@ -10,7 +10,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       <Header />
       <div className="flex flex-1 max-w-[1920px] mx-auto w-full">
         <SportsSidebar className="hidden lg:block" />
-        <main className="flex-1 overflow-y-auto pb-20 xl:pb-0" id="main-content">
+        <main className="flex-1 overflow-y-auto pb-28 xl:pb-0" id="main-content">
           {children}
         </main>
         <BetSlipPanel />

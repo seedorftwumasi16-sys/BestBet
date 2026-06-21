@@ -17,7 +17,7 @@ function ShieldIcon({ size = 36, className }: { size?: number; className?: strin
       viewBox="0 0 48 48"
       width={size}
       height={size}
-      className={cn("gold-glow shrink-0", className)}
+      className={cn("gold-glow shrink-0 drop-shadow-[0_0_12px_rgba(255,215,0,0.5)]", className)}
       aria-hidden="true"
     >
       <defs>
