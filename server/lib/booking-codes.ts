@@ -13,8 +13,9 @@ export async function generateUniqueBookingCode(): Promise<string> {
   const db = await getDb();
   for (let attempt = 0; attempt < 20; attempt++) {
     const code = generateShareBookingCode();
-    const existing = await db.query(`SELECT id FROM booking_codes WHERE code = ?`, [code]);
-    if (existing.rows.length === 0) return code;
+    const inBookingCodes = await db.query(`SELECT id FROM booking_codes WHERE code = ?`, [code]);
+    const inBets = await db.query(`SELECT id FROM bets WHERE booking_code = ?`, [code]);
+    if (inBookingCodes.rows.length === 0 && inBets.rows.length === 0) return code;
   }
   return `BB${Date.now().toString().slice(-8)}`;
 }

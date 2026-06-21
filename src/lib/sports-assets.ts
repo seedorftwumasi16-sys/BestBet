@@ -3,6 +3,9 @@
 export const DEFAULT_LEAGUE_BADGE =
   "https://r2.thesportsdb.com/images/media/league/badge/e7er5g1696521789.png";
 
+export const SIMULATED_LEAGUE_BADGE = "/images/leagues/simulated-league.svg";
+export const SIMULATED_LEAGUE_ICON = "/images/leagues/simulated-league-icon.svg";
+
 export const LEAGUE_BADGE_BY_SPORTSDB_ID: Record<string, string> = {
   "4328": "https://r2.thesportsdb.com/images/media/league/badge/gasy9d1737743125.png",
   "4334": "https://r2.thesportsdb.com/images/media/league/badge/9f7z9d1742983155.png",
@@ -80,6 +83,16 @@ export function normalizeName(name: string): string {
   return name.toLowerCase().trim();
 }
 
+export function isSimulatedLeague(
+  leagueName?: string,
+  leagueId?: string,
+  isSimulated?: boolean
+): boolean {
+  if (isSimulated) return true;
+  const key = normalizeName(leagueName || leagueId || "");
+  return key === "simulated league" || key.includes("simulated league") || key === "simulated";
+}
+
 function readCachedBadges(): Record<string, string> | null {
   if (typeof window === "undefined") return null;
   try {
@@ -146,8 +159,13 @@ export function getTeamLogoUrl(name: string, logo?: string): string | null {
 export function getLeagueBadgeUrl(
   leagueId?: string,
   leagueName?: string,
-  sportsdbId?: string
+  sportsdbId?: string,
+  isSimulated?: boolean
 ): string {
+  if (isSimulatedLeague(leagueName, leagueId, isSimulated)) {
+    return SIMULATED_LEAGUE_BADGE;
+  }
+
   const map = getCachedLeagueBadges();
 
   if (sportsdbId && map[sportsdbId]) return map[sportsdbId];

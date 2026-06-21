@@ -6,6 +6,7 @@ import { HeroBanner, PopularLeagues } from "@/components/home/HeroBanner";
 import { MatchCard } from "@/components/betting/MatchCard";
 import { MatchCardSkeleton } from "@/components/ui/Skeleton";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { LeagueLogo } from "@/components/ui/LeagueLogo";
 import { betsApi } from "@/lib/api";
 import type { Match } from "@/lib/constants";
 import { applyMatchFeed, mergeApiMatches, applyOddsUpdate, toMatch } from "@/lib/match-utils";
@@ -51,6 +52,7 @@ function MatchSection({
   actionLabel,
   actionHref,
   skeletonCount = 3,
+  headerLeading,
 }: {
   id: string;
   title: string;
@@ -63,6 +65,7 @@ function MatchSection({
   actionLabel?: string;
   actionHref?: string;
   skeletonCount?: number;
+  headerLeading?: React.ReactNode;
 }) {
   return (
     <section aria-labelledby={id}>
@@ -72,6 +75,7 @@ function MatchSection({
         live={live}
         actionLabel={actionLabel}
         actionHref={actionHref}
+        leading={headerLeading}
       />
       {subtitle && <p className="text-xs sm:text-sm text-bestbet-gray-muted -mt-1 sm:-mt-2 mb-3 sm:mb-4">{subtitle}</p>}
       {loading ? (
@@ -202,8 +206,17 @@ export default function HomePage() {
 
         <MatchSection
           id="simulated-heading"
-          title="Simulated Matches"
-          subtitle="Available 24/7 · Admin controlled · Clearly labeled for practice and demo betting"
+          title="Simulated League"
+          subtitle="BestBet Simulated League · Available 24/7 · Admin controlled · Clearly labeled for practice and demo betting"
+          headerLeading={
+            <LeagueLogo
+              leagueName="Simulated League"
+              isSimulated
+              showSimulatedBadge
+              compact
+              className="!w-7 !h-7 md:!w-8 md:!h-8"
+            />
+          }
           matches={simulatedDisplay}
           loading={loading}
           showStats

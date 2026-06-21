@@ -1,23 +1,13 @@
 import { Router } from "express";
-import { v4 as uuidv4 } from "uuid";
 import { getDb, getWalletBalance } from "../db";
 import { authenticate, requirePermission, logAudit } from "../middleware/auth";
-import { boolFrom, boolVal } from "../db/helpers";
-import { listMatches, normalizeMatchStatus, type FixtureWindow } from "../lib/matches";
-import { calculatePotentialWin, calculateTotalOdds, sanitizeBetOdds } from "../lib/bet-odds";
-import {
-  saveBookingCodeRecord,
-  loadBookingCodeRecord,
-  markBookingCodeUsed,
-  generateShareBookingCode,
-} from "../lib/booking-codes";
+import { boolFrom } from "../db/helpers";
+import { listMatches, type FixtureWindow } from "../lib/matches";
+import { saveBookingCodeRecord, loadBookingCodeRecord } from "../lib/booking-codes";
+import { placeBetRecord } from "../lib/place-bet";
 import { formatCurrency } from "../lib/currency";
 
 const router = Router();
-
-function generateBetBookingCode(): string {
-  return generateShareBookingCode();
-}
 
 router.get("/matches", async (req, res) => {
   const { sport, live, featured, league, search, window } = req.query;
@@ -63,6 +53,8 @@ router.get("/history", authenticate, async (req, res) => {
 });
 
 router.post("/place", authenticate, requirePermission("place_bets"), async (req, res) => {
+  const userId = req.user!.id;
+
   try {
     const { type, stake, selections, savedBookingCode } = req.body as {
       type: "single" | "multi";
@@ -70,6 +62,20 @@ router.post("/place", authenticate, requirePermission("place_bets"), async (req,
       selections: { matchId: string; market: string; selection: string; odds: number }[];
       savedBookingCode?: string;
     };
+
+    console.log("[bets/place] Request", {
+      userId,
+      type,
+      stake,
+      selectionCount: selections?.length ?? 0,
+      selections: selections?.map((s) => ({
+        matchId: s.matchId,
+        market: s.market,
+        selection: s.selection,
+        odds: s.odds,
+      })),
+      savedBookingCode: savedBookingCode || null,
+    });
 
     if (!type || !stake || !selections?.length) {
       return res.status(400).json({ error: "Type, stake, and selections are required" });
@@ -82,91 +88,39 @@ router.post("/place", authenticate, requirePermission("place_bets"), async (req,
       return res.status(400).json({ error: "Multi bets require at least two selections" });
     }
 
-    const normalizedSelections = selections.map((sel) => ({
-      ...sel,
-      odds: sanitizeBetOdds(sel.odds),
-    }));
-
-    const db = await getDb();
-    const userStatus = await db.query(`SELECT status FROM users WHERE id = ?`, [req.user!.id]);
-    const status = userStatus.rows[0]?.status || "active";
-    if (status !== "active") return res.status(403).json({ error: "Account is not active" });
-
-    for (const sel of normalizedSelections) {
-      const match = await db.query(`SELECT betting_suspended, match_status FROM matches WHERE id = ?`, [sel.matchId]);
-      if (match.rows.length === 0) {
-        return res.status(400).json({ error: `Match not found: ${sel.matchId}` });
-      }
-      if (boolFrom(match.rows[0], "betting_suspended")) {
-        return res.status(400).json({ error: "Betting is suspended on one or more selected matches" });
-      }
-      if (normalizeMatchStatus(match.rows[0]) === "finished") {
-        return res.status(400).json({ error: "One or more matches have finished" });
-      }
-    }
-
-    const balance = await getWalletBalance(req.user!.id);
-    if (balance < stake) {
-      return res.status(400).json({ error: "Insufficient balance", balance, stake });
-    }
-
-    const totalOdds = calculateTotalOdds(normalizedSelections);
-    const potentialWin = calculatePotentialWin(stake, totalOdds);
-    const betId = uuidv4();
-    const bookingCode = generateBetBookingCode();
-    const cashoutValue = Math.round(potentialWin * 0.85 * 100) / 100;
-
-    await db.query(
-      `INSERT INTO bets (id, user_id, type, stake, potential_win, status, booking_code, cashout_value, cashout_available) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        betId,
-        req.user!.id,
-        type,
-        stake,
-        potentialWin,
-        "pending",
-        bookingCode,
-        cashoutValue,
-        boolVal(db, true),
-      ]
-    );
-
-    for (const sel of normalizedSelections) {
-      await db.query(
-        `INSERT INTO bet_selections (id, bet_id, match_id, market, selection, odds) VALUES (?, ?, ?, ?, ?, ?)`,
-        [uuidv4(), betId, sel.matchId, sel.market, sel.selection, sel.odds]
-      );
-    }
-
-    await db.query(`UPDATE wallets SET balance = balance - ? WHERE user_id = ?`, [stake, req.user!.id]);
-
-    const walletCheck = await db.query(`SELECT balance FROM wallets WHERE user_id = ?`, [req.user!.id]);
-    if (walletCheck.rows.length === 0) {
-      console.error(`[bets/place] Wallet missing for user ${req.user!.id}`);
-      return res.status(500).json({ error: "Wallet not found for your account" });
-    }
-
-    await logAudit(req.user!.id, "place_bet", `Bet ${betId} placed, stake: ${stake}`);
-
-    if (savedBookingCode) {
-      await markBookingCodeUsed(savedBookingCode, req.user!.id, betId);
-    }
-
-    const newBalance = await getWalletBalance(req.user!.id);
-
-    res.status(201).json({
-      id: betId,
-      bookingCode,
-      stake,
-      potentialWin,
-      totalOdds,
-      cashoutValue,
-      balance: newBalance,
+    const result = await placeBetRecord({
+      userId,
+      type,
+      stake: Number(stake),
+      selections,
+      savedBookingCode,
     });
+
+    console.log("[bets/place] Success", {
+      userId,
+      betId: result.id,
+      bookingCode: result.bookingCode,
+      stake: result.stake,
+      totalOdds: result.totalOdds,
+    });
+
+    res.status(201).json(result);
   } catch (err) {
+    const statusCode = (err as { statusCode?: number }).statusCode ?? 500;
     const message = err instanceof Error ? err.message : String(err);
-    console.error("[bets/place] FAILED:", message, err);
-    res.status(500).json({ error: message || "Failed to place bet" });
+    const extra = err as { balance?: number; stake?: number };
+
+    console.error("[bets/place] FAILED:", {
+      userId,
+      message,
+      statusCode,
+      stack: err instanceof Error ? err.stack : undefined,
+    });
+
+    res.status(statusCode).json({
+      error: message || "Failed to place bet",
+      ...(extra.balance !== undefined ? { balance: extra.balance, stake: extra.stake } : {}),
+    });
   }
 });
 

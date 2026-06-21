@@ -76,7 +76,7 @@ router.get("/leagues", async (_req, res) => {
 router.get("/badges", async (_req, res) => {
   try {
     const db = await getDb();
-    const { LEAGUE_BADGE_BY_SPORTSDB_ID, DEFAULT_LEAGUE_BADGE } = await import("../lib/sportsdb/badges");
+    const { LEAGUE_BADGE_BY_SPORTSDB_ID, DEFAULT_LEAGUE_BADGE, SIMULATED_LEAGUE_BADGE } = await import("../lib/sportsdb/badges");
     const cached = await cacheGet<Record<string, string>>("sports:badges");
     if (cached) return res.json(cached);
 
@@ -84,7 +84,12 @@ router.get("/badges", async (_req, res) => {
       `SELECT external_id, name, badge_url FROM leagues WHERE badge_url IS NOT NULL`
     ).catch(() => ({ rows: [] as Record<string, unknown>[] }));
 
-    const badges: Record<string, string> = { ...LEAGUE_BADGE_BY_SPORTSDB_ID, default: DEFAULT_LEAGUE_BADGE };
+    const badges: Record<string, string> = {
+      ...LEAGUE_BADGE_BY_SPORTSDB_ID,
+      default: DEFAULT_LEAGUE_BADGE,
+      "simulated league": SIMULATED_LEAGUE_BADGE,
+      "simulated-league": SIMULATED_LEAGUE_BADGE,
+    };
     for (const row of fromDb.rows) {
       const externalId = String(row.external_id ?? row.id ?? "");
       const badge = row.badge_url ? String(row.badge_url) : "";

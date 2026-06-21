@@ -19,6 +19,14 @@ export const LEAGUE_BADGE_BY_SPORTSDB_ID: Record<string, string> = {
 export const DEFAULT_LEAGUE_BADGE =
   "https://r2.thesportsdb.com/images/media/league/badge/e7er5g1696521789.png";
 
+export const SIMULATED_LEAGUE_BADGE = "/images/leagues/simulated-league.svg";
+export const SIMULATED_LEAGUE_ICON = "/images/leagues/simulated-league-icon.svg";
+
+function isSimulatedLeagueName(name: string): boolean {
+  const key = name.toLowerCase().trim();
+  return key === "simulated league" || key.includes("simulated league") || key === "simulated";
+}
+
 const SLUG_TO_SPORTSDB: Record<string, string> = Object.fromEntries(
   TRACKED_LEAGUES.map((l) => [l.slug, l.id])
 );
@@ -64,7 +72,6 @@ const NAME_ALIASES: Record<string, string> = {
   ghana: "4974",
   "ghana premier league": "4974",
   "ghanaian premier league": "4974",
-  "simulated league": "4328",
 };
 
 function normalizeKey(value: string): string {
@@ -75,8 +82,15 @@ export function resolveLeagueBadgeUrl(
   leagueName?: string | null,
   leagueSlug?: string | null,
   sportsdbId?: string | null,
-  storedBadge?: string | null
+  storedBadge?: string | null,
+  isSimulated?: boolean
 ): string {
+  const name = normalizeKey(String(leagueName ?? ""));
+  const slug = String(leagueSlug ?? "").trim().toLowerCase();
+  if (isSimulated || isSimulatedLeagueName(name) || slug === "simulated-league" || slug === "simulated") {
+    return SIMULATED_LEAGUE_BADGE;
+  }
+
   if (storedBadge && (storedBadge.startsWith("http") || storedBadge.startsWith("/"))) {
     return storedBadge;
   }
@@ -86,12 +100,10 @@ export function resolveLeagueBadgeUrl(
     return LEAGUE_BADGE_BY_SPORTSDB_ID[id];
   }
 
-  const slug = String(leagueSlug ?? "").trim().toLowerCase();
   if (slug && SLUG_TO_SPORTSDB[slug]) {
     return LEAGUE_BADGE_BY_SPORTSDB_ID[SLUG_TO_SPORTSDB[slug]] ?? DEFAULT_LEAGUE_BADGE;
   }
 
-  const name = normalizeKey(String(leagueName ?? ""));
   if (name && NAME_ALIASES[name]) {
     return LEAGUE_BADGE_BY_SPORTSDB_ID[NAME_ALIASES[name]] ?? DEFAULT_LEAGUE_BADGE;
   }

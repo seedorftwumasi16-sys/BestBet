@@ -102,17 +102,15 @@ export function MatchCard({ match, showStats = false }: MatchCardProps) {
             leagueId={match.leagueId}
             leagueName={match.league}
             badgeUrl={match.leagueBadge}
+            isSimulated={match.isSimulated}
+            showSimulatedBadge
+            compact
             alt={match.league}
             className="!w-6 !h-6 md:!w-7 md:!h-7 !rounded-md"
           />
           <span className="text-[11px] sm:text-xs font-semibold text-bestbet-gray-muted truncate">{match.league}</span>
         </div>
         <div className="flex items-center gap-1 shrink-0 self-end sm:self-auto flex-wrap justify-end">
-          {match.isSimulated && (
-            <Badge variant="warning" className="uppercase tracking-wide text-[8px] sm:text-[9px] px-1.5 py-0">
-              Simulated
-            </Badge>
-          )}
           {match.bettingSuspended && (
             <Badge variant="danger" className="text-[10px] px-1.5 py-0">Suspended</Badge>
           )}

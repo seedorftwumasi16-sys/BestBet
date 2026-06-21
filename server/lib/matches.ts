@@ -110,7 +110,8 @@ export function mapMatchRow(
     leagueName,
     leagueSlug,
     null,
-    row.league_badge ? String(row.league_badge) : null
+    row.league_badge ? String(row.league_badge) : null,
+    boolFrom(row, "is_simulated")
   );
   const homeLogoRaw = row.home_team_logo ? String(row.home_team_logo) : "";
   const awayLogoRaw = row.away_team_logo ? String(row.away_team_logo) : "";
@@ -350,7 +351,13 @@ export async function createMatchRecord(id: string, input: MatchInput) {
       ? timerFieldsForStatusChange("live", input.liveMinute ?? 0, input.liveMinute ?? 0)
       : { minuteTickAt: null as string | null, timerPaused: false, liveMinute: input.liveMinute ?? 0 };
   const createdAt = new Date().toISOString();
-  const leagueBadge = resolveLeagueBadgeUrl(input.league, leagueSlugFromName(input.league));
+  const leagueBadge = resolveLeagueBadgeUrl(
+    input.league,
+    leagueSlugFromName(input.league),
+    null,
+    null,
+    !!input.isSimulated
+  );
   const [homeLogo, awayLogo] = await Promise.all([
     resolveTeamLogo(db, input.homeTeam),
     resolveTeamLogo(db, input.awayTeam),

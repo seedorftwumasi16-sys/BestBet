@@ -23,6 +23,7 @@ import supportRoutes from "./routes/support";
 import sportsRoutes from "./routes/sports";
 import { startSportsSyncScheduler } from "./services/sports-sync";
 import { startMatchTimerScheduler } from "./services/match-timer";
+import { startKickoffScheduler } from "./services/kickoff-scheduler";
 import { computeEffectiveLiveMinute } from "./lib/match-timer";
 import { sanitizeBetOdds } from "./lib/bet-odds";
 
@@ -158,6 +159,7 @@ async function start() {
 
     setInterval(broadcastLiveUpdates, 5000);
     startMatchTimerScheduler();
+    startKickoffScheduler();
     startSportsSyncScheduler();
   } catch (err) {
     console.error("[Server] Failed to start:", err);

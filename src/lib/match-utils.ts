@@ -54,7 +54,7 @@ export function toMatch(m: MatchApi): Match {  return {
     awayTeam: { id: m.id + "-a", ...m.awayTeam },
     league: m.league,
     leagueId: m.leagueId,
-    leagueBadge: m.leagueBadge || getLeagueBadgeUrl(m.leagueId, m.league),
+    leagueBadge: m.leagueBadge || getLeagueBadgeUrl(m.leagueId, m.league, undefined, m.isSimulated),
     sport: m.sport,
     startTime: new Date(m.startTime),
     matchStatus: m.matchStatus,
