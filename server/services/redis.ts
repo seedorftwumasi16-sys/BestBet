@@ -80,6 +80,12 @@ export async function cacheDel(key: string): Promise<void> {
   await client.del(key);
 }
 
+export async function cacheInvalidatePrefix(prefix: string): Promise<void> {
+  for (const key of memoryCache.keys()) {
+    if (key.startsWith(prefix)) memoryCache.delete(key);
+  }
+}
+
 export function isRedisConnected(): boolean {
   return client.connected;
 }

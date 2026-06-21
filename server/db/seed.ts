@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { getDb } from "./index";
 import { migrate } from "./migrate";
 import { upsert, boolVal } from "./helpers";
+import { syncOddsForMatch } from "../lib/odds";
 
 dotenv.config();
 
@@ -106,7 +107,7 @@ export async function seed(): Promise<void> {
   }
 
   const adminEmail = process.env.ADMIN_EMAIL || "admin@bestbet.gh";
-  const adminPassword = process.env.ADMIN_PASSWORD || "Admin@123456";
+  const adminPassword = process.env.ADMIN_PASSWORD || "Admin@123";
   const adminId = "admin-001";
   const hash = await bcrypt.hash(adminPassword, 10);
 
@@ -135,6 +136,41 @@ export async function seed(): Promise<void> {
     console.log(`Reset admin password for: ${adminEmail}`);
   }
 
+  const adminUserId =
+    existing.rows.length === 0
+      ? adminId
+      : ((existing.rows[0].id as string) || adminId);
+
+  const adminRecord = await db.query(`SELECT id FROM admins WHERE user_id = ?`, [adminUserId]);
+  if (adminRecord.rows.length === 0) {
+    await db.query(`INSERT INTO admins (id, user_id, role, status) VALUES (?, ?, ?, ?)`, [
+      uuidv4(),
+      adminUserId,
+      "super_admin",
+      "active",
+    ]);
+  } else {
+    await db.query(`UPDATE admins SET role = ?, status = ? WHERE user_id = ?`, [
+      "super_admin",
+      "active",
+      adminUserId,
+    ]);
+  }
+
+  const legacyAdmins = await db.query(
+    `SELECT u.id, u.role_id FROM users u
+     LEFT JOIN admins a ON a.user_id = u.id
+     WHERE u.role_id IN ('super_admin', 'sub_admin') AND a.id IS NULL`
+  );
+  for (const row of legacyAdmins.rows) {
+    await db.query(`INSERT INTO admins (id, user_id, role, status) VALUES (?, ?, ?, ?)`, [
+      uuidv4(),
+      row.id,
+      row.role_id,
+      "active",
+    ]);
+  }
+
   for (const l of LEAGUES) {
     const exists = await db.query(`SELECT id FROM leagues WHERE id = ?`, [l.id]);
     if (exists.rows.length === 0) {
@@ -150,6 +186,17 @@ export async function seed(): Promise<void> {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [m.id, m.home, m.away, m.league, m.sport, new Date().toISOString(), boolVal(db, m.live), m.oh, m.od ?? null, m.oa, m.hs ?? null, m.as ?? null, m.lm ?? null]
       );
+      await syncOddsForMatch(m.id, {
+        oddsHome: m.oh,
+        oddsDraw: m.od ?? null,
+        oddsAway: m.oa,
+      });
+    } else {
+      await syncOddsForMatch(m.id, {
+        oddsHome: m.oh,
+        oddsDraw: m.od ?? null,
+        oddsAway: m.oa,
+      });
     }
   }
 

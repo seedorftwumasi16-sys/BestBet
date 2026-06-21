@@ -6,26 +6,48 @@ import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { adminApi, contentApi, type AdminStatsApi, type UserAdminApi, type DepositAdminApi, type WithdrawalAdminApi } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
+import { useToast } from "@/context/ToastContext";
+import { useAuth } from "@/context/AuthContext";
 
 export function AdminUsersSection() {
+  const toast = useToast();
+  const { user } = useAuth();
   const [users, setUsers] = useState<UserAdminApi[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    adminApi.getUsers().then(setUsers).catch(() => {}).finally(() => setLoading(false));
-  }, []);
+    adminApi
+      .getUsers()
+      .then(setUsers)
+      .catch((err) => toast.error(err instanceof Error ? err.message : "Failed to load users"))
+      .finally(() => setLoading(false));
+  }, [toast]);
 
   const updateStatus = async (id: string, status: string) => {
-    await adminApi.updateUserStatus(id, status);
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status } : u)));
+    try {
+      await adminApi.updateUserStatus(id, status);
+      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status } : u)));
+      toast.success(`User ${status}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update user");
+    }
   };
 
   const adjustBalance = async (id: string, type: "add" | "deduct") => {
+    if (user?.roleId !== "super_admin") {
+      toast.error("Only super admins can adjust balances");
+      return;
+    }
     const amount = prompt(`Amount to ${type}:`);
     if (!amount) return;
-    await adminApi.adjustBalance(id, Number(amount), type);
-    const updated = await adminApi.getUsers();
-    setUsers(updated);
+    try {
+      await adminApi.adjustBalance(id, Number(amount), type);
+      const updated = await adminApi.getUsers();
+      setUsers(updated);
+      toast.success(`Balance ${type === "add" ? "added" : "deducted"} successfully`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to adjust balance");
+    }
   };
 
   if (loading) return <p className="text-bestbet-gray-muted">Loading users...</p>;
@@ -74,21 +96,51 @@ export function AdminUsersSection() {
 }
 
 export function AdminDepositsSection() {
+  const toast = useToast();
   const [deposits, setDeposits] = useState<DepositAdminApi[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const load = () => adminApi.getDeposits().then(setDeposits).catch(() => {});
+  const load = () => {
+    adminApi
+      .getDeposits()
+      .then(setDeposits)
+      .catch((err) => toast.error(err instanceof Error ? err.message : "Failed to load deposits"))
+      .finally(() => setLoading(false));
+  };
   useEffect(() => { load(); }, []);
 
-  const approve = async (id: string) => { await adminApi.approveDeposit(id); load(); };
+  const approve = async (id: string) => {
+    try {
+      await adminApi.approveDeposit(id);
+      toast.success("Deposit approved");
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to approve deposit");
+    }
+  };
   const reject = async (id: string) => {
     const note = prompt("Rejection reason:");
-    await adminApi.rejectDeposit(id, note || undefined);
-    load();
+    try {
+      await adminApi.rejectDeposit(id, note || undefined);
+      toast.success("Deposit rejected");
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to reject deposit");
+    }
   };
   const requestInfo = async (id: string) => {
     const note = prompt("What info is needed?");
-    if (note) { await adminApi.requestDepositInfo(id, note); load(); }
+    if (!note) return;
+    try {
+      await adminApi.requestDepositInfo(id, note);
+      toast.success("Info request sent");
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to request info");
+    }
   };
+
+  if (loading) return <p className="text-bestbet-gray-muted">Loading deposits...</p>;
 
   return (
     <div className="space-y-3">
@@ -119,9 +171,20 @@ export function AdminDepositsSection() {
 }
 
 export function AdminWithdrawalsSection() {
+  const toast = useToast();
   const [withdrawals, setWithdrawals] = useState<WithdrawalAdminApi[]>([]);
-  const load = () => adminApi.getWithdrawals().then(setWithdrawals).catch(() => {});
+  const [loading, setLoading] = useState(true);
+
+  const load = () => {
+    adminApi
+      .getWithdrawals()
+      .then(setWithdrawals)
+      .catch((err) => toast.error(err instanceof Error ? err.message : "Failed to load withdrawals"))
+      .finally(() => setLoading(false));
+  };
   useEffect(() => { load(); }, []);
+
+  if (loading) return <p className="text-bestbet-gray-muted">Loading withdrawals...</p>;
 
   return (
     <div className="space-y-3">
@@ -135,8 +198,24 @@ export function AdminWithdrawalsSection() {
             <Badge variant={w.status === "completed" ? "success" : w.status === "pending" ? "warning" : "danger"}>{w.status}</Badge>
             {w.status === "pending" && (
               <>
-                <Button size="sm" variant="primary" onClick={async () => { await adminApi.approveWithdrawal(w.id); load(); }}>Approve</Button>
-                <Button size="sm" variant="danger" onClick={async () => { await adminApi.rejectWithdrawal(w.id); load(); }}>Reject</Button>
+                <Button size="sm" variant="primary" onClick={async () => {
+                  try {
+                    await adminApi.approveWithdrawal(w.id);
+                    toast.success("Withdrawal approved");
+                    load();
+                  } catch (err) {
+                    toast.error(err instanceof Error ? err.message : "Failed to approve withdrawal");
+                  }
+                }}>Approve</Button>
+                <Button size="sm" variant="danger" onClick={async () => {
+                  try {
+                    await adminApi.rejectWithdrawal(w.id);
+                    toast.success("Withdrawal rejected");
+                    load();
+                  } catch (err) {
+                    toast.error(err instanceof Error ? err.message : "Failed to reject withdrawal");
+                  }
+                }}>Reject</Button>
               </>
             )}
           </div>
@@ -211,23 +290,27 @@ export function AdminVirtualSection() {
 }
 
 export function AdminSettingsSection() {
+  const toast = useToast();
+  const { user } = useAuth();
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [momoNumber, setMomoNumber] = useState("0203907314");
   const [momoRecipient, setMomoRecipient] = useState("RAHAMATU NUHU");
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
 
   useEffect(() => {
     contentApi.getSettings().then((data) => {
       setSettings(data);
       if (data.momo_number) setMomoNumber(data.momo_number);
       if (data.momo_recipient_name) setMomoRecipient(data.momo_recipient_name);
-    }).catch(() => {});
-  }, []);
+    }).catch((err) => toast.error(err instanceof Error ? err.message : "Failed to load settings"));
+  }, [toast]);
 
   const saveMomoSettings = async () => {
+    if (user?.roleId !== "super_admin") {
+      toast.error("Only super admins can update settings");
+      return;
+    }
     setSaving(true);
-    setMessage("");
     try {
       await contentApi.updateSettings({
         momo_number: momoNumber.trim(),
@@ -238,9 +321,9 @@ export function AdminSettingsSection() {
         momo_number: momoNumber.trim(),
         momo_recipient_name: momoRecipient.trim(),
       }));
-      setMessage("Mobile Money settings saved.");
+      toast.success("Mobile Money settings saved");
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Failed to save settings");
+      toast.error(err instanceof Error ? err.message : "Failed to save settings");
     } finally {
       setSaving(false);
     }
@@ -255,7 +338,6 @@ export function AdminSettingsSection() {
         <Button variant="primary" size="sm" loading={saving} onClick={saveMomoSettings}>
           Save MoMo Settings
         </Button>
-        {message && <p className="text-sm text-bestbet-gray-muted">{message}</p>}
       </div>
 
       <div className="space-y-3">
@@ -273,8 +355,16 @@ export function AdminSettingsSection() {
 
 export function useAdminStats() {
   const [stats, setStats] = useState<AdminStatsApi | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError, setStatsError] = useState("");
+
   useEffect(() => {
-    adminApi.getStats().then(setStats).catch(() => {});
+    adminApi
+      .getStats()
+      .then(setStats)
+      .catch((err) => setStatsError(err instanceof Error ? err.message : "Failed to load stats"))
+      .finally(() => setStatsLoading(false));
   }, []);
-  return stats;
+
+  return { stats, statsLoading, statsError };
 }

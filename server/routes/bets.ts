@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { getDb, getWalletBalance } from "../db";
 import { authenticate, requirePermission, logAudit } from "../middleware/auth";
 import { boolFrom } from "../db/helpers";
+import { listMatches, normalizeMatchStatus } from "../lib/matches";
 
 const router = Router();
 
@@ -14,28 +15,12 @@ function generateBookingCode(): string {
 }
 
 router.get("/matches", async (req, res) => {
-  const { sport, live } = req.query;
-  const db = await getDb();
-  const result = await db.query(`SELECT * FROM matches ORDER BY is_live DESC, start_time ASC`);
-  let rows = result.rows;
-
-  if (sport) rows = rows.filter((m) => m.sport === sport);
-  if (live === "true") rows = rows.filter((m) => boolFrom(m, "is_live"));
-
-  const matches = rows.map((m) => ({
-    id: m.id,
-    homeTeam: { name: m.home_team, shortName: String(m.home_team).slice(0, 3).toUpperCase(), logo: "⚽" },
-    awayTeam: { name: m.away_team, shortName: String(m.away_team).slice(0, 3).toUpperCase(), logo: "⚽" },
-    league: m.league,
-    leagueId: String(m.league).toLowerCase().replace(/\s+/g, "-"),
-    sport: m.sport,
-    startTime: m.start_time,
-    isLive: boolFrom(m, "is_live"),
-    liveMinute: m.live_minute,
-    homeScore: m.home_score,
-    awayScore: m.away_score,
-    odds: { home: Number(m.odds_home), draw: m.odds_draw ? Number(m.odds_draw) : undefined, away: Number(m.odds_away) },
-  }));
+  const { sport, live, featured } = req.query;
+  const matches = await listMatches({
+    sport: sport ? String(sport) : undefined,
+    live: live === "true" ? true : undefined,
+    featured: featured === "true" ? true : undefined,
+  });
   res.json(matches);
 });
 
@@ -85,6 +70,17 @@ router.post("/place", authenticate, requirePermission("place_bets"), async (req,
     const userStatus = await db.query(`SELECT status FROM users WHERE id = ?`, [req.user!.id]);
     const status = userStatus.rows[0]?.status || "active";
     if (status !== "active") return res.status(403).json({ error: "Account is not active" });
+
+    for (const sel of selections) {
+      const match = await db.query(`SELECT betting_suspended, match_status FROM matches WHERE id = ?`, [sel.matchId]);
+      if (match.rows.length === 0) return res.status(400).json({ error: "One or more matches not found" });
+      if (boolFrom(match.rows[0], "betting_suspended")) {
+        return res.status(400).json({ error: "Betting is suspended on one or more selected matches" });
+      }
+      if (normalizeMatchStatus(match.rows[0]) === "finished") {
+        return res.status(400).json({ error: "One or more matches have finished" });
+      }
+    }
 
     const balance = await getWalletBalance(req.user!.id);
     if (balance < stake) {

@@ -87,10 +87,11 @@ export const authApi = {
 };
 
 export const betsApi = {
-  getMatches: (sport?: string, live?: boolean) => {
+  getMatches: (sport?: string, live?: boolean, featured?: boolean) => {
     const params = new URLSearchParams();
     if (sport) params.set("sport", sport);
     if (live) params.set("live", "true");
+    if (featured) params.set("featured", "true");
     const q = params.toString();
     return api<MatchApi[]>(`/api/bets/matches${q ? `?${q}` : ""}`);
   },
@@ -157,6 +158,20 @@ export const adminApi = {
       method: "POST",
       body: JSON.stringify({ title, message, type }),
     }),
+  getMatches: () => api<MatchApi[]>("/api/admin/matches"),
+  createMatch: (data: AdminMatchInput) =>
+    api<MatchApi>("/api/admin/matches", { method: "POST", body: JSON.stringify(data) }),
+  updateMatch: (id: string, data: Partial<AdminMatchInput>) =>
+    api<MatchApi>(`/api/admin/matches/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteMatch: (id: string) =>
+    api<{ message: string }>(`/api/admin/matches/${id}`, { method: "DELETE" }),
+  getAdmins: () => api<AdminAccountApi[]>("/api/admin/admins"),
+  createAdmin: (data: AdminAccountInput) =>
+    api<AdminAccountApi>("/api/admin/admins", { method: "POST", body: JSON.stringify(data) }),
+  updateAdmin: (id: string, data: Partial<AdminAccountInput>) =>
+    api<AdminAccountApi>(`/api/admin/admins/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteAdmin: (id: string) =>
+    api<{ message: string }>(`/api/admin/admins/${id}`, { method: "DELETE" }),
 };
 
 export const contentApi = {
@@ -194,11 +209,64 @@ export interface MatchApi {
   leagueId: string;
   sport: string;
   startTime: string;
+  matchStatus: "upcoming" | "live" | "finished";
   isLive: boolean;
+  isFeatured: boolean;
+  bettingSuspended: boolean;
   liveMinute?: number;
   homeScore?: number;
   awayScore?: number;
-  odds: { home: number; draw?: number; away: number };
+  odds: {
+    home: number;
+    draw?: number;
+    away: number;
+    over?: number;
+    under?: number;
+    bttsYes?: number;
+    bttsNo?: number;
+    overUnderLine?: number;
+  };
+}
+
+export interface AdminAccountInput {
+  name: string;
+  email: string;
+  password?: string;
+  role?: "super_admin" | "sub_admin";
+  status?: "active" | "suspended";
+}
+
+export interface AdminAccountApi {
+  id: string;
+  userId: string;
+  name: string;
+  email: string;
+  role: "super_admin" | "sub_admin";
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminMatchInput {
+  homeTeam: string;
+  awayTeam: string;
+  league: string;
+  sport: string;
+  startTime?: string;
+  matchStatus?: "upcoming" | "live" | "finished";
+  isFeatured?: boolean;
+  bettingSuspended?: boolean;
+  oddsHome?: number;
+  oddsDraw?: number | null;
+  oddsAway?: number;
+  oddsOver?: number | null;
+  oddsUnder?: number | null;
+  oddsBttsYes?: number | null;
+  oddsBttsNo?: number | null;
+  overUnderLine?: number;
+  homeScore?: number;
+  awayScore?: number;
+  liveMinute?: number;
 }
 
 export interface BetHistoryItem {
@@ -230,6 +298,8 @@ export interface AdminStatsApi {
   totalUsers: number;
   activeUsers: number;
   totalBets: number;
+  totalMatches: number;
+  liveMatches: number;
   totalDeposits: number;
   totalWithdrawals: number;
   revenue: number;

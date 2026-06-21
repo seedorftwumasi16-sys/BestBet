@@ -121,6 +121,25 @@ CREATE TABLE IF NOT EXISTS responsible_gaming (
   self_excluded_until TEXT,
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS admins (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  role TEXT NOT NULL DEFAULT 'sub_admin',
+  status TEXT NOT NULL DEFAULT 'active',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS odds (
+  id TEXT PRIMARY KEY,
+  match_id TEXT NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+  market TEXT NOT NULL,
+  selection TEXT NOT NULL,
+  odds_value REAL NOT NULL,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(match_id, market, selection)
+);
 `;
 
 export const PG_SCHEMA_EXT_SQL = SCHEMA_EXT_SQL
@@ -163,4 +182,15 @@ ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS reviewed_by TEXT;
 export const BET_COLUMNS_SQL = `
 ALTER TABLE bets ADD COLUMN IF NOT EXISTS cashout_value DECIMAL(12,2);
 ALTER TABLE bets ADD COLUMN IF NOT EXISTS cashout_available BOOLEAN DEFAULT FALSE;
+`;
+
+export const MATCH_COLUMNS_SQL = `
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS match_status TEXT DEFAULT 'upcoming';
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS is_featured BOOLEAN DEFAULT FALSE;
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS betting_suspended BOOLEAN DEFAULT FALSE;
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS odds_over DECIMAL(12,2);
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS odds_under DECIMAL(12,2);
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS odds_btts_yes DECIMAL(12,2);
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS odds_btts_no DECIMAL(12,2);
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS over_under_line DECIMAL(12,2) DEFAULT 2.5;
 `;

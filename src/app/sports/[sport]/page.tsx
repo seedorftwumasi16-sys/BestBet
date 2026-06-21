@@ -3,27 +3,12 @@
 import { MainLayout } from "@/components/layout/MainLayout";
 import { MatchCard } from "@/components/betting/MatchCard";
 import { FadeIn, Skeleton } from "@/components/ui/Skeleton";
-import { betsApi, type MatchApi } from "@/lib/api";
+import { betsApi } from "@/lib/api";
 import type { Match } from "@/lib/constants";
 import { SPORTS } from "@/lib/constants";
-import { use, useEffect, useState } from "react";
-
-function toMatch(m: MatchApi): Match {
-  return {
-    id: m.id,
-    homeTeam: { id: m.id + "-h", ...m.homeTeam },
-    awayTeam: { id: m.id + "-a", ...m.awayTeam },
-    league: m.league,
-    leagueId: m.leagueId,
-    sport: m.sport,
-    startTime: new Date(m.startTime),
-    isLive: m.isLive,
-    liveMinute: m.liveMinute,
-    homeScore: m.homeScore,
-    awayScore: m.awayScore,
-    odds: m.odds,
-  };
-}
+import { applyMatchFeed, toMatch } from "@/lib/match-utils";
+import { useLiveOdds } from "@/hooks/useLiveOdds";
+import { use, useCallback, useEffect, useState } from "react";
 
 export default function SportPage({ params }: { params: Promise<{ sport: string }> }) {
   const { sport } = use(params);
@@ -31,7 +16,7 @@ export default function SportPage({ params }: { params: Promise<{ sport: string 
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const loadMatches = useCallback(() => {
     setLoading(true);
     const sportFilter = sport === "live" ? undefined : sport;
     const live = sport === "live";
@@ -41,6 +26,36 @@ export default function SportPage({ params }: { params: Promise<{ sport: string 
       .catch(() => setMatches([]))
       .finally(() => setLoading(false));
   }, [sport]);
+
+  useEffect(() => {
+    loadMatches();
+  }, [loadMatches]);
+
+  useLiveOdds({
+    onMatchFeed: ({ action, match, matchId }) => {
+      setMatches((prev) => {
+        const next = applyMatchFeed(prev, action, match, matchId);
+        if (sport === "live") return next.filter((m) => m.isLive);
+        if (sport !== "live") return next.filter((m) => m.sport === sport);
+        return next;
+      });
+    },
+    onUpdate: (update) => {
+      setMatches((prev) =>
+        prev.map((m) =>
+          m.id === update.matchId
+            ? {
+                ...m,
+                odds: { ...m.odds, home: update.odds.home, away: update.odds.away },
+                homeScore: update.homeScore ?? m.homeScore,
+                awayScore: update.awayScore ?? m.awayScore,
+                liveMinute: update.liveMinute ?? m.liveMinute,
+              }
+            : m
+        )
+      );
+    },
+  });
 
   return (
     <MainLayout>

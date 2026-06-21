@@ -8,6 +8,10 @@ export function setSocketServer(server: SocketServer) {
   io = server;
 }
 
+export function getSocketServer(): SocketServer | null {
+  return io;
+}
+
 export async function createNotification(
   userId: string,
   title: string,

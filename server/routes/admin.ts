@@ -1,16 +1,24 @@
 import { Router } from "express";
-import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
 import { getDb, getWalletBalance } from "../db";
 import { authenticate, requirePermission, requireRole, logAudit } from "../middleware/auth";
 import { createNotification } from "../services/notifications";
+import adminMatchesRoutes from "./admin/matches";
+import adminAdminsRoutes from "./admin/admins";
 
 const router = Router();
+
+router.use("/matches", adminMatchesRoutes);
+router.use("/admins", adminAdminsRoutes);
 
 router.get("/stats", authenticate, requireRole("super_admin", "sub_admin"), async (_req, res) => {
   const db = await getDb();
   const users = await db.query(`SELECT COUNT(*) as count FROM users`);
   const bets = await db.query(`SELECT COUNT(*) as count FROM bets`);
+  const matches = await db.query(`SELECT COUNT(*) as count FROM matches`);
+  const liveMatches = await db.query(
+    `SELECT COUNT(*) as count FROM matches WHERE match_status = 'live' OR is_live = true OR is_live = 1`
+  );
   const deposits = await db.query(`SELECT COALESCE(SUM(amount), 0) as total FROM deposits WHERE status = 'completed'`);
   const withdrawals = await db.query(`SELECT COALESCE(SUM(amount), 0) as total FROM withdrawals WHERE status = 'completed'`);
   const pendingDeposits = await db.query(`SELECT COUNT(*) as count FROM deposits WHERE status = 'pending'`);
@@ -24,6 +32,8 @@ router.get("/stats", authenticate, requireRole("super_admin", "sub_admin"), asyn
     totalUsers: Number(users.rows[0].count),
     activeUsers: Number(activeUsers.rows[0]?.count ?? users.rows[0].count),
     totalBets: Number(bets.rows[0].count),
+    totalMatches: Number(matches.rows[0]?.count ?? 0),
+    liveMatches: Number(liveMatches.rows[0]?.count ?? 0),
     totalDeposits,
     totalWithdrawals,
     revenue: totalDeposits - totalWithdrawals,
@@ -120,25 +130,6 @@ router.get("/bookings", authenticate, requireRole("super_admin", "sub_admin"), a
   );
   const logs = await db.query(`SELECT * FROM booking_logs ORDER BY created_at DESC LIMIT 100`);
   res.json({ codes: codes.rows, logs: logs.rows });
-});
-
-router.post("/admins", authenticate, requirePermission("manage_admins"), async (req, res) => {
-  const { name, email, password } = req.body;
-  if (!name || !email || !password) return res.status(400).json({ error: "Name, email, and password required" });
-
-  const db = await getDb();
-  const existing = await db.query(`SELECT id FROM users WHERE email = ?`, [email.toLowerCase()]);
-  if (existing.rows.length > 0) return res.status(409).json({ error: "Email already exists" });
-
-  const userId = uuidv4();
-  const hash = await bcrypt.hash(password, 10);
-  await db.query(
-    `INSERT INTO users (id, email, password_hash, name, role_id) VALUES (?, ?, ?, ?, ?)`,
-    [userId, email.toLowerCase(), hash, name, "sub_admin"]
-  );
-  await db.query(`INSERT INTO wallets (id, user_id, balance) VALUES (?, ?, ?)`, [uuidv4(), userId, 0]);
-  await logAudit(req.user!.id, "create_sub_admin", `Created sub admin: ${email}`);
-  res.status(201).json({ id: userId, email, name, roleId: "sub_admin" });
 });
 
 router.post("/agents", authenticate, requireRole("super_admin"), async (req, res) => {

@@ -5,6 +5,7 @@ import { AnimatePresence } from "framer-motion";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { BetSlipProvider } from "@/context/BetSlipContext";
+import { ToastProvider } from "@/context/ToastContext";
 import { SplashScreen } from "@/components/brand/SplashScreen";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -29,12 +30,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <ThemeProvider>
       <AuthProvider>
         <BetSlipProvider>
-          {children}
-          {mounted && (
-            <AnimatePresence>
-              {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
-            </AnimatePresence>
-          )}
+          <ToastProvider>
+            {children}
+            {mounted && (
+              <AnimatePresence>
+                {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
+              </AnimatePresence>
+            )}
+          </ToastProvider>
         </BetSlipProvider>
       </AuthProvider>
     </ThemeProvider>

@@ -55,7 +55,10 @@ export interface Match {
   leagueId: string;
   sport: string;
   startTime: Date;
+  matchStatus?: "upcoming" | "live" | "finished";
   isLive: boolean;
+  isFeatured?: boolean;
+  bettingSuspended?: boolean;
   liveMinute?: number;
   homeScore?: number;
   awayScore?: number;
@@ -63,6 +66,11 @@ export interface Match {
     home: number;
     draw?: number;
     away: number;
+    over?: number;
+    under?: number;
+    bttsYes?: number;
+    bttsNo?: number;
+    overUnderLine?: number;
   };
   stats?: {
     possession: [number, number];
@@ -150,18 +158,9 @@ export const ADMIN_SECTIONS = [
   { id: "dashboard", name: "Dashboard", icon: "LayoutDashboard" },
   { id: "users", name: "Users", icon: "Users" },
   { id: "admins", name: "Admins", icon: "Shield" },
-  { id: "agents", name: "Agents", icon: "UserCog" },
-  { id: "permissions", name: "Permissions", icon: "Key" },
   { id: "matches", name: "Matches", icon: "Calendar" },
   { id: "deposits", name: "Deposits", icon: "ArrowDownToLine" },
   { id: "withdrawals", name: "Withdrawals", icon: "ArrowUpFromLine" },
-  { id: "bookings", name: "Bookings", icon: "Ticket" },
-  { id: "promotions", name: "Promotions", icon: "Gift" },
-  { id: "banners", name: "Banners", icon: "Image" },
-  { id: "virtual", name: "Virtual Games", icon: "Gamepad2" },
-  { id: "support", name: "Support", icon: "MessageSquare" },
-  { id: "notifications", name: "Notifications", icon: "Bell" },
-  { id: "reports", name: "Reports", icon: "BarChart3" },
-  { id: "audit-logs", name: "Audit Logs", icon: "FileText" },
+  { id: "betting-history", name: "Betting History", icon: "TrendingUp" },
   { id: "settings", name: "Settings", icon: "Settings" },
 ] as const;

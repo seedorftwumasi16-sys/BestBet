@@ -39,6 +39,7 @@ export function MatchCard({ match, showStats = false }: MatchCardProps) {
     selections.some((s) => s.matchId === match.id && s.selection === type);
 
   const handleOddsClick = (type: string, odds: number, label: string) => {
+    if (match.bettingSuspended) return;
     addSelection({
       id: `${match.id}-${type}`,
       matchId: match.id,
@@ -62,11 +63,13 @@ export function MatchCard({ match, showStats = false }: MatchCardProps) {
   }) => (
     <button
       onClick={() => handleOddsClick(type, odds, label)}
+      disabled={match.bettingSuspended}
       className={cn(
         "odds-btn",
         isSelected(label) && "odds-btn-selected",
         flashOdds[type] === "up" && "odds-flash-up",
-        flashOdds[type] === "down" && "odds-flash-down"
+        flashOdds[type] === "down" && "odds-flash-down",
+        match.bettingSuspended && "opacity-40 cursor-not-allowed"
       )}
       aria-label={`${label} at ${formatOdds(odds)}`}
     >
@@ -91,6 +94,9 @@ export function MatchCard({ match, showStats = false }: MatchCardProps) {
           <span className="text-xs font-semibold text-bestbet-gray-muted truncate">{match.league}</span>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
+          {match.bettingSuspended && (
+            <Badge variant="danger">Suspended</Badge>
+          )}
           {match.isLive ? (
             <Badge variant="live">
               <Clock size={10} className="mr-0.5" />

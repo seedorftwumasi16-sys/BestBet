@@ -7,6 +7,7 @@ import dotenv from "dotenv";
 import { migrate } from "./db/migrate";
 import seed from "./db/seed";
 import { getDb } from "./db";
+import { boolFrom } from "./db/helpers";
 import { initRedis } from "./services/redis";
 import { setSocketServer } from "./services/notifications";
 import { securityHeaders, apiLimiter } from "./middleware/security";
@@ -100,9 +101,11 @@ io.on("connection", (socket) => {
 async function broadcastLiveUpdates() {
   try {
     const db = await getDb();
-    const result = await db.query(`SELECT * FROM matches WHERE is_live = 1 OR is_live = true`);
+    const result = await db.query(`SELECT * FROM matches WHERE match_status = 'live' OR is_live = true OR is_live = 1`);
 
     for (const match of result.rows) {
+      if (boolFrom(match, "betting_suspended")) continue;
+
       const oddsChange = {
         home: +(Number(match.odds_home) + (Math.random() - 0.5) * 0.1).toFixed(2),
         away: +(Number(match.odds_away) + (Math.random() - 0.5) * 0.1).toFixed(2),
