@@ -27,18 +27,33 @@ const PORT = Number(process.env.PORT) || 5000;
 
 app.set("trust proxy", 1);
 app.use(securityHeaders);
+function isAllowedOrigin(origin: string | undefined): boolean {
+  if (!origin) return true;
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin)) return true;
+
+  const allowed = [
+    process.env.FRONTEND_URL,
+    ...(process.env.CORS_ORIGINS || "").split(","),
+  ]
+    .map((value) => value?.trim())
+    .filter(Boolean) as string[];
+
+  if (allowed.some((entry) => origin === entry)) return true;
+
+  try {
+    const hostname = new URL(origin).hostname;
+    if (hostname.endsWith(".vercel.app")) return true;
+  } catch {
+    return false;
+  }
+
+  return process.env.NODE_ENV !== "production";
+}
+
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (
-        !origin ||
-        /^https?:\/\/localhost(:\d+)?$/.test(origin) ||
-        /^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)
-      ) {
-        callback(null, true);
-      } else {
-        callback(null, process.env.NODE_ENV !== "production");
-      }
+      callback(null, isAllowedOrigin(origin));
     },
     credentials: true,
   })
@@ -63,7 +78,13 @@ app.use((_req, res) => {
 
 const server = http.createServer(app);
 const io = new SocketServer(server, {
-  cors: { origin: "*", methods: ["GET", "POST"] },
+  cors: {
+    origin: (origin, callback) => {
+      callback(null, isAllowedOrigin(origin));
+    },
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
   path: "/socket.io",
 });
 
@@ -108,8 +129,8 @@ async function start() {
     await migrate();
     await seed();
 
-    server.listen(PORT, () => {
-      console.log(`[Server] BestBet API running on http://localhost:${PORT}`);
+    server.listen(PORT, "0.0.0.0", () => {
+      console.log(`[Server] BestBet API running on port ${PORT}`);
       console.log(`[Server] Health: http://localhost:${PORT}/api/health`);
       console.log(`[Server] Socket.io: http://localhost:${PORT}/socket.io`);
       console.log(`[Server] Mobile Money: ${process.env.MOMO_NUMBER || "0245680115"}`);

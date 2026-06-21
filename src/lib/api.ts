@@ -1,6 +1,6 @@
 const API_BASE =
   typeof window !== "undefined"
-    ? ""
+    ? process.env.NEXT_PUBLIC_API_URL || ""
     : process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000";
 
 export class ApiError extends Error {

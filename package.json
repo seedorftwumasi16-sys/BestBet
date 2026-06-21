@@ -8,6 +8,7 @@
     "dev:backend": "tsx watch server/index.ts",
     "build": "next build",
     "start": "concurrently \"next start\" \"tsx server/index.ts\"",
+    "start:backend": "tsx server/index.ts",
     "lint": "next lint",
     "db:migrate": "tsx server/db/run-migrate.ts",
     "db:seed": "tsx server/db/run-seed.ts",
