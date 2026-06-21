@@ -32,10 +32,21 @@ export const apiLimiter = rateLimit({
 
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: 40,
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true,
+  keyGenerator: (req) => {
+    const email =
+      typeof req.body?.email === "string" ? req.body.email.toLowerCase().trim() : "";
+    const ip =
+      req.ip ||
+      (typeof req.headers["x-forwarded-for"] === "string"
+        ? req.headers["x-forwarded-for"].split(",")[0]?.trim()
+        : "") ||
+      "unknown";
+    return email ? `${ip}:${email}` : ip;
+  },
   message: { error: "Too many login attempts, please try again in 15 minutes" },
   handler: (_req, res) => {
     res.status(429).json({ error: "Too many login attempts, please try again in 15 minutes" });
@@ -43,9 +54,20 @@ export const authLimiter = rateLimit({
 });
 
 /** Clear auth rate-limit counter after a successful login/register. */
-export async function resetAuthRateLimit(req: { ip?: string; headers: Record<string, string | string[] | undefined> }) {
-  const ip = req.ip || (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || "unknown";
+export async function resetAuthRateLimit(req: {
+  ip?: string;
+  body?: { email?: string };
+  headers: Record<string, string | string[] | undefined>;
+}) {
+  const ip =
+    req.ip ||
+    (typeof req.headers["x-forwarded-for"] === "string"
+      ? req.headers["x-forwarded-for"].split(",")[0]?.trim()
+      : "") ||
+    "unknown";
+  const email = typeof req.body?.email === "string" ? req.body.email.toLowerCase().trim() : "";
   try {
+    await authLimiter.resetKey(email ? `${ip}:${email}` : ip);
     await authLimiter.resetKey(ip);
   } catch {
     // non-fatal

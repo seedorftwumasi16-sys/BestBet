@@ -58,7 +58,13 @@ export async function getUserWithWallet(
 ): Promise<UserAuthRow | null> {
   let userResult;
   if (lookup.email) {
-    userResult = await db.query(`SELECT * FROM users WHERE email = ?`, [lookup.email.toLowerCase()]);
+    const normalizedEmail = lookup.email.toLowerCase().trim();
+    userResult = await db.query(
+      db.driver === "postgresql"
+        ? `SELECT * FROM users WHERE LOWER(TRIM(email)) = ?`
+        : `SELECT * FROM users WHERE email = ?`,
+      [normalizedEmail]
+    );
   } else if (lookup.id) {
     userResult = await db.query(`SELECT * FROM users WHERE id = ?`, [lookup.id]);
   } else {

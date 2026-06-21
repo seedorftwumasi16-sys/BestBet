@@ -1,4 +1,11 @@
 import { getApiBaseUrl } from "./config";
+import {
+  clearStoredAuth,
+  getStoredToken,
+  normalizeLoginEmail,
+  normalizeLoginPassword,
+  setStoredToken,
+} from "./auth-storage";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -9,13 +16,12 @@ export class ApiError extends Error {
 
 function getToken(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem("bestbet_token");
+  return getStoredToken();
 }
 
 export function setToken(token: string | null) {
   if (typeof window === "undefined") return;
-  if (token) localStorage.setItem("bestbet_token", token);
-  else localStorage.removeItem("bestbet_token");
+  setStoredToken(token);
 }
 
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -46,8 +52,12 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
     const serverMessage = typeof body.error === "string" ? body.error : undefined;
     const authBuild = typeof body.authBuild === "string" ? body.authBuild : res.headers.get("X-Auth-Build");
     let message = serverMessage || "Request failed";
-    if (res.status === 401) message = serverMessage || "Invalid email or password";
-    else if (res.status === 403) message = serverMessage || "Access denied";
+    if (res.status === 401) {
+      message = serverMessage || "Invalid email or password";
+      if (typeof window !== "undefined" && token) {
+        clearStoredAuth();
+      }
+    } else if (res.status === 403) message = serverMessage || "Access denied";
     else if (res.status === 429) {
       message = serverMessage || "Too many attempts. Please wait a few minutes and try again.";
     }
@@ -69,7 +79,10 @@ export const authApi = {
   login: (email: string, password: string) =>
     api<{ token: string; user: Record<string, unknown> }>("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({
+        email: normalizeLoginEmail(email),
+        password: normalizeLoginPassword(password),
+      }),
     }),
   register: (data: { name: string; email: string; password: string; phone?: string; referralCode?: string }) =>
     api<{ token: string; user: Record<string, unknown> }>("/api/auth/register", {

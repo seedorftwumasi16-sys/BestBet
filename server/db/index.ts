@@ -127,8 +127,9 @@ function createJsonDb(filePath: string): Database {
         let rows = [...store.tables[table]];
 
         if (sql.includes("WHERE")) {
-          if (sql.includes("email = ?")) {
-            rows = rows.filter((r) => r.email === params[0]);
+          if (sql.includes("email = ?") || sql.includes("LOWER(TRIM(email)) = ?")) {
+            const needle = String(params[0] ?? "").toLowerCase().trim();
+            rows = rows.filter((r) => String(r.email ?? "").toLowerCase().trim() === needle);
           } else if (sql.includes("user_id = ?") && sql.includes("bet_id = ?")) {
             rows = rows.filter((r) => r.bet_id === params[0]);
           } else if (sql.includes("user_id = ?")) {

@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, useCallback } from "rea
 import type { User, Notification } from "@/lib/constants";
 import { isAdminRole } from "@/lib/constants";
 import { authApi, notificationsApi, setToken, type NotificationApi } from "@/lib/api";
+import { clearStoredAuth, getStoredToken } from "@/lib/auth-storage";
 
 function mapApiUser(u: Record<string, unknown>): User {
   return {
@@ -72,12 +73,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       setUser(null);
       setToken(null);
+      clearStoredAuth();
       setNotifications([]);
     }
   }, [loadNotifications]);
 
   useEffect(() => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("bestbet_token") : null;
+    const token = typeof window !== "undefined" ? getStoredToken() : null;
     if (token) {
       refreshUser().finally(() => setLoading(false));
     } else {
@@ -86,6 +88,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refreshUser]);
 
   const login = async (email: string, password: string) => {
+    clearStoredAuth();
+    setToken(null);
+    setUser(null);
     const { token, user: u } = await authApi.login(email, password);
     setToken(token);
     const user = mapApiUser(u);

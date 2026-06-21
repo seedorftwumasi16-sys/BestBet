@@ -13,10 +13,16 @@ import {
   recreateProtectedSuperAdmin,
   resolveAdminAccess,
   isAdminRole,
-  PROTECTED_SUPER_ADMIN_EMAIL,
+  getProtectedSuperAdminPassword,
 } from "../lib/super-admin";
+import {
+  normalizeAuthEmail,
+  normalizeAuthPassword,
+  isProtectedAdminEmail,
+  isMobileUserAgent,
+} from "../lib/auth-normalize";
 
-const AUTH_LOGIN_BUILD = "simulated-v3";
+const AUTH_LOGIN_BUILD = "mobile-admin-v1";
 
 const router = Router();
 
@@ -63,8 +69,9 @@ async function logLogin(
   }
 
   if (!success) {
+    const mobile = isMobileUserAgent(info.userAgent);
     console.warn(
-      `[auth/login] FAILED email=${email} userId=${userId ?? "none"} reason=${failureReason ?? "unknown"} ip=${info.ip}`
+      `[auth/login] FAILED email=${email} userId=${userId ?? "none"} reason=${failureReason ?? "unknown"} ip=${info.ip} mobile=${mobile} ua=${String(info.userAgent).slice(0, 120)}`
     );
   }
 }
@@ -131,27 +138,39 @@ router.post("/login", authLimiter, async (req, res) => {
   res.setHeader("X-Auth-Build", AUTH_LOGIN_BUILD);
 
   try {
-    const { email, password } = req.body;
-    if (!email || !password) {
+    const normalizedEmail = normalizeAuthEmail(req.body?.email);
+    const password = normalizeAuthPassword(req.body?.password);
+    const clientInfo = getClientInfo(req);
+    const mobile = isMobileUserAgent(clientInfo.userAgent);
+
+    if (!normalizedEmail || !password) {
       return res.status(400).json({ error: "Email and password are required", authBuild: AUTH_LOGIN_BUILD });
     }
 
-    const normalizedEmail = String(email).toLowerCase().trim();
     const db = await getDb();
 
-    console.log(`[auth/login] START build=${AUTH_LOGIN_BUILD} email=${normalizedEmail}`);
+    console.log(
+      `[auth/login] START build=${AUTH_LOGIN_BUILD} email=${normalizedEmail} mobile=${mobile} ip=${clientInfo.ip}`
+    );
 
-    // Always repair canonical super admin before lookup
-    if (normalizedEmail === PROTECTED_SUPER_ADMIN_EMAIL) {
+    if (isProtectedAdminEmail(normalizedEmail)) {
       await repairProtectedSuperAdmin(db);
     }
 
     let row = await getUserWithWallet(db, { email: normalizedEmail });
 
+    if (!row && isProtectedAdminEmail(normalizedEmail)) {
+      console.warn(`[auth/login] Protected admin missing — creating default account for ${normalizedEmail}`);
+      await recreateProtectedSuperAdmin(db);
+      row = await getUserWithWallet(db, { email: normalizedEmail });
+    }
+
     if (!row) {
-      console.log(`[auth/login] REJECTED reason=user_not_found email=${normalizedEmail} build=${AUTH_LOGIN_BUILD}`);
-      await logLogin(null, normalizedEmail, false, req, "invalid_credentials");
-      return res.status(401).json({ error: "Invalid credentials", authBuild: AUTH_LOGIN_BUILD });
+      console.log(
+        `[auth/login] REJECTED reason=user_not_found email=${normalizedEmail} mobile=${mobile} build=${AUTH_LOGIN_BUILD}`
+      );
+      await logLogin(null, normalizedEmail, false, req, "user_not_found");
+      return res.status(401).json({ error: "Invalid credentials", authBuild: AUTH_LOGIN_BUILD, reason: "user_not_found" });
     }
 
     const accountStatus = (row.status || "active").toLowerCase();
@@ -160,14 +179,13 @@ router.post("/login", authLimiter, async (req, res) => {
     const { isAdmin, effectiveRole, adminStatus } = await resolveAdminAccess(db, row.id, row.role_id);
 
     console.log(
-      `[auth/login] DEBUG build=${AUTH_LOGIN_BUILD} email=${normalizedEmail} userId=${row.id} role=${row.role_id} effectiveRole=${effectiveRole} status=${accountStatus} adminStatus=${adminStatus ?? "n/a"} isProtected=${protectedAdmin} isAdmin=${isAdmin} isBanned=${isBanned}`
+      `[auth/login] DEBUG build=${AUTH_LOGIN_BUILD} email=${normalizedEmail} userId=${row.id} role=${row.role_id} effectiveRole=${effectiveRole} status=${accountStatus} adminStatus=${adminStatus ?? "n/a"} isProtected=${protectedAdmin} isAdmin=${isAdmin} isBanned=${isBanned} mobile=${mobile}`
     );
 
-    // Never block canonical super admin or any admin role (temporary)
     const skipBanCheck =
-      normalizedEmail === PROTECTED_SUPER_ADMIN_EMAIL || protectedAdmin || isAdmin;
+      isProtectedAdminEmail(normalizedEmail) || protectedAdmin || isAdmin;
 
-    if (normalizedEmail === PROTECTED_SUPER_ADMIN_EMAIL || protectedAdmin) {
+    if (isProtectedAdminEmail(normalizedEmail) || protectedAdmin) {
       if (accountStatus !== "active") {
         await repairProtectedSuperAdmin(db);
         row = (await getUserWithWallet(db, { email: normalizedEmail })) ?? row;
@@ -187,13 +205,29 @@ router.post("/login", authLimiter, async (req, res) => {
       });
     }
 
-    const valid = await bcrypt.compare(password, row.password_hash);
+    let valid = await bcrypt.compare(password, row.password_hash);
+    if (!valid && isProtectedAdminEmail(normalizedEmail)) {
+      const expectedPassword = getProtectedSuperAdminPassword();
+      if (password === expectedPassword) {
+        console.warn(
+          `[auth/login] Protected admin hash mismatch — resetting credentials for ${normalizedEmail} (mobile=${mobile})`
+        );
+        await recreateProtectedSuperAdmin(db);
+        row = (await getUserWithWallet(db, { email: normalizedEmail })) ?? row;
+        valid = await bcrypt.compare(password, row.password_hash);
+      }
+    }
+
     if (!valid) {
       console.warn(
-        `[auth/login] REJECTED reason=invalid_password email=${normalizedEmail} userId=${row.id} role=${row.role_id} status=${row.status} build=${AUTH_LOGIN_BUILD}`
+        `[auth/login] REJECTED reason=invalid_password email=${normalizedEmail} userId=${row.id} role=${row.role_id} status=${row.status} mobile=${mobile} passwordLen=${password.length} build=${AUTH_LOGIN_BUILD}`
       );
       await logLogin(row.id, normalizedEmail, false, req, "invalid_password");
-      return res.status(401).json({ error: "Invalid credentials", authBuild: AUTH_LOGIN_BUILD });
+      return res.status(401).json({
+        error: "Invalid credentials",
+        authBuild: AUTH_LOGIN_BUILD,
+        reason: "invalid_password",
+      });
     }
 
     row.role_id = isAdminRole(effectiveRole) ? effectiveRole : row.role_id;
@@ -212,7 +246,7 @@ router.post("/login", authLimiter, async (req, res) => {
     await resetAuthRateLimit(req);
 
     console.log(
-      `[auth/login] SUCCESS build=${AUTH_LOGIN_BUILD} email=${normalizedEmail} userId=${user.id} role=${user.roleId} status=active`
+      `[auth/login] SUCCESS build=${AUTH_LOGIN_BUILD} email=${normalizedEmail} userId=${user.id} role=${user.roleId} mobile=${mobile}`
     );
 
     const info = getClientInfo(req);

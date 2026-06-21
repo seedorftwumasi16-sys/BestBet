@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/Input";
 import { useAuth } from "@/context/AuthContext";
 import { getPostLoginPath } from "@/lib/constants";
 import { ApiError } from "@/lib/api";
+import { clearStoredAuth } from "@/lib/auth-storage";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -20,6 +21,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    clearStoredAuth();
     setError("");
   }, []);
 
@@ -74,6 +76,10 @@ export default function LoginPage() {
           onChange={(e) => setEmail(e.target.value)}
           icon={<Mail size={18} />}
           autoComplete="email"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          inputMode="email"
           required
         />
 
@@ -86,6 +92,9 @@ export default function LoginPage() {
           icon={<Lock size={18} />}
           showPasswordToggle
           autoComplete="current-password"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
           required
         />
 
