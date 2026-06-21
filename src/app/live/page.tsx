@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/Badge";
 import { betsApi } from "@/lib/api";
 import type { Match } from "@/lib/constants";
 import { applyMatchFeed, mergeMatchLists, applyOddsUpdate, toMatch } from "@/lib/match-utils";
+import { logLiveMatchPayload } from "@/lib/live-score-utils";
 import { getLiveMatches } from "@/lib/fixture-utils";
 import { useLiveOdds } from "@/hooks/useLiveOdds";
 import { useLiveScorePolling } from "@/hooks/useLiveScorePolling";
@@ -23,6 +24,7 @@ export default function LivePage() {
       const data = await betsApi.getMatches({ live: true, sport: "football" });
       const incoming = data.map(toMatch);
       setLiveMatches((prev) => (silent && prev.length > 0 ? mergeMatchLists(prev, incoming) : incoming));
+      logLiveMatchPayload(silent ? "live-poll" : "live-load", incoming);
     } catch (err) {
       console.error("[live] failed to load matches", err);
     }

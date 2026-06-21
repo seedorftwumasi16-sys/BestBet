@@ -88,6 +88,7 @@ export function toMatch(m: MatchApi): Match {
     awayRedCards: m.awayRedCards,
     liveDataAvailable: m.liveDataAvailable,
     liveDataError: m.liveDataError ?? undefined,
+    scoresPending: m.scoresPending,
     odds: m.odds,
   };
 }
@@ -137,6 +138,7 @@ function matchSnapshotKey(m: Match): string {
     m.homeRedCards ?? "",
     m.awayRedCards ?? "",
     m.liveDataAvailable ?? "",
+    m.scoresPending ?? "",
     m.timerPaused ?? "",
     m.minuteTickAt ?? "",
     m.bettingSuspended ?? "",

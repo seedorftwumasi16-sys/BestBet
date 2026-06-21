@@ -30,7 +30,7 @@ export async function promoteKickoffMatches(): Promise<{ promoted: number; finis
 
     const live = syncLiveFields("live");
     await db.query(
-      `UPDATE matches SET is_live = ?, match_status = ?, live_minute = ?, minute_tick_at = ?, timer_paused = ? WHERE id = ?`,
+      `UPDATE matches SET is_live = ?, match_status = ?, live_minute = ?, minute_tick_at = ?, timer_paused = ?, home_score = COALESCE(home_score, 0), away_score = COALESCE(away_score, 0) WHERE id = ?`,
       [live.is_live, live.match_status, 0, nowIso, false, row.id]
     );
 

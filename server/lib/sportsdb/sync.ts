@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import type { Database } from "../../db";
 import { getDb } from "../../db";
-import { boolVal } from "../../db/helpers";
+import { boolVal, boolFrom } from "../../db/helpers";
 import { invalidateMatchCache, emitMatchChange, getMatchById, syncLiveFields } from "../matches";
 import { syncOddsForMatch, buildDefaultCorrectScoreForSport } from "../odds";
 import { settleMatchBets } from "../settlement";
@@ -45,6 +45,16 @@ function parseScore(value: string | number | null | undefined): number | null {
   if (value === null || value === undefined || value === "") return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
+}
+
+function scoreForStatus(
+  value: string | number | null | undefined,
+  status: MatchStatus
+): number | null {
+  const parsed = parseScore(value);
+  if (parsed != null) return parsed;
+  if (status === "live" || status === "finished") return 0;
+  return null;
 }
 
 function defaultOdds(home: string, away: string) {
@@ -144,9 +154,15 @@ async function upsertEvent(db: Database, event: SportsDbEvent): Promise<boolean>
   const live = syncLiveFields(status);
   const sport = mapSport(event.strSport);
   const startTime = parseStartTime(event);
-  const homeScore = parseScore(event.intHomeScore);
-  const awayScore = parseScore(event.intAwayScore);
+  const homeScore = scoreForStatus(event.intHomeScore, status);
+  const awayScore = scoreForStatus(event.intAwayScore, status);
   const liveMinute = event.strProgress ? parseInt(String(event.strProgress), 10) : null;
+
+  if (status === "live") {
+    console.log(
+      `[sportsdb] live event ${externalId} ${event.strHomeTeam} vs ${event.strAwayTeam} score=${homeScore ?? "?"}-${awayScore ?? "?"} status=${event.strStatus} progress=${event.strProgress ?? "n/a"}`
+    );
+  }
   const isFeatured =
     status === "upcoming" && new Date(startTime).getTime() - Date.now() < 7 * 24 * 60 * 60 * 1000;
 

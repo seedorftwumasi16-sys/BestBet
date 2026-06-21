@@ -103,6 +103,7 @@ export interface Match {
   awayRedCards?: number;
   liveDataAvailable?: boolean;
   liveDataError?: string | null;
+  scoresPending?: boolean;
   odds: {
     home: number;
     draw?: number;

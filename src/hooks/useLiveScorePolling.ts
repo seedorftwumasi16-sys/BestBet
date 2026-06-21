@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { betsApi } from "@/lib/api";
 import type { Match } from "@/lib/constants";
 import { mergeMatchLists, toMatch } from "@/lib/match-utils";
+import { logLiveMatchPayload } from "@/lib/live-score-utils";
 
 const LIVE_SCORE_POLL_MS = 45_000;
 
@@ -23,6 +24,7 @@ export function useLiveScorePolling(
         const data = await betsApi.getMatches({ live: true, sport: "football" });
         const incoming = data.map(toMatch);
         setRef.current((prev) => mergeMatchLists(prev, incoming));
+        logLiveMatchPayload("live-score-poll", incoming);
       } catch {
         // silent fallback — websocket may still update
       }

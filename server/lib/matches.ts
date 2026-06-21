@@ -67,6 +67,7 @@ export interface MatchApiPayload {
   awayRedCards?: number;
   liveDataAvailable?: boolean;
   liveDataError?: string | null;
+  scoresPending?: boolean;
   odds: {
     home: number;
     draw?: number;
@@ -106,6 +107,27 @@ export function syncLiveFields(status: MatchStatus) {
   };
 }
 
+function resolveScoresForApi(
+  row: Record<string, unknown>,
+  matchStatus: MatchStatus,
+  isLive: boolean
+): { homeScore: number | null; awayScore: number | null; scoresPending: boolean } {
+  const rawHome = row.home_score != null ? Number(row.home_score) : null;
+  const rawAway = row.away_score != null ? Number(row.away_score) : null;
+  const hasActual = rawHome != null && rawAway != null;
+  const inPlay = isLive || matchStatus === "live" || matchStatus === "finished";
+
+  if (hasActual) {
+    return { homeScore: rawHome, awayScore: rawAway, scoresPending: false };
+  }
+
+  if (inPlay) {
+    return { homeScore: 0, awayScore: 0, scoresPending: true };
+  }
+
+  return { homeScore: null, awayScore: null, scoresPending: false };
+}
+
 export function mapMatchRow(
   row: Record<string, unknown>,
   extra?: { correctScore?: Record<string, number>; doubleChance?: Record<string, number> }
@@ -127,6 +149,9 @@ export function mapMatchRow(
   const awayLogo =
     awayLogoRaw.startsWith("http") || awayLogoRaw.startsWith("/") ? awayLogoRaw : "⚽";
   const timer = computeEffectiveLiveMinute(row);
+  const isLive = isMatchLive(row);
+  const scores = resolveScoresForApi(row, matchStatus, isLive);
+  const hasApiFootball = Boolean(row.apifootball_fixture_id);
   return {
     id: String(row.id),
     homeTeam: {
@@ -145,7 +170,7 @@ export function mapMatchRow(
     sport: String(row.sport),
     startTime: String(row.start_time),
     matchStatus,
-    isLive: isMatchLive(row),
+    isLive,
     isFeatured: boolFrom(row, "is_featured"),
     bettingSuspended: boolFrom(row, "betting_suspended"),
     isSimulated: boolFrom(row, "is_simulated"),
@@ -154,14 +179,19 @@ export function mapMatchRow(
     liveMinuteDisplay: timer.display,
     timerPaused: timer.paused,
     minuteTickAt: row.minute_tick_at ? String(row.minute_tick_at) : null,
-    homeScore: row.home_score != null ? Number(row.home_score) : null,
-    awayScore: row.away_score != null ? Number(row.away_score) : null,
+    homeScore: scores.homeScore,
+    awayScore: scores.awayScore,
+    scoresPending: scores.scoresPending,
     liveStatusShort: row.live_status_short ? String(row.live_status_short) : null,
     homeYellowCards: row.home_yellow_cards != null ? Number(row.home_yellow_cards) : 0,
     awayYellowCards: row.away_yellow_cards != null ? Number(row.away_yellow_cards) : 0,
     homeRedCards: row.home_red_cards != null ? Number(row.home_red_cards) : 0,
     awayRedCards: row.away_red_cards != null ? Number(row.away_red_cards) : 0,
-    liveDataAvailable: row.live_data_available == null ? true : boolFrom(row, "live_data_available"),
+    liveDataAvailable: hasApiFootball
+      ? row.live_data_available == null
+        ? true
+        : boolFrom(row, "live_data_available")
+      : true,
     liveDataError: row.live_data_error ? String(row.live_data_error) : null,
     odds: {
       home: Number(row.odds_home),

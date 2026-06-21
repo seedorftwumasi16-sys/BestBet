@@ -277,3 +277,8 @@ ALTER TABLE matches ADD COLUMN IF NOT EXISTS away_red_cards INTEGER DEFAULT 0;
 ALTER TABLE matches ADD COLUMN IF NOT EXISTS live_data_available BOOLEAN DEFAULT TRUE;
 ALTER TABLE matches ADD COLUMN IF NOT EXISTS live_data_error TEXT;
 `;
+
+/** Clear stale unavailable flags set by earlier API-Football sync failures. */
+export const LIVE_DATA_RESET_SQL = `
+UPDATE matches SET live_data_available = TRUE, live_data_error = NULL WHERE live_data_available = FALSE;
+`;

@@ -10,6 +10,7 @@ import { LeagueLogo } from "@/components/ui/LeagueLogo";
 import { betsApi } from "@/lib/api";
 import type { Match } from "@/lib/constants";
 import { applyMatchFeed, mergeApiMatches, mergeMatchLists, applyOddsUpdate, toMatch } from "@/lib/match-utils";
+import { logLiveMatchPayload } from "@/lib/live-score-utils";
 import { prefetchLeagueBadges } from "@/lib/sports-assets";
 import { useMatchPolling } from "@/hooks/useMatchPolling";
 import { useLiveScorePolling } from "@/hooks/useLiveScorePolling";
@@ -108,6 +109,7 @@ export default function HomePage() {
       ]);
       const incoming = mergeApiMatches(all, live).map(toMatch);
       setMatches((prev) => (silent && prev.length > 0 ? mergeMatchLists(prev, incoming) : incoming));
+      logLiveMatchPayload(silent ? "homepage-poll" : "homepage-load", incoming);
     } catch (err) {
       console.error("[homepage] failed to load matches", err);
       if (!silent) setMatches([]);

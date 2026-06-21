@@ -148,17 +148,6 @@ export async function syncApiFootballLiveScores(): Promise<{
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[apifootball] sync failed:", message);
-
-    try {
-      await db.query(
-        `UPDATE matches SET live_data_available = ?, live_data_error = ?
-         WHERE COALESCE(is_simulated, FALSE) = FALSE AND (is_live = TRUE OR LOWER(match_status) = 'live')`,
-        [boolVal(db, false), message.slice(0, 240)]
-      );
-    } catch {
-      // ignore
-    }
-
     return { updated: 0, finished: 0, unavailable: true, message };
   }
 }

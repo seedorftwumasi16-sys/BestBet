@@ -22,6 +22,22 @@ async function fetchJson<T>(path: string, timeoutMs = 12000): Promise<T | null> 
       return null;
     }
     const data = (await res.json()) as T;
+    if (path.includes("eventsday.php") || path.includes("eventsnextleague.php")) {
+      const events = (data as { events?: Array<{ strStatus?: string; intHomeScore?: string; intAwayScore?: string; strHomeTeam?: string; strAwayTeam?: string }> })?.events;
+      if (Array.isArray(events) && events.length > 0) {
+        const live = events.filter((e) => ["1H", "2H", "HT", "ET", "P", "LIVE", "BT", "INT"].includes(String(e.strStatus || "").toUpperCase()));
+        if (live.length > 0) {
+          console.log(
+            `[sportsdb] ${path} live sample:`,
+            live.slice(0, 3).map((e) => ({
+              match: `${e.strHomeTeam} vs ${e.strAwayTeam}`,
+              score: `${e.intHomeScore ?? "?"}-${e.intAwayScore ?? "?"}`,
+              status: e.strStatus,
+            }))
+          );
+        }
+      }
+    }
     return data;
   } catch (err) {
     console.warn(`[sportsdb] Request failed for ${path}:`, err instanceof Error ? err.message : err);

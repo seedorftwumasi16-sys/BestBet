@@ -24,6 +24,21 @@ router.get("/", async (req, res) => {
     window: window && validWindows.has(String(window)) ? (String(window) as FixtureWindow) : undefined,
   });
 
+  if (isLiveQuery) {
+    console.log(
+      `[matches] live query sport=${sport ?? "all"} count=${matches.length}`,
+      matches.slice(0, 8).map((m) => ({
+        id: m.id,
+        teams: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
+        homeScore: m.homeScore,
+        awayScore: m.awayScore,
+        scoresPending: m.scoresPending,
+        minute: m.liveMinuteDisplay,
+        status: m.matchStatus,
+      }))
+    );
+  }
+
   if (!isLiveQuery) {
     await cacheSet(cacheKey, matches, 30);
   }
