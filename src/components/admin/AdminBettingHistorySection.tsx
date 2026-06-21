@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { adminApi } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
@@ -20,6 +20,8 @@ interface BetRow {
 
 export function AdminBettingHistorySection() {
   const toast = useToast();
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
   const [bets, setBets] = useState<BetRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -31,10 +33,10 @@ export function AdminBettingHistorySection() {
       .catch((err) => {
         const message = err instanceof Error ? err.message : "Failed to load betting history";
         setError(message);
-        toast.error(message);
+        toastRef.current.error(message);
       })
       .finally(() => setLoading(false));
-  }, [toast]);
+  }, []);
 
   if (loading) return <p className="text-bestbet-gray-muted">Loading betting history...</p>;
   if (error) {

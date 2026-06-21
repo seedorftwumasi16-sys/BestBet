@@ -17,10 +17,15 @@ export const securityHeaders = helmet({
 
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 300,
+  max: 500,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many requests, please try again later" },
+  skip: (req) => {
+    if (!req.headers.authorization) return false;
+    const path = `${req.baseUrl || ""}${req.path || ""}`;
+    return path.includes("/admin");
+  },
 });
 
 export const authLimiter = rateLimit({

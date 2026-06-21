@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
@@ -12,6 +12,8 @@ import { useAuth } from "@/context/AuthContext";
 
 export function AdminUsersSection() {
   const toast = useToast();
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
   const { user } = useAuth();
   const [users, setUsers] = useState<UserAdminApi[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,10 +26,10 @@ export function AdminUsersSection() {
       .catch((err) => {
         const message = err instanceof Error ? err.message : "Failed to load users";
         setError(message);
-        toast.error(message);
+        toastRef.current.error(message);
       })
       .finally(() => setLoading(false));
-  }, [toast]);
+  }, []);
 
   const updateStatus = async (id: string, status: string) => {
     try {
@@ -334,6 +336,8 @@ export function AdminVirtualSection() {
 
 export function AdminSettingsSection() {
   const toast = useToast();
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
   const { user } = useAuth();
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [momoNumber, setMomoNumber] = useState("0203907314");
@@ -345,8 +349,8 @@ export function AdminSettingsSection() {
       setSettings(data);
       if (data.momo_number) setMomoNumber(data.momo_number);
       if (data.momo_recipient_name) setMomoRecipient(data.momo_recipient_name);
-    }).catch((err) => toast.error(err instanceof Error ? err.message : "Failed to load settings"));
-  }, [toast]);
+    }).catch((err) => toastRef.current.error(err instanceof Error ? err.message : "Failed to load settings"));
+  }, []);
 
   const saveMomoSettings = async () => {
     if (user?.roleId !== "super_admin") {

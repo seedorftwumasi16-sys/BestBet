@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Search, Trash2, Ticket } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -12,12 +12,14 @@ import { useToast } from "@/context/ToastContext";
 
 export function AdminBookingCodesSection() {
   const toast = useToast();
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
   const [codes, setCodes] = useState<BookingCodeAdminApi[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const load = (q?: string) => {
+  const load = useCallback((q?: string) => {
     setLoading(true);
     setError("");
     adminApi
@@ -26,14 +28,14 @@ export function AdminBookingCodesSection() {
       .catch((err) => {
         const message = err instanceof Error ? err.message : "Failed to load booking codes";
         setError(message);
-        toast.error(message);
+        toastRef.current.error(message);
       })
       .finally(() => setLoading(false));
-  };
+  }, []);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   const handleSearch = () => load(search.trim() || undefined);
 

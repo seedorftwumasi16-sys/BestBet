@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Plus, Pencil, Trash2, Save, X, Shield } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -27,6 +27,8 @@ const emptyForm = (): AdminForm => ({
 
 export function AdminAdminsSection() {
   const toast = useToast();
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
   const { user } = useAuth();
   const [admins, setAdmins] = useState<AdminAccountApi[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,10 +47,10 @@ export function AdminAdminsSection() {
       .catch((err) => {
         const message = err instanceof Error ? err.message : "Failed to load admins";
         setLoadError(message);
-        toast.error(message);
+        toastRef.current.error(message);
       })
       .finally(() => setLoading(false));
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     load();
@@ -79,6 +81,7 @@ export function AdminAdminsSection() {
   };
 
   const saveAdmin = async () => {
+    if (saving) return;
     if (!form.name.trim() || !form.email.trim()) {
       toast.error("Name and email are required");
       return;

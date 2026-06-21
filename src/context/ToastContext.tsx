@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, AlertCircle, Info } from "lucide-react";
 
@@ -31,11 +31,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     }, 4000);
   }, []);
 
-  const value: ToastContextValue = {
-    success: (message) => push(message, "success"),
-    error: (message) => push(message, "error"),
-    info: (message) => push(message, "info"),
-  };
+  const success = useCallback((message: string) => push(message, "success"), [push]);
+  const error = useCallback((message: string) => push(message, "error"), [push]);
+  const info = useCallback((message: string) => push(message, "info"), [push]);
+
+  const value = useMemo(
+    (): ToastContextValue => ({ success, error, info }),
+    [success, error, info]
+  );
 
   return (
     <ToastContext.Provider value={value}>

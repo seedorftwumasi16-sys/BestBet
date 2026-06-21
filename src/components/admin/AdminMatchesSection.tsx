@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Plus,
   Pencil,
@@ -140,6 +140,9 @@ function statusBadge(status: MatchStatus) {
 
 export function AdminMatchesSection() {
   const toast = useToast();
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
+
   const [matches, setMatches] = useState<MatchApi[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -161,10 +164,10 @@ export function AdminMatchesSection() {
       .catch((err) => {
         const message = err instanceof Error ? err.message : "Failed to load matches";
         setLoadError(message);
-        toast.error(message);
+        toastRef.current.error(message);
       })
       .finally(() => setLoading(false));
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     load();
@@ -198,6 +201,7 @@ export function AdminMatchesSection() {
   };
 
   const saveMatch = async () => {
+    if (saving) return;
     if (!form.homeTeam || !form.awayTeam || !form.league) {
       toast.error("Home team, away team, and league are required");
       return;
@@ -400,7 +404,7 @@ export function AdminMatchesSection() {
           </div>
 
           <div className="flex gap-2 pt-2">
-            <Button variant="primary" size="sm" loading={saving} onClick={saveMatch}>
+            <Button type="button" variant="primary" size="sm" loading={saving} disabled={saving} onClick={saveMatch}>
               <Save size={14} className="mr-1" /> {editingId ? "Update Match" : "Create Match"}
             </Button>
             <Button variant="outline" size="sm" onClick={closeForm}>
