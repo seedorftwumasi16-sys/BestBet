@@ -8,6 +8,7 @@ import { authenticate, requirePermission, logAudit } from "../middleware/auth";
 import { depositLimiter } from "../middleware/security";
 import { createNotification, notifyAdmins } from "../services/notifications";
 import { getMomoFromEnv, getMomoInfo } from "../lib/momo";
+import { formatCurrency } from "../lib/currency";
 
 const router = Router();
 
@@ -65,8 +66,8 @@ router.post("/deposit", authenticate, depositLimiter, upload.single("screenshot"
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, req.user!.id, amount, amountSent, "pending", "mobile_money", paymentReference, screenshotUrl]
     );
-    await logAudit(req.user!.id, "deposit_request", `MoMo deposit GHS ${amount}, ref: ${paymentReference}`);
-    await notifyAdmins("New Deposit Request", `User ${req.user!.email} submitted GHS ${amount} deposit`, "warning");
+    await logAudit(req.user!.id, "deposit_request", `MoMo deposit ${formatCurrency(amount)}, ref: ${paymentReference}`);
+    await notifyAdmins("New Deposit Request", `User ${req.user!.email} submitted ${formatCurrency(amount)} deposit`, "warning");
     await createNotification(req.user!.id, "Deposit Submitted", "Your deposit is pending admin approval", "info");
 
     res.status(201).json({ id, amount, amountSent, status: "pending", paymentReference, screenshotUrl });
@@ -96,8 +97,8 @@ router.post("/withdraw", authenticate, async (req, res) => {
     [id, req.user!.id, amount, "pending", method, accountDetails]
   );
   await db.query(`UPDATE wallets SET locked_balance = locked_balance + ? WHERE user_id = ?`, [amount, req.user!.id]);
-  await logAudit(req.user!.id, "withdrawal_request", `Withdrawal request: GHS ${amount}`);
-  await notifyAdmins("New Withdrawal Request", `User ${req.user!.email} requested GHS ${amount} withdrawal`, "warning");
+  await logAudit(req.user!.id, "withdrawal_request", `Withdrawal request: ${formatCurrency(amount)}`);
+  await notifyAdmins("New Withdrawal Request", `User ${req.user!.email} requested ${formatCurrency(amount)} withdrawal`, "warning");
 
   res.status(201).json({ id, amount, status: "pending", method });
 });
@@ -130,8 +131,8 @@ router.post("/deposit/:id/approve", authenticate, requirePermission("manage_depo
   const creditAmount = Number(row.amount_sent || row.amount);
   await db.query(`UPDATE deposits SET status = 'completed', reviewed_by = ? WHERE id = ?`, [req.user!.id, req.params.id]);
   await db.query(`UPDATE wallets SET balance = balance + ? WHERE user_id = ?`, [creditAmount, row.user_id]);
-  await logAudit(req.user!.id, "approve_deposit", `Approved deposit ${req.params.id} for GHS ${creditAmount}`);
-  await createNotification(row.user_id as string, "Deposit Approved", `GHS ${creditAmount} has been credited to your wallet`, "success");
+  await logAudit(req.user!.id, "approve_deposit", `Approved deposit ${req.params.id} for ${formatCurrency(creditAmount)}`);
+  await createNotification(row.user_id as string, "Deposit Approved", `${formatCurrency(creditAmount)} has been credited to your wallet`, "success");
 
   res.json({ message: "Deposit approved", amount: creditAmount });
 });
@@ -172,8 +173,8 @@ router.post("/withdraw/:id/approve", authenticate, requirePermission("manage_wit
 
   await db.query(`UPDATE withdrawals SET status = 'completed', reviewed_by = ? WHERE id = ?`, [req.user!.id, req.params.id]);
   await db.query(`UPDATE wallets SET balance = balance - ?, locked_balance = locked_balance - ? WHERE user_id = ?`, [row.amount, row.amount, row.user_id]);
-  await logAudit(req.user!.id, "approve_withdrawal", `Approved withdrawal ${req.params.id} for GHS ${row.amount}`);
-  await createNotification(row.user_id as string, "Withdrawal Approved", `GHS ${row.amount} withdrawal has been processed`, "success");
+  await logAudit(req.user!.id, "approve_withdrawal", `Approved withdrawal ${req.params.id} for ${formatCurrency(Number(row.amount))}`);
+  await createNotification(row.user_id as string, "Withdrawal Approved", `${formatCurrency(Number(row.amount))} withdrawal has been processed`, "success");
 
   res.json({ message: "Withdrawal approved", amount: Number(row.amount) });
 });

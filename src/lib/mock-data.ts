@@ -131,7 +131,7 @@ export const mockPromotions: Promotion[] = [
   {
     id: "p1",
     title: "Welcome Bonus",
-    description: "Get 100% match on your first deposit up to $500",
+    description: "Get 100% match on your first deposit up to GH₵ 500.00",
     image: "/images/promotions/welcome.svg",
     cta: "Claim Now",
     badge: "NEW",
@@ -154,7 +154,7 @@ export const mockPromotions: Promotion[] = [
   {
     id: "p4",
     title: "Refer a Friend",
-    description: "Earn $50 for every friend who joins and places their first bet",
+    description: "Earn GH₵ 50.00 for every friend who joins and places their first bet",
     image: "/images/promotions/refer.svg",
     cta: "Refer Now",
   },
@@ -209,16 +209,16 @@ export const mockActiveBets: ActiveBet[] = [
 ];
 
 export const mockTransactions: Transaction[] = [
-  { id: "t1", type: "deposit", amount: 500, status: "completed", date: new Date(Date.now() - 86400000), method: "Visa ****4242" },
-  { id: "t2", type: "withdrawal", amount: 200, status: "completed", date: new Date(Date.now() - 172800000), method: "Bank Transfer" },
-  { id: "t3", type: "deposit", amount: 100, status: "completed", date: new Date(Date.now() - 259200000), method: "Mastercard ****8888" },
-  { id: "t4", type: "withdrawal", amount: 150, status: "pending", date: new Date(Date.now() - 43200000), method: "PayPal" },
+  { id: "t1", type: "deposit", amount: 500, status: "completed", date: new Date(Date.now() - 86400000), method: "MTN Mobile Money" },
+  { id: "t2", type: "withdrawal", amount: 200, status: "completed", date: new Date(Date.now() - 172800000), method: "Mobile Money" },
+  { id: "t3", type: "deposit", amount: 100, status: "completed", date: new Date(Date.now() - 259200000), method: "Vodafone Cash" },
+  { id: "t4", type: "withdrawal", amount: 150, status: "pending", date: new Date(Date.now() - 43200000), method: "Mobile Money" },
 ];
 
 export const mockNotifications: Notification[] = [
-  { id: "n1", title: "Bet Won!", message: "Your bet on Man City vs Arsenal won $185.00", type: "success", read: false, date: new Date(Date.now() - 3600000) },
+  { id: "n1", title: "Bet Won!", message: "Your bet on Man City vs Arsenal won GH₵ 185.00", type: "success", read: false, date: new Date(Date.now() - 3600000) },
   { id: "n2", title: "New Promotion", message: "Weekend Live Boost - Enhanced odds on all live football", type: "promo", read: false, date: new Date(Date.now() - 7200000) },
-  { id: "n3", title: "Deposit Confirmed", message: "Your deposit of $500.00 has been processed", type: "info", read: true, date: new Date(Date.now() - 86400000) },
+  { id: "n3", title: "Deposit Confirmed", message: "Your deposit of GH₵ 500.00 has been processed", type: "info", read: true, date: new Date(Date.now() - 86400000) },
 ];
 
 export const mockAdminStats: AdminStats = {
@@ -254,7 +254,7 @@ export const heroSlides = [
   {
     id: "h3",
     title: "100% Welcome Bonus",
-    subtitle: "Double your first deposit up to GHS 500. New players only.",
+    subtitle: "Double your first deposit up to GH₵ 500.00. New players only.",
     cta: "Claim Bonus",
     badge: "NEW",
     href: "/register",

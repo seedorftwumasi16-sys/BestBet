@@ -3,6 +3,7 @@ import { boolFrom } from "../db/helpers";
 import { evaluateSelection } from "./markets";
 import { createNotification } from "../services/notifications";
 import { logAudit } from "../middleware/auth";
+import { formatCurrency } from "./currency";
 
 export async function settleMatchBets(matchId: string): Promise<{ settled: number; won: number; lost: number }> {
   const db = await getDb();
@@ -72,7 +73,7 @@ export async function settleMatchBets(matchId: string): Promise<{ settled: numbe
       await createNotification(
         String(betRow.user_id),
         "Bet Won!",
-        `Your bet won GHS ${potentialWin.toFixed(2)}`,
+        `Your bet won ${formatCurrency(potentialWin)}`,
         "success"
       );
       won++;
@@ -81,7 +82,7 @@ export async function settleMatchBets(matchId: string): Promise<{ settled: numbe
       await createNotification(
         String(betRow.user_id),
         "Bet Lost",
-        `Your bet of GHS ${stake.toFixed(2)} did not win`,
+        `Your bet of ${formatCurrency(stake)} did not win`,
         "warning"
       );
       lost++;

@@ -1,4 +1,5 @@
 import { getDb } from "../db";
+import { DEFAULT_CURRENCY } from "./currency";
 
 export const DEFAULT_MOMO_NUMBER = "0203907314";
 export const DEFAULT_MOMO_RECIPIENT = "RAHAMATU NUHU";
@@ -22,14 +23,14 @@ export async function getMomoInfo() {
       number: settings.momo_number || env.number,
       recipientName: settings.momo_recipient_name || env.recipientName,
       provider: "Mobile Money",
-      currency: "GHS",
+      currency: DEFAULT_CURRENCY,
     };
   } catch {
     return {
       number: env.number,
       recipientName: env.recipientName,
       provider: "Mobile Money",
-      currency: "GHS",
+      currency: DEFAULT_CURRENCY,
     };
   }
 }

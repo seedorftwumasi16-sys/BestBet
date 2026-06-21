@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/Badge";
 import { useAuth } from "@/context/AuthContext";
 import { walletsApi } from "@/lib/api";
 import { ArrowLeft } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 
 export default function WithdrawPage() {
   const { isLoggedIn, user, refreshUser } = useAuth();
@@ -65,11 +66,11 @@ export default function WithdrawPage() {
         </Link>
         <div>
           <h1 className="text-2xl font-black">Withdraw Funds</h1>
-          <p className="text-sm text-bestbet-gray-muted mt-1">Available: GHS {user!.balance.toFixed(2)}</p>
+          <p className="text-sm text-bestbet-gray-muted mt-1">Available: {formatCurrency(user!.balance)}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="card-premium p-6 space-y-4">
-          <Input label="Amount (GHS)" type="number" min="10" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required />
+          <Input label="Amount (GH₵)" type="number" min="10" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required />
           <div>
             <label className="block text-sm font-medium mb-2">Method</label>
             <select

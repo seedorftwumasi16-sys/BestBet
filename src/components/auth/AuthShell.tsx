@@ -55,7 +55,7 @@ export function AuthShell({
               <Gift size={40} className="text-bestbet-yellow mb-4" />
               <h2 className="text-2xl font-black text-white mb-1">Welcome Bonus</h2>
               <p className="text-3xl font-black text-bestbet-yellow">100% Match</p>
-              <p className="text-bestbet-gray-muted mt-2 text-sm">Up to $500 on your first deposit</p>
+              <p className="text-bestbet-gray-muted mt-2 text-sm">Up to GH₵ 500.00 on your first deposit</p>
             </div>
           ) : (
             <p className="text-bestbet-gray-muted text-base leading-relaxed mb-10 max-w-md">

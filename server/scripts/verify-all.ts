@@ -5,6 +5,7 @@
 import dotenv from "dotenv";
 import { spawn, execSync } from "child_process";
 import { WebSocket } from "ws";
+import { formatCurrency } from "../lib/currency";
 
 dotenv.config();
 
@@ -150,7 +151,7 @@ async function testAuth(): Promise<string | null> {
     const me = await fetchJson("/api/auth/me", {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (me.status === 200) pass("Protected /api/auth/me", `Balance: $${me.body.balance}`);
+    if (me.status === 200) pass("Protected /api/auth/me", `Balance: ${formatCurrency(me.body.balance)}`);
     else fail("Protected /api/auth/me", `Status ${me.status}`);
 
     const noAuth = await fetchJson("/api/auth/me");
@@ -231,7 +232,7 @@ async function testBetting(token: string | null) {
       method: "POST",
       headers,
     });
-    if (approve.status === 200) pass("Admin deposit approval", `Wallet +$${approve.body.amount}`);
+    if (approve.status === 200) pass("Admin deposit approval", `Wallet +${formatCurrency(approve.body.amount)}`);
     else fail("Admin deposit approval", JSON.stringify(approve.body));
   }
 
@@ -245,7 +246,7 @@ async function testBetting(token: string | null) {
     }),
   });
   if (place.status === 201) {
-    pass("Single bet placed", `Booking: ${place.body.bookingCode}, balance: $${place.body.balance}`);
+    pass("Single bet placed", `Booking: ${place.body.bookingCode}, balance: ${formatCurrency(place.body.balance)}`);
   } else fail("Single bet placed", JSON.stringify(place.body));
 
   const multi = await fetchJson("/api/bets/place", {
@@ -260,7 +261,7 @@ async function testBetting(token: string | null) {
       ],
     }),
   });
-  if (multi.status === 201) pass("Multi bet placed", `Potential: $${multi.body.potentialWin}`);
+  if (multi.status === 201) pass("Multi bet placed", `Potential: ${formatCurrency(multi.body.potentialWin)}`);
   else fail("Multi bet placed", JSON.stringify(multi.body));
 
   const saveCode = await fetchJson("/api/bets/booking-code/save", {

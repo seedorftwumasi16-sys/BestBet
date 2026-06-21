@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useBetSlip } from "@/context/BetSlipContext";
 import { useAuth } from "@/context/AuthContext";
-import { formatCurrency, formatOdds } from "@/lib/utils";
+import { CURRENCY_SYMBOL, formatCurrency, formatOdds } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { betsApi } from "@/lib/api";
@@ -197,12 +197,12 @@ export function BetSlipPanel({ className, floating = false }: BetSlipPanelProps)
           <div>
             <label className="text-xs font-medium text-bestbet-gray-muted mb-1.5 block">Stake</label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-bestbet-gray-muted">$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-bestbet-gray-muted">{CURRENCY_SYMBOL}</span>
               <input
                 type="number"
                 value={stake}
                 onChange={(e) => setStake(Math.max(0, Number(e.target.value)))}
-                className="w-full pl-7 pr-4 py-2.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-sm font-bold focus:outline-none focus:ring-2 focus:ring-bestbet-yellow/50"
+                className="w-full pl-12 pr-4 py-2.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-sm font-bold focus:outline-none focus:ring-2 focus:ring-bestbet-yellow/50"
                 min={1}
               />
             </div>
@@ -218,7 +218,7 @@ export function BetSlipPanel({ className, floating = false }: BetSlipPanelProps)
                       : "bg-[var(--card)] hover:bg-[var(--card-hover)]"
                   )}
                 >
-                  ${s}
+                  {formatCurrency(s)}
                 </button>
               ))}
             </div>

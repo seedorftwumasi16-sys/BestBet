@@ -57,9 +57,9 @@ const MATCHES = [
 ];
 
 const PROMOTIONS = [
-  { id: "p1", title: "100% Welcome Bonus", description: "Double your first deposit up to GHS 500", cta: "Claim Now", badge: "NEW", image_url: "/images/promotions/welcome.svg" },
+  { id: "p1", title: "100% Welcome Bonus", description: "Double your first deposit up to GH₵ 500.00", cta: "Claim Now", badge: "NEW", image_url: "/images/promotions/welcome.svg" },
   { id: "p2", title: "Acca Boost", description: "Get up to 50% extra on multi-bets with 5+ selections", cta: "Bet Now", badge: "HOT", image_url: "/images/promotions/acca.svg" },
-  { id: "p3", title: "Refer & Earn", description: "Earn GHS 10 for every friend you refer", cta: "Share Code", badge: "EARN", image_url: "/images/promotions/refer.svg" },
+  { id: "p3", title: "Refer & Earn", description: "Earn GH₵ 10.00 for every friend you refer", cta: "Share Code", badge: "EARN", image_url: "/images/promotions/refer.svg" },
 ];
 
 const BANNERS = [

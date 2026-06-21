@@ -10,6 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 import { walletsApi } from "@/lib/api";
 import { DEFAULT_MOMO_INFO } from "@/lib/momo";
 import { ArrowLeft, Smartphone, Upload, Copy, CheckCircle2, User } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 
 export default function DepositPage() {
   const { isLoggedIn, refreshUser } = useAuth();
@@ -90,7 +91,11 @@ export default function DepositPage() {
           <Badge variant="warning">Pending Admin Approval</Badge>
           <h1 className="text-2xl md:text-3xl font-black font-display">Deposit Submitted</h1>
           <p className="text-bestbet-gray-muted leading-relaxed">
-            Your deposit of <span className="text-white font-semibold">GHS {amountSent || amount}</span> is being
+            Your deposit of{" "}
+            <span className="text-white font-semibold">
+              {formatCurrency(Number(amountSent || amount) || 0)}
+            </span>{" "}
+            is being
             reviewed. You will be notified once approved.
           </p>
           <div className="glass-panel rounded-2xl p-4 text-left space-y-2 text-sm">
@@ -175,7 +180,7 @@ export default function DepositPage() {
         <form onSubmit={handleSubmit} className="card-premium p-5 md:p-6 space-y-4">
           <h2 className="text-sm font-bold font-display">Submit Payment Proof</h2>
           <Input
-            label="Deposit Amount (GHS)"
+            label="Deposit Amount (GH₵)"
             type="number"
             min="5"
             step="0.01"
@@ -184,7 +189,7 @@ export default function DepositPage() {
             required
           />
           <Input
-            label="Amount Sent (GHS)"
+            label="Amount Sent (GH₵)"
             type="number"
             min="5"
             step="0.01"

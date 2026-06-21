@@ -10,6 +10,7 @@ import {
   markBookingCodeUsed,
   generateShareBookingCode,
 } from "../lib/booking-codes";
+import { formatCurrency } from "../lib/currency";
 
 const router = Router();
 
@@ -148,7 +149,7 @@ router.post("/:id/cashout", authenticate, async (req, res) => {
   const cashoutValue = Number(row.cashout_value || row.stake);
   await db.query(`UPDATE bets SET status = 'cashout', cashout_available = 0 WHERE id = ?`, [req.params.id]);
   await db.query(`UPDATE wallets SET balance = balance + ? WHERE user_id = ?`, [cashoutValue, req.user!.id]);
-  await logAudit(req.user!.id, "cashout", `Cashed out bet ${req.params.id} for GHS ${cashoutValue}`);
+  await logAudit(req.user!.id, "cashout", `Cashed out bet ${req.params.id} for ${formatCurrency(cashoutValue)}`);
 
   const newBalance = await getWalletBalance(req.user!.id);
   res.json({ message: "Cash out successful", amount: cashoutValue, balance: newBalance });

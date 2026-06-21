@@ -5,6 +5,7 @@ import { authenticate, requirePermission, requireRole, logAudit } from "../middl
 import { createNotification } from "../services/notifications";
 import { getUserWithWallet } from "../db/helpers";
 import { canChangeUserStatus } from "../lib/super-admin";
+import { formatCurrency } from "../lib/currency";
 import adminMatchesRoutes from "./admin/matches";
 import adminAdminsRoutes from "./admin/admins";
 import adminBookingCodesRoutes from "./admin/booking-codes";
@@ -109,7 +110,7 @@ router.patch("/users/:id/balance", authenticate, requireRole("super_admin"), asy
   await logAudit(req.user!.id, "adjust_balance", `${type} ${amount} for user ${req.params.id}: ${reason || ""}`);
 
   const newBalance = await getWalletBalance(req.params.id);
-  await createNotification(req.params.id, "Balance Updated", `Your balance has been ${type === "add" ? "credited" : "debited"} by GHS ${amount}`, "info");
+  await createNotification(req.params.id, "Balance Updated", `Your balance has been ${type === "add" ? "credited" : "debited"} by ${formatCurrency(amount)}`, "info");
   res.json({ balance: newBalance });
 });
 

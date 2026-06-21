@@ -1,6 +1,10 @@
+import { DEFAULT_CURRENCY, CURRENCY_SYMBOL } from "./currency";
+
 export const BRAND = {
   name: "BestBet",
   slogan: "Bet Smarter. Win Bigger.",
+  currency: DEFAULT_CURRENCY,
+  currencySymbol: CURRENCY_SYMBOL,
   colors: {
     yellow: "#FFD700",
     yellowDark: "#E6C200",
