@@ -78,12 +78,12 @@ function SportPageContent({ sport }: { sport: string }) {
   }, [matches, league, search]);
 
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto pb-28 xl:pb-6">
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-5 md:space-y-6 max-w-5xl mx-auto pb-20 sm:pb-24 xl:pb-6 w-full min-w-0">
       <FadeIn>
         <div className="flex items-center gap-3">
           <span className="text-3xl">{sportInfo?.icon || "🏆"}</span>
           <div>
-            <h1 className="text-2xl font-black">{sportInfo?.name || sport}</h1>
+            <h1 className="text-xl sm:text-2xl font-black">{sportInfo?.name || sport}</h1>
             <p className="text-sm text-bestbet-gray-muted">{displayed.length} events available</p>
           </div>
         </div>

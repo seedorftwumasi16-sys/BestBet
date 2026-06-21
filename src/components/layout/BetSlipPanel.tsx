@@ -330,7 +330,7 @@ export function BetSlipPanel({ className, floating = false }: BetSlipPanelProps)
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
             className={cn(
-              "fixed bottom-16 left-0 right-0 z-40 bg-[var(--bet-slip-bg)] border-t border-bestbet-yellow/15 rounded-t-2xl shadow-2xl max-h-[70vh] overflow-hidden bet-slip-glow",
+              "fixed bottom-[4.5rem] sm:bottom-[4.75rem] left-0 right-0 z-40 bg-[var(--bet-slip-bg)] border-t border-bestbet-yellow/15 rounded-t-2xl shadow-2xl max-h-[65vh] sm:max-h-[70vh] overflow-hidden bet-slip-glow",
               className
             )}
           >
@@ -362,7 +362,7 @@ export function FloatingBetSlipButton() {
   return (
     <button
       onClick={() => setIsOpen(!isOpen)}
-      className="xl:hidden fixed bottom-20 right-4 z-30 bg-bestbet-yellow text-bestbet-black font-bold px-4 py-3 rounded-full shadow-lg shadow-bestbet-yellow/30 flex items-center gap-2 active:scale-95 transition-transform yellow-glow"
+      className="xl:hidden fixed bottom-[4.25rem] sm:bottom-[4.5rem] right-3 sm:right-4 z-30 bg-bestbet-yellow text-bestbet-black font-bold px-3 py-2 sm:px-4 sm:py-2.5 rounded-full shadow-lg shadow-bestbet-yellow/30 flex items-center gap-1.5 sm:gap-2 active:scale-95 transition-transform text-sm min-h-[40px]"
       aria-label={`Bet slip with ${selections.length} selections`}
     >
       <Ticket size={18} />

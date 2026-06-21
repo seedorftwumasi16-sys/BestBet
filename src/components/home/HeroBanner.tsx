@@ -97,14 +97,14 @@ const TOP_LEAGUE_CHIPS = [
 
 export function PopularLeagues() {
   return (
-    <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1 snap-x snap-mandatory">
+    <div className="flex gap-2 sm:gap-3 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1 snap-x snap-mandatory">
       {TOP_LEAGUE_CHIPS.map((comp) => (
         <Link
           key={comp.sportsdbId}
           href={`/sports/football?league=${comp.sportsdbId}`}
-          className="league-chip group snap-start min-w-[168px]"
+          className="league-chip group snap-start min-w-[132px] sm:min-w-[148px] md:min-w-[168px]"
         >
-          <div className="relative w-10 h-10 shrink-0">
+          <div className="relative w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 shrink-0">
             <Image
               src={getLeagueBadgeUrl(comp.badgeId)}
               alt={comp.label}
@@ -114,10 +114,10 @@ export function PopularLeagues() {
             />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-bold whitespace-nowrap font-display group-hover:text-bestbet-yellow transition-colors">
+            <p className="text-xs sm:text-sm font-bold whitespace-nowrap font-display group-hover:text-bestbet-yellow transition-colors">
               {comp.label}
             </p>
-            <p className="text-[11px] text-bestbet-gray-muted">{comp.country}</p>
+            <p className="text-[10px] sm:text-[11px] text-bestbet-gray-muted">{comp.country}</p>
           </div>
         </Link>
       ))}

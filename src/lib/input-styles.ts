@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
-/** Shared field height: 56px (within 52–56px spec) */
-export const INPUT_HEIGHT_CLASS = "h-14";
+/** Shared field height: compact on mobile, standard on desktop */
+export const INPUT_HEIGHT_CLASS = "h-11 sm:h-12 md:h-14";
 
 /** Left padding when an icon or prefix is present */
 export const INPUT_ICON_PADDING = "pl-12";

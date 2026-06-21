@@ -73,11 +73,12 @@ export function Logo({ variant = "horizontal", className, showSlogan = false }: 
   }
 
   return (
-    <Link href="/" className={cn("flex items-center gap-3", className)} aria-label={BRAND.name}>
-      <ShieldIcon size={32} className="md:hidden" />
-      <ShieldIcon size={36} className="hidden md:block" />
+    <Link href="/" className={cn("flex items-center gap-2 sm:gap-2.5", className)} aria-label={BRAND.name}>
+      <ShieldIcon size={26} className="sm:hidden" />
+      <ShieldIcon size={30} className="hidden sm:block md:hidden" />
+      <ShieldIcon size={34} className="hidden md:block" />
       <div className="hidden md:flex flex-col">
-        <span className="font-black text-lg tracking-wider leading-none">
+        <span className="font-black text-base lg:text-lg tracking-wider leading-none">
           <span className="text-white">BEST</span>
           <span className="text-bestbet-yellow">BET</span>
         </span>
@@ -87,7 +88,7 @@ export function Logo({ variant = "horizontal", className, showSlogan = false }: 
           </span>
         )}
       </div>
-      <span className="md:hidden font-black text-lg tracking-wider">
+      <span className="md:hidden font-black text-base tracking-wide leading-none">
         <span className="text-white">BEST</span>
         <span className="text-bestbet-yellow">BET</span>
       </span>

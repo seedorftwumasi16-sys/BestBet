@@ -77,7 +77,7 @@ export function MatchCard({ match, showStats = false }: MatchCardProps) {
       aria-label={`${label} at ${formatOdds(odds)}`}
     >
       <span className="text-[10px] font-medium opacity-70">{shortLabel}</span>
-      <span className="text-sm font-extrabold tabular-nums">{formatOdds(odds)}</span>
+      <span className="text-xs sm:text-sm font-extrabold tabular-nums">{formatOdds(odds)}</span>
     </button>
   );
 
@@ -89,79 +89,79 @@ export function MatchCard({ match, showStats = false }: MatchCardProps) {
       className="match-card-premium group"
     >
       {/* Header */}
-      <div className="px-4 pt-3.5 pb-2 flex items-center justify-between border-b border-white/5">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="relative w-6 h-6 shrink-0">
+      <div className="px-3 sm:px-4 pt-2.5 sm:pt-3 pb-1.5 sm:pb-2 flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between border-b border-white/5">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="relative w-5 h-5 sm:w-6 sm:h-6 shrink-0">
             <Image src={leagueBadge} alt={match.league} fill unoptimized className="object-contain" />
           </div>
-          <span className="text-xs font-semibold text-bestbet-gray-muted truncate">{match.league}</span>
+          <span className="text-[11px] sm:text-xs font-semibold text-bestbet-gray-muted truncate">{match.league}</span>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1 shrink-0 self-end sm:self-auto flex-wrap justify-end">
           {match.isSimulated && (
-            <Badge variant="warning" className="uppercase tracking-wide text-[9px]">
+            <Badge variant="warning" className="uppercase tracking-wide text-[8px] sm:text-[9px] px-1.5 py-0">
               Simulated
             </Badge>
           )}
           {match.bettingSuspended && (
-            <Badge variant="danger">Suspended</Badge>
+            <Badge variant="danger" className="text-[10px] px-1.5 py-0">Suspended</Badge>
           )}
           {match.isLive ? (
-            <Badge variant="live">
-              <Clock size={10} className="mr-0.5" />
+            <Badge variant="live" className="text-[10px] px-1.5 py-0">
+              <Clock size={9} className="mr-0.5" />
               {match.liveMinute}&apos;
             </Badge>
           ) : (
-            <span className="text-[11px] font-medium text-bestbet-gray-muted">
+            <span className="text-[10px] sm:text-[11px] font-medium text-bestbet-gray-muted whitespace-nowrap">
               {formatMatchDate(match.startTime)} · {formatMatchTime(match.startTime)}
             </span>
           )}
           <button
             onClick={() => setFavorited(!favorited)}
-            className="p-1.5 rounded-lg hover:bg-white/5 transition-colors"
+            className="hidden sm:block p-1 rounded-lg hover:bg-white/5 transition-colors"
             aria-label={favorited ? "Remove from favorites" : "Add to favorites"}
           >
             <Star
-              size={15}
+              size={14}
               className={favorited ? "fill-bestbet-yellow text-bestbet-yellow" : "text-bestbet-gray-muted"}
             />
           </button>
           {showStats && match.isLive && (
-            <button className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" aria-label="Match stats">
-              <BarChart3 size={15} className="text-bestbet-gray-muted" />
+            <button className="hidden sm:block p-1 rounded-lg hover:bg-white/5 transition-colors" aria-label="Match stats">
+              <BarChart3 size={14} className="text-bestbet-gray-muted" />
             </button>
           )}
         </div>
       </div>
 
       {/* Teams & score */}
-      <div className="px-4 py-4">
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <TeamLogo name={match.homeTeam.name} shortName={match.homeTeam.shortName} logo={match.homeTeam.logo} size="lg" />
-            <span className="text-sm font-bold truncate leading-tight">{match.homeTeam.name}</span>
+      <div className="px-3 sm:px-4 py-2.5 sm:py-3">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+            <TeamLogo name={match.homeTeam.name} shortName={match.homeTeam.shortName} logo={match.homeTeam.logo} size="md" />
+            <span className="text-xs sm:text-sm font-bold truncate leading-tight">{match.homeTeam.name}</span>
           </div>
 
-          <div className="text-center shrink-0 px-2">
+          <div className="text-center shrink-0 px-1 sm:px-2">
             {match.isLive && match.homeScore !== undefined ? (
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/40 border border-white/10">
-                <span className="text-xl font-black tabular-nums">{match.homeScore}</span>
-                <span className="text-bestbet-gray-muted text-xs font-bold">:</span>
-                <span className="text-xl font-black tabular-nums">{match.awayScore}</span>
+              <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-black/40 border border-white/10">
+                <span className="text-base sm:text-xl font-black tabular-nums">{match.homeScore}</span>
+                <span className="text-bestbet-gray-muted text-[10px] sm:text-xs font-bold">:</span>
+                <span className="text-base sm:text-xl font-black tabular-nums">{match.awayScore}</span>
               </div>
             ) : (
-              <span className="text-xs font-bold text-bestbet-yellow/80 tracking-widest">VS</span>
+              <span className="text-[10px] sm:text-xs font-bold text-bestbet-yellow/80 tracking-widest">VS</span>
             )}
           </div>
 
-          <div className="flex items-center gap-2.5 min-w-0 justify-end">
-            <span className="text-sm font-bold truncate text-right leading-tight">{match.awayTeam.name}</span>
-            <TeamLogo name={match.awayTeam.name} shortName={match.awayTeam.shortName} logo={match.awayTeam.logo} size="lg" />
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 justify-end">
+            <span className="text-xs sm:text-sm font-bold truncate text-right leading-tight">{match.awayTeam.name}</span>
+            <TeamLogo name={match.awayTeam.name} shortName={match.awayTeam.shortName} logo={match.awayTeam.logo} size="md" />
           </div>
         </div>
       </div>
 
       {showStats && match.stats && match.isLive && (
-        <div className="px-4 pb-3 grid grid-cols-3 gap-2">
+        <div className="px-3 sm:px-4 pb-2 sm:pb-3 grid grid-cols-3 gap-1.5 sm:gap-2">
           {[
             { label: "Possession", values: match.stats.possession, suffix: "%" },
             { label: "Shots", values: match.stats.shots },
@@ -178,7 +178,7 @@ export function MatchCard({ match, showStats = false }: MatchCardProps) {
       )}
 
       {/* Odds */}
-      <div className="px-4 pb-2 flex gap-2">
+      <div className="px-3 sm:px-4 pb-1.5 sm:pb-2 flex gap-1.5 sm:gap-2">
         <OddsButton label={match.homeTeam.name} odds={match.odds.home} type="home" shortLabel="1" />
         {match.odds.draw && (
           <OddsButton label="Draw" odds={match.odds.draw} type="draw" shortLabel="X" />
@@ -188,7 +188,7 @@ export function MatchCard({ match, showStats = false }: MatchCardProps) {
 
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full px-4 pb-3 flex items-center justify-center gap-1 text-[11px] font-semibold text-bestbet-yellow/80 hover:text-bestbet-yellow transition-colors"
+        className="w-full px-3 sm:px-4 pb-2 sm:pb-3 flex items-center justify-center gap-1 text-[10px] sm:text-[11px] font-semibold text-bestbet-yellow/80 hover:text-bestbet-yellow transition-colors min-h-[32px]"
       >
         {expanded ? "Hide Markets" : "More Markets"}
         <ChevronDown size={14} className={cn("transition-transform", expanded && "rotate-180")} />

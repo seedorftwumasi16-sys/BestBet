@@ -21,7 +21,7 @@ import { motion } from "framer-motion";
 
 function EmptyMatches({ message }: { message: string }) {
   return (
-    <div className="glass-panel rounded-2xl p-8 text-center">
+    <div className="glass-panel rounded-xl sm:rounded-2xl p-6 sm:p-8 text-center">
       <p className="text-sm text-bestbet-gray-muted">{message}</p>
     </div>
   );
@@ -30,7 +30,7 @@ function EmptyMatches({ message }: { message: string }) {
 function MatchList({ matches, showStats }: { matches: Match[]; showStats?: boolean }) {
   if (matches.length === 0) return null;
   return (
-    <div className="space-y-3">
+    <div className="space-y-2 sm:space-y-3">
       {matches.map((match) => (
         <MatchCard key={match.id} match={match} showStats={showStats} />
       ))}
@@ -72,7 +72,7 @@ function MatchSection({
         actionLabel={actionLabel}
         actionHref={actionHref}
       />
-      {subtitle && <p className="text-xs text-bestbet-gray-muted -mt-2 mb-4">{subtitle}</p>}
+      {subtitle && <p className="text-xs sm:text-sm text-bestbet-gray-muted -mt-1 sm:-mt-2 mb-3 sm:mb-4">{subtitle}</p>}
       {loading ? (
         <div className="space-y-3">
           {Array.from({ length: skeletonCount }, (_, i) => (
@@ -154,7 +154,7 @@ export default function HomePage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.4 }}
-        className="p-4 md:p-6 pb-28 xl:pb-6 space-y-6 max-w-5xl mx-auto"
+        className="p-3 sm:p-4 md:p-6 pb-20 sm:pb-24 xl:pb-6 space-y-4 sm:space-y-5 md:space-y-6 max-w-5xl mx-auto w-full min-w-0"
       >
         <HeroBanner liveMatchCount={allLiveCount} />
 

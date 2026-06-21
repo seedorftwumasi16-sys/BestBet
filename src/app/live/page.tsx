@@ -50,11 +50,11 @@ export default function LivePage() {
 
   return (
     <MainLayout>
-      <div className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto">
+      <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-5 md:space-y-6 max-w-5xl mx-auto pb-20 sm:pb-24 xl:pb-6 w-full min-w-0">
         <FadeIn>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-black flex items-center gap-3">
+              <h1 className="text-xl sm:text-2xl font-black flex items-center gap-2 sm:gap-3">
                 <span className="w-3 h-3 rounded-full bg-bestbet-live live-pulse" />
                 Live Betting
               </h1>

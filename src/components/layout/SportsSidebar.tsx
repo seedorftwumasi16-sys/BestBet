@@ -18,7 +18,7 @@ export function SportsSidebar({ activeSport, className }: SportsSidebarProps) {
   return (
     <aside
       className={cn(
-        "w-64 shrink-0 bg-[var(--sidebar-bg)] border-r border-[var(--border)] overflow-y-auto",
+        "w-56 xl:w-64 shrink-0 bg-[var(--sidebar-bg)] border-r border-[var(--border)] overflow-y-auto",
         className
       )}
       aria-label="Sports navigation"

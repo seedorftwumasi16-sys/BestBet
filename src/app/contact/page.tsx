@@ -8,12 +8,12 @@ import { HeadphonesIcon } from "lucide-react";
 export default function ContactPage() {
   return (
     <MainLayout>
-      <div className="max-w-2xl mx-auto p-4 md:p-6 pb-28 xl:pb-6 space-y-6">
+      <div className="max-w-2xl mx-auto p-3 sm:p-4 md:p-6 pb-20 sm:pb-24 xl:pb-6 space-y-4 sm:space-y-6 w-full min-w-0">
         <div className="text-center space-y-3">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-bestbet-yellow/10 border border-bestbet-yellow/25">
             <HeadphonesIcon size={28} className="text-bestbet-yellow" />
           </div>
-          <h1 className="text-2xl md:text-3xl font-black font-display">Contact Support</h1>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-black font-display">Contact Support</h1>
           <p className="text-sm text-bestbet-gray-muted max-w-md mx-auto leading-relaxed">
             Reach the BestBet support team for help with deposits, withdrawals, betting, and account
             verification.

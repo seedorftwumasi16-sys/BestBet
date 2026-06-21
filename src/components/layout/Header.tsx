@@ -48,15 +48,15 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 glass-header">
-      <div className="max-w-[1920px] mx-auto px-4">
-        <div className="flex items-center justify-between h-14 md:h-16 gap-3">
-          <div className="flex items-center gap-3">
+      <div className="max-w-[1920px] mx-auto px-3 sm:px-4">
+        <div className="flex items-center justify-between h-11 sm:h-12 md:h-14 gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
             <button
-              className="lg:hidden p-2 rounded-xl hover:bg-white/5 transition-colors"
+              className="lg:hidden p-1.5 sm:p-2 rounded-lg hover:bg-white/5 transition-colors shrink-0"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle menu"
             >
-              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+              {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
             <Logo />
           </div>
@@ -77,37 +77,37 @@ export function Header() {
             ))}
           </nav>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
             <button
               onClick={() => setSearchOpen(!searchOpen)}
-              className="p-2.5 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10 transition-all"
+              className="p-2 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 transition-all"
               aria-label="Search"
             >
-              <Search size={18} />
+              <Search size={17} />
             </button>
 
             <button
               onClick={toggleTheme}
-              className="p-2.5 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10 transition-all"
+              className="p-2 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 transition-all"
               aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
             >
-              {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+              {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
             </button>
 
             {isLoggedIn ? (
               <>
                 <Link
                   href="/dashboard"
-                  className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl glass-panel hover:border-bestbet-yellow/30 transition-all"
+                  className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg glass-panel hover:border-bestbet-yellow/30 transition-all"
                 >
-                  <Wallet size={15} className="text-bestbet-yellow" />
-                  <span className="text-sm font-bold tabular-nums">{formatCurrency(user!.balance)}</span>
+                  <Wallet size={14} className="text-bestbet-yellow shrink-0" />
+                  <span className="text-xs sm:text-sm font-bold tabular-nums">{formatCurrency(user!.balance)}</span>
                 </Link>
 
                 <div className="relative">
                   <button
                     onClick={() => setNotifOpen(!notifOpen)}
-                    className="relative p-2.5 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10 transition-all"
+                    className="relative p-2 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 transition-all"
                     aria-label="Notifications"
                   >
                     <Bell size={18} />
@@ -157,7 +157,7 @@ export function Header() {
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
                     className="flex items-center p-1 rounded-xl hover:bg-white/5 transition-colors"
                   >
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-bestbet-yellow to-bestbet-yellow-secondary flex items-center justify-center text-bestbet-black font-extrabold text-sm ring-2 ring-bestbet-yellow/30 shadow-[0_0_16px_rgba(255,215,0,0.3)]">
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-bestbet-yellow to-bestbet-yellow-secondary flex items-center justify-center text-bestbet-black font-extrabold text-xs sm:text-sm ring-2 ring-bestbet-yellow/30">
                       {user!.name.charAt(0)}
                     </div>
                   </button>
@@ -238,7 +238,7 @@ export function Header() {
             className="lg:hidden border-t border-white/5 overflow-hidden"
             aria-label="Mobile sports navigation"
           >
-            <div className="px-4 py-3 grid grid-cols-2 gap-2">
+            <div className="px-3 sm:px-4 py-2.5 grid grid-cols-2 gap-1.5 sm:gap-2">
               {[
                 { href: "/sports/football", label: "Football", icon: null },
                 { href: "/live", label: "Live", icon: Radio },
@@ -252,7 +252,7 @@ export function Header() {
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-2 px-3 py-3 text-sm font-medium rounded-xl transition-all",
+                      "flex items-center gap-1.5 px-2.5 py-2.5 text-xs sm:text-sm font-medium rounded-lg transition-all min-h-[40px]",
                       active
                         ? "bg-bestbet-yellow/15 text-bestbet-yellow border border-bestbet-yellow/30"
                         : "glass-panel hover:border-bestbet-yellow/20"

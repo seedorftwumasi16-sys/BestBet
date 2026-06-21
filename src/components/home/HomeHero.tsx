@@ -13,25 +13,25 @@ interface HomeHeroProps {
 
 function HeroSlide({ slide, liveMatchCount }: { slide: (typeof heroSlides)[number]; liveMatchCount: number }) {
   return (
-    <div className="relative z-10 flex h-full flex-col justify-center px-6 sm:px-10 md:px-12">
+    <div className="relative z-10 flex h-full flex-col justify-center px-4 py-4 sm:px-8 md:px-12">
       {slide.badge && (
-        <span className="mb-3 inline-flex w-fit items-center gap-1.5 rounded-full border border-bestbet-yellow/30 bg-bestbet-yellow/10 px-3 py-1 text-[10px] font-extrabold uppercase tracking-widest text-bestbet-yellow">
+        <span className="mb-2 sm:mb-3 inline-flex w-fit items-center gap-1 rounded-full border border-bestbet-yellow/30 bg-bestbet-yellow/10 px-2.5 py-0.5 sm:px-3 sm:py-1 text-[9px] sm:text-[10px] font-extrabold uppercase tracking-widest text-bestbet-yellow">
           {slide.badge}
         </span>
       )}
-      <h2 className="font-display text-2xl sm:text-3xl md:text-4xl font-black text-white leading-tight max-w-xl">
+      <h2 className="font-display text-2xl sm:text-[1.75rem] md:text-3xl lg:text-4xl font-black text-white leading-tight max-w-xl">
         {slide.title}
       </h2>
-      <p className="mt-3 max-w-lg text-sm sm:text-base text-white/75 leading-relaxed">{slide.subtitle}</p>
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <Link href={slide.href || "/sports/football"} className="wc-hero-cta group inline-flex w-fit items-center gap-2">
+      <p className="mt-2 sm:mt-3 max-w-lg text-sm text-white/75 leading-relaxed">{slide.subtitle}</p>
+      <div className="mt-4 sm:mt-6 flex flex-wrap items-center gap-2 sm:gap-3">
+        <Link href={slide.href || "/sports/football"} className="wc-hero-cta group inline-flex w-fit items-center gap-1.5 sm:gap-2">
           {slide.cta}
-          <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
+          <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
         </Link>
         {liveMatchCount > 0 && (
           <Link
             href="/live"
-            className="inline-flex items-center gap-2 rounded-xl border border-bestbet-live/40 bg-bestbet-live/10 px-4 py-2.5 text-xs font-bold text-bestbet-live transition-colors hover:bg-bestbet-live/20"
+            className="inline-flex items-center gap-1.5 rounded-lg sm:rounded-xl border border-bestbet-live/40 bg-bestbet-live/10 px-3 py-2 sm:px-4 sm:py-2.5 text-[11px] sm:text-xs font-bold text-bestbet-live transition-colors hover:bg-bestbet-live/20 min-h-[40px]"
           >
             <Radio size={14} className="animate-pulse" />
             {liveMatchCount} Live Now
@@ -75,7 +75,7 @@ export function HomeHero({ liveMatchCount = 0 }: HomeHeroProps) {
         </motion.div>
       </AnimatePresence>
 
-      <div className="relative min-h-[320px] sm:min-h-[360px] md:min-h-[400px]">
+      <div className="relative min-h-[220px] sm:min-h-[280px] md:min-h-[340px] lg:min-h-[380px]">
         <AnimatePresence mode="wait">
           <motion.div
             key={`slide-${current}`}

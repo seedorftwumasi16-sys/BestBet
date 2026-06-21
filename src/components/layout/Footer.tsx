@@ -31,7 +31,7 @@ const footerLinks = {
 export function Footer() {
   return (
     <footer className="mt-auto border-t border-[var(--border)] bg-bestbet-dark-secondary">
-      <div className="max-w-[1920px] mx-auto px-4 py-10 md:py-12">
+      <div className="max-w-[1920px] mx-auto px-3 sm:px-4 py-6 sm:py-8 md:py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-10">
           <div className="lg:col-span-2 space-y-5">
             <Logo showSlogan />

@@ -106,7 +106,7 @@ export default function LoginPage() {
           type="submit"
           variant="primary"
           size="lg"
-          className="mt-1 h-14 w-full text-base font-black shadow-lg shadow-bestbet-yellow/15 transition-all duration-300 hover:scale-[1.01] hover:shadow-bestbet-yellow/30"
+          className="mt-1 w-full text-sm font-bold shadow-lg shadow-bestbet-yellow/15 transition-all duration-300 sm:text-base"
           loading={loading}
           disabled={loading}
         >

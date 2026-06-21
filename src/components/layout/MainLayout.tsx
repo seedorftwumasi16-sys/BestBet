@@ -6,11 +6,11 @@ import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--background)]">
+    <div className="min-h-screen flex flex-col bg-[var(--background)] overflow-x-hidden">
       <Header />
-      <div className="flex flex-1 max-w-[1920px] mx-auto w-full">
-        <SportsSidebar className="hidden lg:block" />
-        <main className="flex-1 overflow-y-auto pb-28 xl:pb-0" id="main-content">
+      <div className="flex flex-1 max-w-[1920px] mx-auto w-full min-w-0">
+        <SportsSidebar className="hidden lg:block w-56 xl:w-64" />
+        <main className="flex-1 overflow-x-hidden overflow-y-auto pb-[4.75rem] sm:pb-24 xl:pb-0 min-w-0" id="main-content">
           {children}
         </main>
         <BetSlipPanel />

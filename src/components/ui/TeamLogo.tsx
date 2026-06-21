@@ -13,7 +13,7 @@ interface TeamLogoProps {
   className?: string;
 }
 
-const sizes = { sm: 28, md: 36, lg: 44 };
+const sizes = { sm: 24, md: 30, lg: 36 };
 
 export function TeamLogo({ name, shortName, logo, size = "md", className }: TeamLogoProps) {
   const px = sizes[size];

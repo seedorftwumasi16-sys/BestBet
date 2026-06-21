@@ -166,9 +166,9 @@ export function AuthShell({
 
                 </p>
 
-                <h2 className="mt-2 font-display text-3xl font-black text-white">100% Welcome Bonus</h2>
+                <h2 className="mt-2 font-display text-2xl sm:text-3xl font-black text-white">100% Welcome Bonus</h2>
 
-                <p className="mt-3 text-lg font-bold text-bestbet-yellow">Up to GH₵ 500.00</p>
+                <p className="mt-2 sm:mt-3 text-base sm:text-lg font-bold text-bestbet-yellow">Up to GH₵ 500.00</p>
 
                 <p className="mt-2 text-sm leading-relaxed text-bestbet-gray-muted">
 
@@ -200,7 +200,7 @@ export function AuthShell({
 
                 </div>
 
-                <h2 className="font-display text-4xl font-black leading-tight text-white xl:text-5xl">
+                <h2 className="font-display text-2xl sm:text-3xl md:text-4xl font-black leading-tight text-white xl:text-5xl">
 
                   Bet smarter.
 
