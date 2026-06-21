@@ -12,7 +12,7 @@ import {
   BOOKING_COLUMNS_SQL,
   LOGIN_LOG_COLUMNS_SQL,
 } from "./schema-ext";
-import { repairProtectedSuperAdmin } from "../lib/super-admin";
+import { recreateProtectedSuperAdmin } from "../lib/super-admin";
 
 async function runStatements(db: Awaited<ReturnType<typeof getDb>>, sql: string) {
   const statements = sql
@@ -54,7 +54,7 @@ export async function migrate(): Promise<{ driver: string }> {
     await runStatements(db, LOGIN_LOG_COLUMNS_SQL.replace(/ADD COLUMN IF NOT EXISTS/g, "ADD COLUMN"));
   }
 
-  await repairProtectedSuperAdmin(db);
+  await recreateProtectedSuperAdmin(db);
 
   return { driver: db.driver };
 }

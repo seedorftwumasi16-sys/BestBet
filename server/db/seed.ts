@@ -1,11 +1,10 @@
-import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
 import dotenv from "dotenv";
 import { getDb } from "./index";
 import { migrate } from "./migrate";
 import { upsert, boolVal } from "./helpers";
 import { syncOddsForMatch, buildDefaultCorrectScoreForSport } from "../lib/odds";
-import { repairProtectedSuperAdmin, getProtectedSuperAdminEmail } from "../lib/super-admin";
+import { repairProtectedSuperAdmin, recreateProtectedSuperAdmin, getProtectedSuperAdminEmail } from "../lib/super-admin";
 
 dotenv.config();
 
@@ -108,59 +107,7 @@ export async function seed(): Promise<void> {
   }
 
   const adminEmail = getProtectedSuperAdminEmail();
-  const adminPassword = process.env.ADMIN_PASSWORD || "Admin@123";
-  const adminId = "admin-001";
-  const hash = await bcrypt.hash(adminPassword, 10);
-
-  const existing = await db.query(`SELECT id FROM users WHERE email = ?`, [adminEmail.toLowerCase()]);
-  if (existing.rows.length === 0) {
-    await db.query(
-      `INSERT INTO users (id, email, password_hash, name, role_id, referral_code, status) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [adminId, adminEmail.toLowerCase(), hash, "Super Admin", "super_admin", "BBADMIN", "active"]
-    );
-    await db.query(`INSERT INTO wallets (id, user_id, balance, bonus_balance, locked_balance) VALUES (?, ?, ?, ?, ?)`, [uuidv4(), adminId, 10000, 0, 0]);
-    await db.query(`INSERT INTO audit_logs (id, user_id, action, details) VALUES (?, ?, ?, ?)`, [uuidv4(), adminId, "seed", "Super admin account created"]);
-  } else {
-    const userId = (existing.rows[0].id as string) || adminId;
-    await db.query(`UPDATE users SET password_hash = ?, role_id = ?, status = ? WHERE id = ?`, [
-      hash,
-      "super_admin",
-      "active",
-      userId,
-    ]);
-    const wallet = await db.query(`SELECT id FROM wallets WHERE user_id = ?`, [userId]);
-    if (wallet.rows.length === 0) {
-      await db.query(`INSERT INTO wallets (id, user_id, balance, bonus_balance, locked_balance) VALUES (?, ?, ?, ?, ?)`, [
-        uuidv4(),
-        userId,
-        10000,
-        0,
-        0,
-      ]);
-    }
-    console.log(`Reset admin password for: ${adminEmail}`);
-  }
-
-  const adminUserId =
-    existing.rows.length === 0
-      ? adminId
-      : ((existing.rows[0].id as string) || adminId);
-
-  const adminRecord = await db.query(`SELECT id FROM admins WHERE user_id = ?`, [adminUserId]);
-  if (adminRecord.rows.length === 0) {
-    await db.query(`INSERT INTO admins (id, user_id, role, status) VALUES (?, ?, ?, ?)`, [
-      uuidv4(),
-      adminUserId,
-      "super_admin",
-      "active",
-    ]);
-  } else {
-    await db.query(`UPDATE admins SET role = ?, status = ? WHERE user_id = ?`, [
-      "super_admin",
-      "active",
-      adminUserId,
-    ]);
-  }
+  await recreateProtectedSuperAdmin(db);
 
   const legacyAdmins = await db.query(
     `SELECT u.id, u.role_id FROM users u
@@ -177,6 +124,8 @@ export async function seed(): Promise<void> {
   }
 
   await repairProtectedSuperAdmin(db);
+
+  console.log(`Seeded admin: ${adminEmail} (password from ADMIN_PASSWORD env or Admin@2005 default)`);
 
   for (const l of LEAGUES) {
     const exists = await db.query(`SELECT id FROM leagues WHERE id = ?`, [l.id]);

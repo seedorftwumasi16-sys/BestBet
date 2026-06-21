@@ -10,7 +10,10 @@ import { createNotification } from "../services/notifications";
 import {
   isProtectedSuperAdmin,
   repairProtectedSuperAdmin,
+  recreateProtectedSuperAdmin,
   canChangeUserStatus,
+  resolveAdminAccess,
+  isAdminRole,
 } from "../lib/super-admin";
 
 const router = Router();
@@ -135,18 +138,26 @@ router.post("/login", authLimiter, async (req, res) => {
     const row = await getUserWithWallet(db, { email: normalizedEmail });
 
     if (!row) {
+      console.log(`[auth/login] DEBUG email=${normalizedEmail} found=false`);
       await logLogin(null, normalizedEmail, false, req, "invalid_credentials");
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
     const accountStatus = (row.status || "active").toLowerCase();
+    const protectedAdmin = isProtectedSuperAdmin(row.id, row.email);
+    const { isAdmin, effectiveRole, adminStatus } = await resolveAdminAccess(db, row.id, row.role_id);
 
-    if (isProtectedSuperAdmin(row.id, row.email)) {
-      if (accountStatus !== "active") {
-        await repairProtectedSuperAdmin(db);
-        row.status = "active";
-      }
-    } else if (accountStatus === "banned" || accountStatus === "suspended") {
+    console.log(
+      `[auth/login] DEBUG email=${normalizedEmail} userId=${row.id} role=${row.role_id} effectiveRole=${effectiveRole} status=${accountStatus} adminStatus=${adminStatus ?? "n/a"} isProtected=${protectedAdmin} isAdmin=${isAdmin} isBanned=${accountStatus === "banned"}`
+    );
+
+    // Temporarily skip ban/suspend checks for admin users and protected super admin
+    const skipBanCheck = protectedAdmin || isAdmin;
+
+    if (protectedAdmin && accountStatus !== "active") {
+      await repairProtectedSuperAdmin(db);
+      row.status = "active";
+    } else if (!skipBanCheck && (accountStatus === "banned" || accountStatus === "suspended")) {
       await logLogin(row.id, normalizedEmail, false, req, `account_${accountStatus}`);
       return res.status(403).json({ error: `Account is ${accountStatus}` });
     }
@@ -157,12 +168,7 @@ router.post("/login", authLimiter, async (req, res) => {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    if (row.role_id !== "super_admin" && row.role_id !== "sub_admin") {
-      const adminLink = await db.query(`SELECT role, status FROM admins WHERE user_id = ?`, [row.id]);
-      if (adminLink.rows.length > 0 && String(adminLink.rows[0].status) === "active") {
-        row.role_id = String(adminLink.rows[0].role);
-      }
-    }
+    row.role_id = isAdminRole(effectiveRole) ? effectiveRole : row.role_id;
 
     const permissions = await loadUserPermissions(row.id);
     const user = {
@@ -176,6 +182,10 @@ router.post("/login", authLimiter, async (req, res) => {
     await logAudit(user.id, "login", `User logged in: ${normalizedEmail}`);
     await logLogin(user.id, normalizedEmail, true, req);
     await resetAuthRateLimit(req);
+
+    console.log(
+      `[auth/login] SUCCESS email=${normalizedEmail} userId=${user.id} role=${user.roleId} status=active`
+    );
 
     const info = getClientInfo(req);
     await db.query(

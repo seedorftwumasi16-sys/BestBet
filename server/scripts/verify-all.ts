@@ -10,7 +10,7 @@ dotenv.config();
 
 const API = process.env.API_URL || "http://127.0.0.1:5000";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@bestbet.gh";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "Admin@123";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "Admin@2005";
 
 interface TestResult {
   name: string;
