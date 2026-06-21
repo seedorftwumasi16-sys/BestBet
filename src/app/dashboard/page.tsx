@@ -20,6 +20,7 @@ import { FadeIn } from "@/components/ui/Skeleton";
 import { useAuth } from "@/context/AuthContext";
 import { formatCurrency } from "@/lib/utils";
 import { betsApi, walletsApi, type BetHistoryItem, type TransactionApi } from "@/lib/api";
+import { ContactInfo } from "@/components/layout/ContactInfo";
 import {
   AreaChart,
   Area,
@@ -184,6 +185,8 @@ export default function DashboardPage() {
                   ))}
                 </div>
               </div>
+
+              <ContactInfo variant="card" className="md:col-span-2" />
             </div>
           </FadeIn>
         )}

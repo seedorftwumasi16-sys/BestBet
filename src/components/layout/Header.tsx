@@ -26,6 +26,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useBetSlip } from "@/context/BetSlipContext";
 import { formatCurrency, cn } from "@/lib/utils";
 import { SearchInput } from "@/components/ui/SearchInput";
+import { ContactInfo } from "@/components/layout/ContactInfo";
 
 const NAV_LINKS = [
   { href: "/sports/football", label: "Football", match: (p: string) => p.startsWith("/sports/football") },
@@ -263,6 +264,9 @@ export function Header() {
                   </Link>
                 );
               })}
+            </div>
+            <div className="px-4 pb-4 border-t border-white/5 pt-3">
+              <ContactInfo variant="compact" />
             </div>
           </motion.nav>
         )}

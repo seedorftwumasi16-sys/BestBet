@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Shield, Mail, Phone } from "lucide-react";
+import { Shield } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
+import { ContactInfo } from "@/components/layout/ContactInfo";
 import { BRAND, SPORTS } from "@/lib/constants";
 
 const footerLinks = {
@@ -19,7 +20,8 @@ const footerLinks = {
     { label: "Register", href: "/register" },
   ],
   Support: [
-    { label: "Help Center", href: "#" },
+    { label: "Contact Us", href: "/contact" },
+    { label: "Help Center", href: "/dashboard" },
     { label: "Responsible Gaming", href: "#" },
     { label: "Terms & Conditions", href: "#" },
     { label: "Privacy Policy", href: "#" },
@@ -30,31 +32,25 @@ export function Footer() {
   return (
     <footer className="mt-auto border-t border-[var(--border)] bg-bestbet-dark-secondary">
       <div className="max-w-[1920px] mx-auto px-4 py-10 md:py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
-          <div className="lg:col-span-2 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-10">
+          <div className="lg:col-span-2 space-y-5">
             <Logo showSlogan />
             <p className="text-sm text-bestbet-gray-muted max-w-sm leading-relaxed">
               Premium sportsbook experience with live odds, virtual games, and instant wallet payouts.
             </p>
-            <div className="flex flex-wrap gap-4 text-xs text-bestbet-gray-muted">
-              <span className="flex items-center gap-1.5">
-                <Shield size={14} className="text-bestbet-yellow" /> Licensed & Secure
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Mail size={14} className="text-bestbet-yellow" /> support@bestbet.gh
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Phone size={14} className="text-bestbet-yellow" /> +233 24 568 0115
-              </span>
-            </div>
+            <span className="inline-flex items-center gap-2 rounded-full border border-bestbet-yellow/20 bg-bestbet-yellow/5 px-3 py-1.5 text-xs text-bestbet-gray-muted">
+              <Shield size={14} className="text-bestbet-yellow shrink-0" />
+              Licensed & Secure
+            </span>
+            <ContactInfo variant="footer" />
           </div>
 
           {Object.entries(footerLinks).map(([title, links]) => (
             <div key={title}>
               <h3 className="text-xs font-bold uppercase tracking-wider text-bestbet-yellow mb-3">{title}</h3>
-              <ul className="space-y-2">
+              <ul className="space-y-2.5">
                 {links.map((link) => (
-                  <li key={link.href}>
+                  <li key={link.label}>
                     <Link
                       href={link.href}
                       className="text-sm text-bestbet-gray-muted hover:text-bestbet-yellow transition-colors"
@@ -69,10 +65,10 @@ export function Footer() {
         </div>
 
         <div className="mt-10 pt-6 border-t border-[var(--border)] flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-bestbet-gray-muted">
+          <p className="text-xs text-bestbet-gray-muted text-center sm:text-left">
             © {new Date().getFullYear()} {BRAND.name}. All rights reserved. 18+ only. Gamble responsibly.
           </p>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap justify-center gap-2">
             {SPORTS.slice(0, 4).map((sport) => (
               <Link
                 key={sport.id}

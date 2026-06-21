@@ -525,6 +525,43 @@ body {
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55), 0 0 32px rgba(255, 215, 0, 0.08);
 }
 
+.contact-info-block {
+  padding: 1rem 1.125rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 215, 0, 0.12);
+  background: linear-gradient(145deg, rgba(26, 26, 26, 0.6) 0%, rgba(14, 14, 14, 0.8) 100%);
+}
+
+.contact-link {
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.contact-link:hover {
+  color: var(--color-bestbet-yellow);
+}
+
+.contact-link:active {
+  transform: scale(0.98);
+}
+
+.contact-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.625rem;
+  background: rgba(255, 215, 0, 0.08);
+  border: 1px solid rgba(255, 215, 0, 0.15);
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.contact-link:hover .contact-icon-wrap {
+  background: rgba(255, 215, 0, 0.15);
+  border-color: rgba(255, 215, 0, 0.35);
+  box-shadow: 0 0 16px rgba(255, 215, 0, 0.15);
+}
+
 @keyframes wc-trophy-pulse {
   0%, 100% { opacity: 0.85; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.05); }
