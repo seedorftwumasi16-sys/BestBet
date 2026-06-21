@@ -44,6 +44,8 @@
   --glass-bg: rgba(10, 10, 10, 0.72);
   --glass-border: rgba(255, 215, 0, 0.12);
   --glass-blur: 16px;
+  --mobile-nav-clearance: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+  --mobile-slip-bar-clearance: calc(7.25rem + env(safe-area-inset-bottom, 0px));
 }
 
 .light {

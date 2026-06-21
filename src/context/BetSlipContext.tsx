@@ -51,6 +51,8 @@ export function BetSlipProvider({ children }: { children: React.ReactNode }) {
       }
       return [...prev, sanitized];
     });
+    // Keep collapsed bar visible on mobile; user expands when ready.
+    setIsOpen(false);
   }, []);
 
   const removeSelection = useCallback((id: string) => {
