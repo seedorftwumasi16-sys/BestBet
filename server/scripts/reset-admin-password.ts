@@ -1,5 +1,5 @@
 /**
- * Reset admin password to match ADMIN_PASSWORD env (default Admin@123456).
+ * Reset admin password to match ADMIN_PASSWORD env (default Admin@123).
  * Run: npx tsx server/scripts/reset-admin-password.ts
  */
 import dotenv from "dotenv";
@@ -10,7 +10,7 @@ dotenv.config();
 
 async function main() {
   const email = (process.env.ADMIN_EMAIL || "admin@bestbet.gh").toLowerCase();
-  const password = process.env.ADMIN_PASSWORD || "Admin@123456";
+  const password = process.env.ADMIN_PASSWORD || "Admin@123";
   const hash = await bcrypt.hash(password, 10);
 
   const db = await getDb();

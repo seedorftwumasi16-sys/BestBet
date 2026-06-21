@@ -47,7 +47,7 @@ services:
       MOMO_NUMBER: "0203907314"
       MOMO_RECIPIENT_NAME: "RAHAMATU NUHU"
       ADMIN_EMAIL: admin@bestbet.gh
-      ADMIN_PASSWORD: Admin@123456
+      ADMIN_PASSWORD: Admin@123
     ports:
       - "5000:5000"
     volumes:

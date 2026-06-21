@@ -10,7 +10,7 @@ dotenv.config();
 
 const API = process.env.API_URL || "http://127.0.0.1:5000";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@bestbet.gh";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "Admin@123456";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "Admin@123";
 
 interface TestResult {
   name: string;
@@ -302,13 +302,75 @@ async function testAdmin(token: string | null) {
   if (stats.status === 200) pass("Super Admin stats", `${stats.body.totalUsers} users`);
   else fail("Super Admin stats", `Status ${stats.status}`);
 
+  const adminList = await fetchJson("/api/admin/admins", { headers });
+  if (adminList.status === 200 && Array.isArray(adminList.body)) {
+    pass("List admins", `${adminList.body.length} admin(s)`);
+  } else fail("List admins", `Status ${adminList.status}`);
+
+  const subAdminEmail = `subadmin-${Date.now()}@bestbet.gh`;
   const subAdmin = await fetchJson("/api/admin/admins", {
     method: "POST",
     headers,
-    body: JSON.stringify({ name: "Sub Admin", email: `subadmin-${Date.now()}@bestbet.gh`, password: "Sub@123456" }),
+    body: JSON.stringify({ name: "Sub Admin", email: subAdminEmail, password: "Sub@123456" }),
   });
   if (subAdmin.status === 201) pass("Sub Admin creation", subAdmin.body.email);
   else fail("Sub Admin creation", JSON.stringify(subAdmin.body));
+
+  if (subAdmin.status === 201 && subAdmin.body.id) {
+    const updated = await fetchJson(`/api/admin/admins/${subAdmin.body.id}`, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({ name: "Sub Admin Updated", status: "active" }),
+    });
+    if (updated.status === 200) pass("Update admin", updated.body.name);
+    else fail("Update admin", JSON.stringify(updated.body));
+
+    const deleted = await fetchJson(`/api/admin/admins/${subAdmin.body.id}`, {
+      method: "DELETE",
+      headers,
+    });
+    if (deleted.status === 200) pass("Delete admin", "Removed");
+    else fail("Delete admin", JSON.stringify(deleted.body));
+  }
+
+  const matches = await fetchJson("/api/admin/matches", { headers });
+  if (matches.status === 200 && Array.isArray(matches.body)) {
+    pass("List matches", `${matches.body.length} match(es)`);
+  } else fail("List matches", `Status ${matches.status}`);
+
+  const newMatch = await fetchJson("/api/admin/matches", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      homeTeam: "Test Home",
+      awayTeam: "Test Away",
+      league: "Test League",
+      sport: "football",
+      matchStatus: "upcoming",
+      oddsHome: 1.9,
+      oddsDraw: 3.2,
+      oddsAway: 4.1,
+    }),
+  });
+  if (newMatch.status === 201) pass("Create match", newMatch.body.id);
+  else fail("Create match", JSON.stringify(newMatch.body));
+
+  if (newMatch.status === 201 && newMatch.body.id) {
+    const matchUpdated = await fetchJson(`/api/admin/matches/${newMatch.body.id}`, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({ matchStatus: "live", oddsHome: 2.0, homeScore: 1, awayScore: 0, liveMinute: 45 }),
+    });
+    if (matchUpdated.status === 200) pass("Update match", matchUpdated.body.matchStatus);
+    else fail("Update match", JSON.stringify(matchUpdated.body));
+
+    const matchDeleted = await fetchJson(`/api/admin/matches/${newMatch.body.id}`, {
+      method: "DELETE",
+      headers,
+    });
+    if (matchDeleted.status === 200) pass("Delete match", "Removed");
+    else fail("Delete match", JSON.stringify(matchDeleted.body));
+  }
 
   const perms = await fetchJson("/api/admin/permissions", { headers });
   if (perms.status === 200) pass("Permissions system", `${perms.body.permissions.length} permissions`);
