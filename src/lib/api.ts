@@ -45,11 +45,20 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
     const serverMessage = typeof body.error === "string" ? body.error : undefined;
+    const authBuild = typeof body.authBuild === "string" ? body.authBuild : res.headers.get("X-Auth-Build");
     let message = serverMessage || "Request failed";
     if (res.status === 401) message = serverMessage || "Invalid email or password";
     else if (res.status === 403) message = serverMessage || "Access denied";
     else if (res.status === 429) {
       message = serverMessage || "Too many attempts. Please wait a few minutes and try again.";
+    }
+    if (path.includes("/auth/login") && typeof window !== "undefined") {
+      console.error("[api/login]", {
+        status: res.status,
+        message,
+        reason: body.reason,
+        authBuild,
+      });
     }
     throw new ApiError(res.status, message);
   }

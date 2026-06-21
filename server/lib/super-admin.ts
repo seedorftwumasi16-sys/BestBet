@@ -2,13 +2,16 @@ import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
 import type { Database } from "../db";
 
+/** Canonical protected super-admin email — always admin@bestbet.gh regardless of env. */
+export const PROTECTED_SUPER_ADMIN_EMAIL = "admin@bestbet.gh";
+
 /** Primary seed super-admin user id — cannot be banned or demoted. */
 export const PROTECTED_SUPER_ADMIN_ID = "admin-001";
 
 const DEFAULT_ADMIN_PASSWORD = "Admin@2005";
 
 export function getProtectedSuperAdminEmail(): string {
-  return (process.env.ADMIN_EMAIL || "admin@bestbet.gh").toLowerCase();
+  return PROTECTED_SUPER_ADMIN_EMAIL;
 }
 
 export function getProtectedSuperAdminPassword(): string {
@@ -16,7 +19,8 @@ export function getProtectedSuperAdminPassword(): string {
 }
 
 export function isProtectedSuperAdmin(userId: string, email: string): boolean {
-  return userId === PROTECTED_SUPER_ADMIN_ID || email.toLowerCase() === getProtectedSuperAdminEmail();
+  const normalized = String(email || "").toLowerCase().trim();
+  return userId === PROTECTED_SUPER_ADMIN_ID || normalized === PROTECTED_SUPER_ADMIN_EMAIL;
 }
 
 export function isAdminRole(roleId?: string): boolean {
@@ -40,7 +44,7 @@ export function canChangeUserStatus(
 
 /** Reset protected super admin: fresh password, role, status, and admins row. */
 export async function recreateProtectedSuperAdmin(db: Database): Promise<string> {
-  const email = getProtectedSuperAdminEmail();
+  const email = PROTECTED_SUPER_ADMIN_EMAIL;
   const password = getProtectedSuperAdminPassword();
   const hash = await bcrypt.hash(password, 10);
   const adminId = PROTECTED_SUPER_ADMIN_ID;
@@ -96,7 +100,7 @@ export async function recreateProtectedSuperAdmin(db: Database): Promise<string>
 
 /** Ensure admin@bestbet.gh is active super_admin (lightweight repair — does not reset password). */
 export async function repairProtectedSuperAdmin(db: Database): Promise<void> {
-  const email = getProtectedSuperAdminEmail();
+  const email = PROTECTED_SUPER_ADMIN_EMAIL;
   const users = await db.query(`SELECT id, status, role_id FROM users WHERE LOWER(email) = ?`, [email]);
   if (users.rows.length === 0) {
     await recreateProtectedSuperAdmin(db);

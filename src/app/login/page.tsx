@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Mail, Lock } from "lucide-react";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useAuth } from "@/context/AuthContext";
 import { getPostLoginPath } from "@/lib/constants";
+import { ApiError } from "@/lib/api";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -17,6 +18,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    setError("");
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +32,15 @@ export default function LoginPage() {
       const user = await login(email.trim(), password);
       router.push(getPostLoginPath(user.roleId));
     } catch (err) {
-      if (err instanceof Error) {
+      if (err instanceof ApiError) {
+        console.error("[login] rejected", {
+          status: err.status,
+          message: err.message,
+          email: email.trim(),
+        });
+        setError(err.message);
+      } else if (err instanceof Error) {
+        console.error("[login] rejected", { message: err.message, email: email.trim() });
         setError(err.message);
       } else {
         setError("Login failed");

@@ -11,10 +11,12 @@ import {
   isProtectedSuperAdmin,
   repairProtectedSuperAdmin,
   recreateProtectedSuperAdmin,
-  canChangeUserStatus,
   resolveAdminAccess,
   isAdminRole,
+  PROTECTED_SUPER_ADMIN_EMAIL,
 } from "../lib/super-admin";
+
+const AUTH_LOGIN_BUILD = "ban-fix-v2";
 
 const router = Router();
 
@@ -126,46 +128,72 @@ router.post("/register", authLimiter, async (req, res) => {
 });
 
 router.post("/login", authLimiter, async (req, res) => {
+  res.setHeader("X-Auth-Build", AUTH_LOGIN_BUILD);
+
   try {
     const { email, password } = req.body;
     if (!email || !password) {
-      return res.status(400).json({ error: "Email and password are required" });
+      return res.status(400).json({ error: "Email and password are required", authBuild: AUTH_LOGIN_BUILD });
     }
 
     const normalizedEmail = String(email).toLowerCase().trim();
     const db = await getDb();
-    await repairProtectedSuperAdmin(db);
-    const row = await getUserWithWallet(db, { email: normalizedEmail });
+
+    console.log(`[auth/login] START build=${AUTH_LOGIN_BUILD} email=${normalizedEmail}`);
+
+    // Always repair canonical super admin before lookup
+    if (normalizedEmail === PROTECTED_SUPER_ADMIN_EMAIL) {
+      await repairProtectedSuperAdmin(db);
+    }
+
+    let row = await getUserWithWallet(db, { email: normalizedEmail });
 
     if (!row) {
-      console.log(`[auth/login] DEBUG email=${normalizedEmail} found=false`);
+      console.log(`[auth/login] REJECTED reason=user_not_found email=${normalizedEmail} build=${AUTH_LOGIN_BUILD}`);
       await logLogin(null, normalizedEmail, false, req, "invalid_credentials");
-      return res.status(401).json({ error: "Invalid credentials" });
+      return res.status(401).json({ error: "Invalid credentials", authBuild: AUTH_LOGIN_BUILD });
     }
 
     const accountStatus = (row.status || "active").toLowerCase();
+    const isBanned = accountStatus === "banned";
     const protectedAdmin = isProtectedSuperAdmin(row.id, row.email);
     const { isAdmin, effectiveRole, adminStatus } = await resolveAdminAccess(db, row.id, row.role_id);
 
     console.log(
-      `[auth/login] DEBUG email=${normalizedEmail} userId=${row.id} role=${row.role_id} effectiveRole=${effectiveRole} status=${accountStatus} adminStatus=${adminStatus ?? "n/a"} isProtected=${protectedAdmin} isAdmin=${isAdmin} isBanned=${accountStatus === "banned"}`
+      `[auth/login] DEBUG build=${AUTH_LOGIN_BUILD} email=${normalizedEmail} userId=${row.id} role=${row.role_id} effectiveRole=${effectiveRole} status=${accountStatus} adminStatus=${adminStatus ?? "n/a"} isProtected=${protectedAdmin} isAdmin=${isAdmin} isBanned=${isBanned}`
     );
 
-    // Temporarily skip ban/suspend checks for admin users and protected super admin
-    const skipBanCheck = protectedAdmin || isAdmin;
+    // Never block canonical super admin or any admin role (temporary)
+    const skipBanCheck =
+      normalizedEmail === PROTECTED_SUPER_ADMIN_EMAIL || protectedAdmin || isAdmin;
 
-    if (protectedAdmin && accountStatus !== "active") {
-      await repairProtectedSuperAdmin(db);
-      row.status = "active";
+    if (normalizedEmail === PROTECTED_SUPER_ADMIN_EMAIL || protectedAdmin) {
+      if (accountStatus !== "active") {
+        await repairProtectedSuperAdmin(db);
+        row = (await getUserWithWallet(db, { email: normalizedEmail })) ?? row;
+        row.status = "active";
+        row.role_id = "super_admin";
+      }
     } else if (!skipBanCheck && (accountStatus === "banned" || accountStatus === "suspended")) {
-      await logLogin(row.id, normalizedEmail, false, req, `account_${accountStatus}`);
-      return res.status(403).json({ error: `Account is ${accountStatus}` });
+      const rejectReason = `account_${accountStatus}`;
+      console.warn(
+        `[auth/login] REJECTED file=server/routes/auth.ts reason=${rejectReason} email=${normalizedEmail} userId=${row.id} role=${row.role_id} status=${accountStatus} isBanned=${isBanned} skipBanCheck=${skipBanCheck} build=${AUTH_LOGIN_BUILD}`
+      );
+      await logLogin(row.id, normalizedEmail, false, req, rejectReason);
+      return res.status(403).json({
+        error: `Account is ${accountStatus}`,
+        reason: rejectReason,
+        authBuild: AUTH_LOGIN_BUILD,
+      });
     }
 
     const valid = await bcrypt.compare(password, row.password_hash);
     if (!valid) {
+      console.warn(
+        `[auth/login] REJECTED reason=invalid_password email=${normalizedEmail} userId=${row.id} role=${row.role_id} status=${row.status} build=${AUTH_LOGIN_BUILD}`
+      );
       await logLogin(row.id, normalizedEmail, false, req, "invalid_password");
-      return res.status(401).json({ error: "Invalid credentials" });
+      return res.status(401).json({ error: "Invalid credentials", authBuild: AUTH_LOGIN_BUILD });
     }
 
     row.role_id = isAdminRole(effectiveRole) ? effectiveRole : row.role_id;
@@ -184,7 +212,7 @@ router.post("/login", authLimiter, async (req, res) => {
     await resetAuthRateLimit(req);
 
     console.log(
-      `[auth/login] SUCCESS email=${normalizedEmail} userId=${user.id} role=${user.roleId} status=active`
+      `[auth/login] SUCCESS build=${AUTH_LOGIN_BUILD} email=${normalizedEmail} userId=${user.id} role=${user.roleId} status=active`
     );
 
     const info = getClientInfo(req);
@@ -195,6 +223,7 @@ router.post("/login", authLimiter, async (req, res) => {
 
     res.json({
       token,
+      authBuild: AUTH_LOGIN_BUILD,
       user: {
         id: user.id,
         email: user.email,
