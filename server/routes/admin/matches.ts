@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { v4 as uuidv4 } from "uuid";
-import { authenticate, requireRole, logAudit } from "../middleware/auth";
+import { authenticate, requireRole, logAudit } from "../../middleware/auth";
 import {
   createMatchRecord,
   deleteMatchRecord,
@@ -10,7 +10,7 @@ import {
   updateMatchRecord,
   type MatchInput,
   type MatchStatus,
-} from "../lib/matches";
+} from "../../lib/matches";
 
 const router = Router();
 
