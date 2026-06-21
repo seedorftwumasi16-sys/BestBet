@@ -30,6 +30,7 @@ export function AdminAdminsSection() {
   const { user } = useAuth();
   const [admins, setAdmins] = useState<AdminAccountApi[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -37,10 +38,15 @@ export function AdminAdminsSection() {
 
   const load = useCallback(() => {
     setLoading(true);
+    setLoadError("");
     adminApi
       .getAdmins()
-      .then(setAdmins)
-      .catch((err) => toast.error(err instanceof Error ? err.message : "Failed to load admins"))
+      .then((data) => setAdmins(Array.isArray(data) ? data : []))
+      .catch((err) => {
+        const message = err instanceof Error ? err.message : "Failed to load admins";
+        setLoadError(message);
+        toast.error(message);
+      })
       .finally(() => setLoading(false));
   }, [toast]);
 
@@ -186,6 +192,13 @@ export function AdminAdminsSection() {
         </div>
       )}
 
+      {loadError && !loading && (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300 flex items-center justify-between gap-3">
+          <span>{loadError}</span>
+          <Button size="sm" variant="outline" onClick={load}>Retry</Button>
+        </div>
+      )}
+
       {loading ? (
         <p className="text-bestbet-gray-muted">Loading admins...</p>
       ) : (
@@ -215,7 +228,9 @@ export function AdminAdminsSection() {
                   <td>
                     <Badge variant={admin.status === "active" ? "success" : "danger"}>{admin.status}</Badge>
                   </td>
-                  <td className="text-xs text-bestbet-gray-muted">{new Date(admin.createdAt).toLocaleDateString()}</td>
+                  <td className="text-xs text-bestbet-gray-muted">
+                    {admin.createdAt ? new Date(admin.createdAt).toLocaleDateString() : "—"}
+                  </td>
                   <td className="flex gap-1">
                     <Button size="sm" variant="outline" onClick={() => openEdit(admin)}>
                       <Pencil size={14} />

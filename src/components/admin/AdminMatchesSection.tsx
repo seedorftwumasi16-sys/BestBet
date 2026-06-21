@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/Badge";
 import { adminApi, type MatchApi } from "@/lib/api";
 import { SPORTS } from "@/lib/constants";
 import { formatMatchDate, formatMatchTime } from "@/lib/utils";
+import { normalizeMatchApi, safeToFixed } from "@/lib/admin-utils";
 import { useToast } from "@/context/ToastContext";
 import {
   AdminMatchMarketsEditor,
@@ -141,6 +142,7 @@ export function AdminMatchesSection() {
   const toast = useToast();
   const [matches, setMatches] = useState<MatchApi[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -152,10 +154,15 @@ export function AdminMatchesSection() {
 
   const load = useCallback(() => {
     setLoading(true);
+    setLoadError("");
     adminApi
       .getMatches()
-      .then(setMatches)
-      .catch((err) => toast.error(err instanceof Error ? err.message : "Failed to load matches"))
+      .then((data) => setMatches(Array.isArray(data) ? data.map(normalizeMatchApi) : []))
+      .catch((err) => {
+        const message = err instanceof Error ? err.message : "Failed to load matches";
+        setLoadError(message);
+        toast.error(message);
+      })
       .finally(() => setLoading(false));
   }, [toast]);
 
@@ -173,10 +180,11 @@ export function AdminMatchesSection() {
   };
 
   const openEdit = (match: MatchApi) => {
-    setEditingId(match.id);
-    setForm(formFromMatch(match));
-    setCorrectScoreOdds(initCorrectScoreFromMatch(match.odds.correctScore));
-    setDoubleChanceOdds(initDoubleChanceFromMatch(match.odds.doubleChance));
+    const normalized = normalizeMatchApi(match);
+    setEditingId(normalized.id);
+    setForm(formFromMatch(normalized));
+    setCorrectScoreOdds(initCorrectScoreFromMatch(normalized.odds.correctScore));
+    setDoubleChanceOdds(initDoubleChanceFromMatch(normalized.odds.doubleChance));
     setMarketTab("main");
     setShowForm(true);
   };
@@ -200,11 +208,11 @@ export function AdminMatchesSection() {
       const payload = formToPayload(form, correctScoreOdds, doubleChanceOdds);
       if (editingId) {
         const updated = await adminApi.updateMatch(editingId, payload);
-        setMatches((prev) => prev.map((m) => (m.id === editingId ? updated : m)));
+        setMatches((prev) => prev.map((m) => (m.id === editingId ? normalizeMatchApi(updated) : m)));
         toast.success("Match updated successfully");
       } else {
         const created = await adminApi.createMatch(payload);
-        setMatches((prev) => [created, ...prev]);
+        setMatches((prev) => [normalizeMatchApi(created), ...prev]);
         toast.success("Match created successfully");
       }
       closeForm();
@@ -230,7 +238,7 @@ export function AdminMatchesSection() {
   const toggleFeatured = async (match: MatchApi) => {
     try {
       const updated = await adminApi.updateMatch(match.id, { isFeatured: !match.isFeatured });
-      setMatches((prev) => prev.map((m) => (m.id === match.id ? updated : m)));
+      setMatches((prev) => prev.map((m) => (m.id === match.id ? normalizeMatchApi(updated) : m)));
       toast.success(updated.isFeatured ? "Match featured on homepage" : "Match unfeatured");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update match");
@@ -240,7 +248,7 @@ export function AdminMatchesSection() {
   const toggleBetting = async (match: MatchApi, suspended: boolean) => {
     try {
       const updated = await adminApi.updateMatch(match.id, { bettingSuspended: suspended });
-      setMatches((prev) => prev.map((m) => (m.id === match.id ? updated : m)));
+      setMatches((prev) => prev.map((m) => (m.id === match.id ? normalizeMatchApi(updated) : m)));
       toast.success(suspended ? "Betting suspended" : "Betting resumed");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update betting status");
@@ -402,6 +410,13 @@ export function AdminMatchesSection() {
         </div>
       )}
 
+      {loadError && !loading && (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300 flex items-center justify-between gap-3">
+          <span>{loadError}</span>
+          <Button size="sm" variant="outline" onClick={load}>Retry</Button>
+        </div>
+      )}
+
       {loading ? (
         <p className="text-bestbet-gray-muted">Loading matches...</p>
       ) : (
@@ -436,10 +451,10 @@ export function AdminMatchesSection() {
                     </p>
                   )}
                   <p className="text-xs text-bestbet-gray-muted mt-2 tabular-nums">
-                    1: {match.odds.home.toFixed(2)} · X: {match.odds.draw?.toFixed(2) ?? "—"} · 2:{" "}
-                    {match.odds.away.toFixed(2)}
+                    1: {safeToFixed(match.odds.home)} · X: {match.odds.draw != null ? safeToFixed(match.odds.draw) : "—"} · 2:{" "}
+                    {safeToFixed(match.odds.away)}
                     {match.odds.over != null && (
-                      <> · O/U {match.odds.overUnderLine}: {match.odds.over.toFixed(2)}/{match.odds.under?.toFixed(2)}</>
+                      <> · O/U {match.odds.overUnderLine ?? "2.5"}: {safeToFixed(match.odds.over)}/{match.odds.under != null ? safeToFixed(match.odds.under) : "—"}</>
                     )}
                   </p>
                 </div>

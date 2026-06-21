@@ -70,6 +70,8 @@ import { AdminAdminsSection } from "@/components/admin/AdminAdminsSection";
 
 import { AdminBettingHistorySection } from "@/components/admin/AdminBettingHistorySection";
 import { AdminBookingCodesSection } from "@/components/admin/AdminBookingCodesSection";
+import { AdminErrorBoundary } from "@/components/admin/AdminErrorBoundary";
+import { normalizeAdminStats, safeFormatCount } from "@/lib/admin-utils";
 
 
 
@@ -167,29 +169,7 @@ export default function AdminPage() {
 
 
 
-  const displayStats = stats ?? {
-
-    totalUsers: 0,
-
-    activeUsers: 0,
-
-    totalBets: 0,
-
-    totalMatches: 0,
-
-    liveMatches: 0,
-
-    totalDeposits: 0,
-
-    totalWithdrawals: 0,
-
-    revenue: 0,
-
-    pendingDeposits: 0,
-
-    pendingWithdrawals: 0,
-
-  };
+  const displayStats = normalizeAdminStats(stats);
 
 
 
@@ -312,7 +292,7 @@ export default function AdminPage() {
         <main className="flex-1 p-4 lg:p-6 overflow-y-auto">
 
           {activeSection === "dashboard" && (
-
+            <AdminErrorBoundary section="Dashboard">
             <div className="space-y-6">
 
               {statsError && (
@@ -335,13 +315,13 @@ export default function AdminPage() {
 
                 {[
 
-                  { label: "Total Matches", value: displayStats.totalMatches.toLocaleString() },
+                  { label: "Total Matches", value: safeFormatCount(displayStats.totalMatches) },
 
-                  { label: "Live Matches", value: displayStats.liveMatches.toLocaleString() },
+                  { label: "Live Matches", value: safeFormatCount(displayStats.liveMatches) },
 
-                  { label: "Total Users", value: displayStats.totalUsers.toLocaleString() },
+                  { label: "Total Users", value: safeFormatCount(displayStats.totalUsers) },
 
-                  { label: "Total Bets", value: displayStats.totalBets.toLocaleString() },
+                  { label: "Total Bets", value: safeFormatCount(displayStats.totalBets) },
 
                   { label: "Total Deposits", value: formatCurrency(displayStats.totalDeposits) },
 
@@ -422,26 +402,58 @@ export default function AdminPage() {
               </div>
 
             </div>
-
+            </AdminErrorBoundary>
           )}
 
 
 
-          {activeSection === "admins" && <AdminAdminsSection />}
+          {activeSection === "admins" && (
+            <AdminErrorBoundary section="Manage Admins">
+              <AdminAdminsSection />
+            </AdminErrorBoundary>
+          )}
 
-          {activeSection === "matches" && <AdminMatchesSection />}
+          {activeSection === "matches" && (
+            <AdminErrorBoundary section="Match Management">
+              <AdminMatchesSection />
+            </AdminErrorBoundary>
+          )}
 
-          {activeSection === "users" && <AdminUsersSection />}
+          {activeSection === "users" && (
+            <AdminErrorBoundary section="Users">
+              <AdminUsersSection />
+            </AdminErrorBoundary>
+          )}
 
-          {activeSection === "deposits" && <AdminDepositsSection />}
+          {activeSection === "deposits" && (
+            <AdminErrorBoundary section="Deposits">
+              <AdminDepositsSection />
+            </AdminErrorBoundary>
+          )}
 
-          {activeSection === "withdrawals" && <AdminWithdrawalsSection />}
+          {activeSection === "withdrawals" && (
+            <AdminErrorBoundary section="Withdrawals">
+              <AdminWithdrawalsSection />
+            </AdminErrorBoundary>
+          )}
 
-          {activeSection === "betting-history" && <AdminBettingHistorySection />}
+          {activeSection === "betting-history" && (
+            <AdminErrorBoundary section="Betting History">
+              <AdminBettingHistorySection />
+            </AdminErrorBoundary>
+          )}
 
-          {activeSection === "booking-codes" && <AdminBookingCodesSection />}
+          {activeSection === "booking-codes" && (
+            <AdminErrorBoundary section="Booking Codes">
+              <AdminBookingCodesSection />
+            </AdminErrorBoundary>
+          )}
 
-          {activeSection === "settings" && <AdminSettingsSection />}
+          {activeSection === "settings" && (
+            <AdminErrorBoundary section="Settings">
+              <AdminSettingsSection />
+            </AdminErrorBoundary>
+          )}
 
         </main>
 

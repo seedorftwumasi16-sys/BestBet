@@ -22,16 +22,28 @@ export function AdminBettingHistorySection() {
   const toast = useToast();
   const [bets, setBets] = useState<BetRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     adminApi
       .getBets()
-      .then((data) => setBets(data as BetRow[]))
-      .catch((err) => toast.error(err instanceof Error ? err.message : "Failed to load betting history"))
+      .then((data) => setBets(Array.isArray(data) ? (data as BetRow[]) : []))
+      .catch((err) => {
+        const message = err instanceof Error ? err.message : "Failed to load betting history";
+        setError(message);
+        toast.error(message);
+      })
       .finally(() => setLoading(false));
   }, [toast]);
 
   if (loading) return <p className="text-bestbet-gray-muted">Loading betting history...</p>;
+  if (error) {
+    return (
+      <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        {error}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

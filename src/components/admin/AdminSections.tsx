@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { adminApi, contentApi, type AdminStatsApi, type UserAdminApi, type DepositAdminApi, type WithdrawalAdminApi } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
+import { normalizeAdminStats } from "@/lib/admin-utils";
 import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
 
@@ -14,12 +15,17 @@ export function AdminUsersSection() {
   const { user } = useAuth();
   const [users, setUsers] = useState<UserAdminApi[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     adminApi
       .getUsers()
-      .then(setUsers)
-      .catch((err) => toast.error(err instanceof Error ? err.message : "Failed to load users"))
+      .then((data) => setUsers(Array.isArray(data) ? data : []))
+      .catch((err) => {
+        const message = err instanceof Error ? err.message : "Failed to load users";
+        setError(message);
+        toast.error(message);
+      })
       .finally(() => setLoading(false));
   }, [toast]);
 
@@ -51,6 +57,13 @@ export function AdminUsersSection() {
   };
 
   if (loading) return <p className="text-bestbet-gray-muted">Loading users...</p>;
+  if (error) {
+    return (
+      <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        {error}
+      </div>
+    );
+  }
 
   return (
     <div className="overflow-x-auto rounded-xl border border-bestbet-yellow/10">
@@ -99,12 +112,19 @@ export function AdminDepositsSection() {
   const toast = useToast();
   const [deposits, setDeposits] = useState<DepositAdminApi[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const load = () => {
+    setLoading(true);
+    setError("");
     adminApi
       .getDeposits()
-      .then(setDeposits)
-      .catch((err) => toast.error(err instanceof Error ? err.message : "Failed to load deposits"))
+      .then((data) => setDeposits(Array.isArray(data) ? data : []))
+      .catch((err) => {
+        const message = err instanceof Error ? err.message : "Failed to load deposits";
+        setError(message);
+        toast.error(message);
+      })
       .finally(() => setLoading(false));
   };
   useEffect(() => { load(); }, []);
@@ -141,6 +161,14 @@ export function AdminDepositsSection() {
   };
 
   if (loading) return <p className="text-bestbet-gray-muted">Loading deposits...</p>;
+  if (error) {
+    return (
+      <div className="space-y-3">
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</div>
+        <Button size="sm" variant="outline" onClick={load}>Retry</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
@@ -174,17 +202,32 @@ export function AdminWithdrawalsSection() {
   const toast = useToast();
   const [withdrawals, setWithdrawals] = useState<WithdrawalAdminApi[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const load = () => {
+    setLoading(true);
+    setError("");
     adminApi
       .getWithdrawals()
-      .then(setWithdrawals)
-      .catch((err) => toast.error(err instanceof Error ? err.message : "Failed to load withdrawals"))
+      .then((data) => setWithdrawals(Array.isArray(data) ? data : []))
+      .catch((err) => {
+        const message = err instanceof Error ? err.message : "Failed to load withdrawals";
+        setError(message);
+        toast.error(message);
+      })
       .finally(() => setLoading(false));
   };
   useEffect(() => { load(); }, []);
 
   if (loading) return <p className="text-bestbet-gray-muted">Loading withdrawals...</p>;
+  if (error) {
+    return (
+      <div className="space-y-3">
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</div>
+        <Button size="sm" variant="outline" onClick={load}>Retry</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
@@ -361,7 +404,7 @@ export function useAdminStats() {
   useEffect(() => {
     adminApi
       .getStats()
-      .then(setStats)
+      .then((data) => setStats(normalizeAdminStats(data)))
       .catch((err) => setStatsError(err instanceof Error ? err.message : "Failed to load stats"))
       .finally(() => setStatsLoading(false));
   }, []);

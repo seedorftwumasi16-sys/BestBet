@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { adminApi, type BookingCodeAdminApi } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
+import { safeToFixed } from "@/lib/admin-utils";
 import { useToast } from "@/context/ToastContext";
 
 export function AdminBookingCodesSection() {
@@ -14,13 +15,19 @@ export function AdminBookingCodesSection() {
   const [codes, setCodes] = useState<BookingCodeAdminApi[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const load = (q?: string) => {
     setLoading(true);
+    setError("");
     adminApi
       .getBookingCodes(q)
-      .then((data) => setCodes(data.codes))
-      .catch((err) => toast.error(err instanceof Error ? err.message : "Failed to load booking codes"))
+      .then((data) => setCodes(Array.isArray(data?.codes) ? data.codes : []))
+      .catch((err) => {
+        const message = err instanceof Error ? err.message : "Failed to load booking codes";
+        setError(message);
+        toast.error(message);
+      })
       .finally(() => setLoading(false));
   };
 
@@ -62,6 +69,13 @@ export function AdminBookingCodesSection() {
         </Button>
       </div>
 
+      {error && !loading && (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300 flex items-center justify-between gap-3">
+          <span>{error}</span>
+          <Button size="sm" variant="outline" onClick={() => load(search.trim() || undefined)}>Retry</Button>
+        </div>
+      )}
+
       {loading ? (
         <p className="text-bestbet-gray-muted">Loading...</p>
       ) : (
@@ -91,9 +105,9 @@ export function AdminBookingCodesSection() {
                   )}
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-bold">{formatCurrency(item.stake)} stake</p>
-                  <p className="text-xs text-bestbet-gray-muted">Odds: {item.totalOdds.toFixed(2)}</p>
-                  <p className="text-sm text-bestbet-yellow font-bold">{formatCurrency(item.potentialWin)} potential</p>
+                  <p className="text-sm font-bold">{formatCurrency(Number(item.stake) || 0)} stake</p>
+                  <p className="text-xs text-bestbet-gray-muted">Odds: {safeToFixed(item.totalOdds)}</p>
+                  <p className="text-sm text-bestbet-yellow font-bold">{formatCurrency(Number(item.potentialWin) || 0)} potential</p>
                   {item.status === "active" && (
                     <Button size="sm" variant="danger" className="mt-2" onClick={() => remove(item)}>
                       <Trash2 size={14} />
