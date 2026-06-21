@@ -10,22 +10,35 @@ import { betsApi } from "@/lib/api";
 import type { Match } from "@/lib/constants";
 import { SPORTS } from "@/lib/constants";
 import { applyMatchFeed, mergeMatchLists, applyOddsUpdate, toMatch } from "@/lib/match-utils";
+import { loadCachedMatches, saveCachedMatches } from "@/lib/match-cache";
 import { filterMatchesByLeague, filterMatchesBySearch } from "@/lib/fixture-utils";
 import { useLiveOdds } from "@/hooks/useLiveOdds";
 import { useMatchPolling } from "@/hooks/useMatchPolling";
-import { useLiveScorePolling } from "@/hooks/useLiveScorePolling";
 
 function SportPageContent({ sport }: { sport: string }) {
   const searchParams = useSearchParams();
   const sportInfo = SPORTS.find((s) => s.id === sport);
+  const cacheKey = `sport:${sport}`;
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hydrated, setHydrated] = useState(false);
   const [league, setLeague] = useState(searchParams.get("league") || "all");
   const [search, setSearch] = useState("");
 
+  useEffect(() => {
+    const cached = loadCachedMatches(cacheKey);
+    if (cached.length > 0) {
+      setMatches(cached);
+      setLoading(false);
+    }
+    setHydrated(true);
+  }, [cacheKey]);
+
   const loadMatches = useCallback(
     async ({ silent }: { silent: boolean }) => {
-      if (!silent) setLoading(true);
+      if (!silent) {
+        setLoading(true);
+      }
       const sportFilter = sport === "live" ? undefined : sport;
       const live = sport === "live";
       try {
@@ -36,18 +49,22 @@ function SportPageContent({ sport }: { sport: string }) {
           search: search || undefined,
         });
         const incoming = data.map(toMatch);
-        setMatches((prev) => (silent && prev.length > 0 ? mergeMatchLists(prev, incoming) : incoming));
-      } catch {
-        if (!silent) setMatches([]);
+        setMatches((prev) => {
+          if (incoming.length === 0 && prev.length > 0) return prev;
+          const next = silent && prev.length > 0 ? mergeMatchLists(prev, incoming) : incoming;
+          saveCachedMatches(cacheKey, next);
+          return next;
+        });
+      } catch (err) {
+        console.error(`[sport:${sport}] failed to load matches, using cache:`, err);
       } finally {
-        if (!silent) setLoading(false);
+        setLoading(false);
       }
     },
-    [sport, league, search]
+    [sport, league, search, cacheKey]
   );
 
-  useMatchPolling(loadMatches, [loadMatches]);
-  useLiveScorePolling(setMatches, sport === "live" || sport === "football");
+  useMatchPolling(loadMatches, [loadMatches], { enabled: hydrated });
 
   useEffect(() => {
     const fromUrl = searchParams.get("league");

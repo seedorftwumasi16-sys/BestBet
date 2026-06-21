@@ -3,12 +3,11 @@
 import { useEffect, useRef } from "react";
 import { betsApi } from "@/lib/api";
 import type { Match } from "@/lib/constants";
-import { mergeMatchLists, toMatch } from "@/lib/match-utils";
+import { applyLiveMatchUpdates, toMatch } from "@/lib/match-utils";
 import { logLiveMatchPayload } from "@/lib/live-score-utils";
+import { MATCH_DATA_REFRESH_INTERVAL_MS } from "@/lib/match-polling";
 
-const LIVE_SCORE_POLL_MS = 60_000;
-
-/** Poll live match scores every 60s without reloading the page. */
+/** Poll live match scores on the main refresh interval without dropping other fixtures. */
 export function useLiveScorePolling(
   setMatches: React.Dispatch<React.SetStateAction<Match[]>>,
   enabled = true
@@ -23,14 +22,14 @@ export function useLiveScorePolling(
       try {
         const data = await betsApi.getMatches({ live: true, sport: "football" });
         const incoming = data.map(toMatch);
-        setRef.current((prev) => mergeMatchLists(prev, incoming));
+        setRef.current((prev) => applyLiveMatchUpdates(prev, incoming));
         logLiveMatchPayload("live-score-poll", incoming);
-      } catch {
-        // silent fallback — websocket may still update
+      } catch (err) {
+        console.warn("[live-score-poll] failed, keeping cached matches:", err);
       }
     };
 
-    const id = setInterval(poll, LIVE_SCORE_POLL_MS);
+    const id = setInterval(poll, MATCH_DATA_REFRESH_INTERVAL_MS);
     return () => clearInterval(id);
   }, [enabled]);
 }

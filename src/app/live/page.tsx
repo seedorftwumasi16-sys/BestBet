@@ -1,85 +1,241 @@
 "use client";
 
-import { useState, useCallback } from "react";
+
+
+import { useState, useCallback, useEffect } from "react";
+
 import { MainLayout } from "@/components/layout/MainLayout";
+
 import { MatchCard } from "@/components/betting/MatchCard";
+
+import { MatchCardSkeleton } from "@/components/ui/Skeleton";
+
 import { FadeIn, StaggerContainer, StaggerItem } from "@/components/ui/Skeleton";
+
 import { Badge } from "@/components/ui/Badge";
+
 import { betsApi } from "@/lib/api";
+
 import type { Match } from "@/lib/constants";
+
 import { applyMatchFeed, mergeMatchLists, applyOddsUpdate, toMatch } from "@/lib/match-utils";
+
 import { logLiveMatchPayload } from "@/lib/live-score-utils";
+
+import { loadCachedMatches, saveCachedMatches } from "@/lib/match-cache";
+
 import { getLiveMatches } from "@/lib/fixture-utils";
+
 import { useLiveOdds } from "@/hooks/useLiveOdds";
-import { useLiveScorePolling } from "@/hooks/useLiveScorePolling";
+
 import { useMatchPolling } from "@/hooks/useMatchPolling";
+
 import { useAuth } from "@/context/AuthContext";
 
+
+
+const LIVE_CACHE_KEY = "live:football";
+
+
+
 export default function LivePage() {
+
   const { user } = useAuth();
+
   const [liveMatches, setLiveMatches] = useState<Match[]>([]);
 
-  const loadMatches = useCallback(async ({ silent }: { silent: boolean }) => {
-    try {
-      const data = await betsApi.getMatches({ live: true, sport: "football" });
-      const incoming = data.map(toMatch);
-      setLiveMatches((prev) => (silent && prev.length > 0 ? mergeMatchLists(prev, incoming) : incoming));
-      logLiveMatchPayload(silent ? "live-poll" : "live-load", incoming);
-    } catch (err) {
-      console.error("[live] failed to load matches", err);
+  const [loading, setLoading] = useState(true);
+
+  const [hydrated, setHydrated] = useState(false);
+
+
+
+  useEffect(() => {
+
+    const cached = getLiveMatches(loadCachedMatches(LIVE_CACHE_KEY));
+
+    if (cached.length > 0) {
+
+      setLiveMatches(cached);
+
+      setLoading(false);
+
     }
+
+    setHydrated(true);
+
   }, []);
 
-  useMatchPolling(loadMatches, [loadMatches]);
 
-  useLiveScorePolling(setLiveMatches, true);
+
+  const loadMatches = useCallback(async ({ silent }: { silent: boolean }) => {
+
+    if (!silent) setLoading(true);
+
+
+
+    try {
+
+      const data = await betsApi.getMatches({ live: true, sport: "football" });
+
+      const incoming = data.map(toMatch);
+
+      setLiveMatches((prev) => {
+
+        if (incoming.length === 0 && prev.length > 0) return prev;
+
+        const next = silent && prev.length > 0 ? mergeMatchLists(prev, incoming) : incoming;
+
+        saveCachedMatches(LIVE_CACHE_KEY, next);
+
+        return next;
+
+      });
+
+      logLiveMatchPayload(silent ? "live-poll" : "live-load", incoming);
+
+    } catch (err) {
+
+      console.error("[live] failed to load matches, using cache:", err);
+
+    } finally {
+
+      setLoading(false);
+
+    }
+
+  }, []);
+
+
+
+  useMatchPolling(loadMatches, [loadMatches], { enabled: hydrated });
+
+
 
   const { connected } = useLiveOdds({
+
     userId: user?.id,
+
     onMatchFeed: ({ action, match, matchId }) => {
+
       setLiveMatches((prev) => {
+
         const next = applyMatchFeed(prev, action, match, matchId);
-        return getLiveMatches(next);
+
+        const live = getLiveMatches(next);
+
+        saveCachedMatches(LIVE_CACHE_KEY, live);
+
+        return live;
+
       });
+
     },
+
     onUpdate: (update) => {
-      setLiveMatches((prev) =>
-        prev.map((m) => (m.id === update.matchId ? applyOddsUpdate(m, update) : m))
-      );
+
+      setLiveMatches((prev) => {
+
+        const next = prev.map((m) => (m.id === update.matchId ? applyOddsUpdate(m, update) : m));
+
+        saveCachedMatches(LIVE_CACHE_KEY, next);
+
+        return next;
+
+      });
+
     },
+
   });
 
+
+
+  const showSkeleton = loading && liveMatches.length === 0;
+
+
+
   return (
+
     <MainLayout>
+
       <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-5 md:space-y-6 max-w-5xl mx-auto pb-20 sm:pb-24 xl:pb-6 w-full min-w-0">
+
         <FadeIn>
+
           <div className="flex items-center justify-between">
+
             <div>
+
               <h1 className="text-xl sm:text-2xl font-black flex items-center gap-2 sm:gap-3">
+
                 <span className="w-3 h-3 rounded-full bg-bestbet-live live-pulse" />
+
                 Live Betting
+
               </h1>
+
               <p className="text-sm text-bestbet-gray-muted mt-1">
+
                 Real-time odds on {liveMatches.length} live events
+
               </p>
+
             </div>
+
             <Badge variant={connected ? "success" : "warning"}>{connected ? "Live" : "Connecting..."}</Badge>
+
           </div>
+
         </FadeIn>
 
-        <StaggerContainer className="space-y-4">
-          {liveMatches.map((match) => (
-            <StaggerItem key={match.id}>
-              <MatchCard match={match} showStats />
-            </StaggerItem>
-          ))}
-          {liveMatches.length === 0 && (
-            <p className="text-center text-bestbet-gray-muted py-12">
-              No live events right now. Live scores and odds update in the background without reloading the page.
-            </p>
-          )}
-        </StaggerContainer>
+
+
+        {showSkeleton ? (
+
+          <div className="space-y-3">
+
+            {Array.from({ length: 3 }, (_, i) => (
+
+              <MatchCardSkeleton key={i} />
+
+            ))}
+
+          </div>
+
+        ) : (
+
+          <StaggerContainer className="space-y-4">
+
+            {liveMatches.map((match) => (
+
+              <StaggerItem key={match.id}>
+
+                <MatchCard match={match} showStats />
+
+              </StaggerItem>
+
+            ))}
+
+            {liveMatches.length === 0 && (
+
+              <p className="text-center text-bestbet-gray-muted py-12">
+
+                No live events right now. Live scores and odds update in the background without reloading the page.
+
+              </p>
+
+            )}
+
+          </StaggerContainer>
+
+        )}
+
       </div>
+
     </MainLayout>
+
   );
+
 }
+
+

@@ -150,6 +150,8 @@ function matchSnapshotKey(m: Match): string {
 
 /** Merge incoming matches without replacing unchanged rows (reduces UI churn on silent poll). */
 export function mergeMatchLists(prev: Match[], incoming: Match[]): Match[] {
+  if (incoming.length === 0) return prev;
+
   const incomingById = new Map(incoming.map((m) => [m.id, m]));
   const merged: Match[] = [];
 
@@ -165,6 +167,29 @@ export function mergeMatchLists(prev: Match[], incoming: Match[]): Match[] {
   }
 
   return merged.sort(
+    (a, b) =>
+      Number(b.isLive || b.matchStatus === "live") - Number(a.isLive || a.matchStatus === "live") ||
+      a.startTime.getTime() - b.startTime.getTime()
+  );
+}
+
+/** Update live scores/minutes on existing rows without removing upcoming or simulated matches. */
+export function applyLiveMatchUpdates(prev: Match[], liveIncoming: Match[]): Match[] {
+  if (liveIncoming.length === 0) return prev;
+
+  const liveById = new Map(liveIncoming.map((m) => [m.id, m]));
+  const updated = prev.map((existing) => {
+    const live = liveById.get(existing.id);
+    if (!live) return existing;
+    liveById.delete(existing.id);
+    return matchSnapshotKey(existing) === matchSnapshotKey(live) ? existing : live;
+  });
+
+  for (const added of liveById.values()) {
+    updated.push(added);
+  }
+
+  return updated.sort(
     (a, b) =>
       Number(b.isLive || b.matchStatus === "live") - Number(a.isLive || a.matchStatus === "live") ||
       a.startTime.getTime() - b.startTime.getTime()

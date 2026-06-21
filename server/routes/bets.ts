@@ -10,17 +10,22 @@ import { formatCurrency } from "../lib/currency";
 const router = Router();
 
 router.get("/matches", async (req, res) => {
-  const { sport, live, featured, league, search, window } = req.query;
-  const validWindows = new Set(["live", "today", "tomorrow", "upcoming", "week"]);
-  const matches = await listMatches({
-    sport: sport ? String(sport) : undefined,
-    live: live === "true" ? true : undefined,
-    featured: featured === "true" ? true : undefined,
-    league: league ? String(league) : undefined,
-    search: search ? String(search) : undefined,
-    window: window && validWindows.has(String(window)) ? (String(window) as FixtureWindow) : undefined,
-  });
-  res.json(matches);
+  try {
+    const { sport, live, featured, league, search, window } = req.query;
+    const validWindows = new Set(["live", "today", "tomorrow", "upcoming", "week"]);
+    const matches = await listMatches({
+      sport: sport ? String(sport) : undefined,
+      live: live === "true" ? true : undefined,
+      featured: featured === "true" ? true : undefined,
+      league: league ? String(league) : undefined,
+      search: search ? String(search) : undefined,
+      window: window && validWindows.has(String(window)) ? (String(window) as FixtureWindow) : undefined,
+    });
+    res.json(matches);
+  } catch (err) {
+    console.error("[bets/matches]", err);
+    res.status(500).json({ error: "Failed to load matches" });
+  }
 });
 
 router.get("/history", authenticate, async (req, res) => {
