@@ -73,7 +73,9 @@ export default function LivePage() {
             </StaggerItem>
           ))}
           {liveMatches.length === 0 && (
-            <p className="text-center text-bestbet-gray-muted py-12">No live events right now</p>
+            <p className="text-center text-bestbet-gray-muted py-12">
+              No live events right now. Live scores sync from TheSportsDB every 5 minutes.
+            </p>
           )}
         </StaggerContainer>
       </div>

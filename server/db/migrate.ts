@@ -11,6 +11,8 @@ import {
   MATCH_COLUMNS_SQL,
   BOOKING_COLUMNS_SQL,
   LOGIN_LOG_COLUMNS_SQL,
+  SPORTSDB_SCHEMA_SQL,
+  SPORTSDB_COLUMNS_SQL,
 } from "./schema-ext";
 import { recreateProtectedSuperAdmin } from "../lib/super-admin";
 
@@ -40,6 +42,8 @@ export async function migrate(): Promise<{ driver: string }> {
   await runStatements(db, schema);
   await runStatements(db, schemaExt);
 
+  await runStatements(db, SPORTSDB_SCHEMA_SQL);
+
   if (db.driver === "postgresql") {
     await runStatements(db, USER_COLUMNS_SQL);
     await runStatements(db, WALLET_COLUMNS_SQL);
@@ -49,9 +53,11 @@ export async function migrate(): Promise<{ driver: string }> {
     await runStatements(db, MATCH_COLUMNS_SQL);
     await runStatements(db, BOOKING_COLUMNS_SQL);
     await runStatements(db, LOGIN_LOG_COLUMNS_SQL);
+    await runStatements(db, SPORTSDB_COLUMNS_SQL);
   } else {
     await runStatements(db, MATCH_COLUMNS_SQL.replace(/ADD COLUMN IF NOT EXISTS/g, "ADD COLUMN"));
     await runStatements(db, LOGIN_LOG_COLUMNS_SQL.replace(/ADD COLUMN IF NOT EXISTS/g, "ADD COLUMN"));
+    await runStatements(db, SPORTSDB_COLUMNS_SQL.replace(/ADD COLUMN IF NOT EXISTS/g, "ADD COLUMN"));
   }
 
   await recreateProtectedSuperAdmin(db);

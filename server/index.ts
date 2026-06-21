@@ -20,6 +20,8 @@ import notificationsRoutes from "./routes/notifications";
 import matchesRoutes from "./routes/matches";
 import contentRoutes from "./routes/content";
 import supportRoutes from "./routes/support";
+import sportsRoutes from "./routes/sports";
+import { startSportsSyncScheduler } from "./services/sports-sync";
 
 dotenv.config();
 
@@ -72,6 +74,7 @@ app.use("/api/notifications", notificationsRoutes);
 app.use("/api/matches", matchesRoutes);
 app.use("/api/content", contentRoutes);
 app.use("/api/support", supportRoutes);
+app.use("/api/sports", sportsRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({ error: "Not found" });
@@ -140,6 +143,7 @@ async function start() {
     });
 
     setInterval(broadcastLiveUpdates, 5000);
+    startSportsSyncScheduler();
   } catch (err) {
     console.error("[Server] Failed to start:", err);
     process.exit(1);

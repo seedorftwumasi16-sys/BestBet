@@ -210,3 +210,38 @@ ALTER TABLE booking_codes ADD COLUMN IF NOT EXISTS used_at TEXT;
 export const LOGIN_LOG_COLUMNS_SQL = `
 ALTER TABLE login_logs ADD COLUMN IF NOT EXISTS failure_reason TEXT;
 `;
+
+export const SPORTSDB_SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS sports_teams (
+  id TEXT PRIMARY KEY,
+  external_id TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  short_name TEXT,
+  badge_url TEXT,
+  league_id TEXT,
+  league_name TEXT,
+  sport TEXT NOT NULL DEFAULT 'football',
+  country TEXT,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS sports_sync_log (
+  id TEXT PRIMARY KEY,
+  status TEXT NOT NULL,
+  message TEXT,
+  leagues_synced INTEGER DEFAULT 0,
+  teams_synced INTEGER DEFAULT 0,
+  events_synced INTEGER DEFAULT 0,
+  source TEXT DEFAULT 'thesportsdb',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+`;
+
+export const SPORTSDB_COLUMNS_SQL = `
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS external_event_id TEXT;
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS home_team_logo TEXT;
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS away_team_logo TEXT;
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS league_badge TEXT;
+ALTER TABLE leagues ADD COLUMN IF NOT EXISTS external_id TEXT;
+ALTER TABLE leagues ADD COLUMN IF NOT EXISTS badge_url TEXT;
+`;

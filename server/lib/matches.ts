@@ -81,17 +81,19 @@ export function mapMatchRow(
   extra?: { correctScore?: Record<string, number>; doubleChance?: Record<string, number> }
 ): MatchApiPayload {
   const matchStatus = normalizeMatchStatus(row);
+  const homeLogo = row.home_team_logo ? String(row.home_team_logo) : "⚽";
+  const awayLogo = row.away_team_logo ? String(row.away_team_logo) : "⚽";
   return {
     id: String(row.id),
     homeTeam: {
       name: String(row.home_team),
       shortName: String(row.home_team).slice(0, 3).toUpperCase(),
-      logo: "⚽",
+      logo: homeLogo,
     },
     awayTeam: {
       name: String(row.away_team),
       shortName: String(row.away_team).slice(0, 3).toUpperCase(),
-      logo: "⚽",
+      logo: awayLogo,
     },
     league: String(row.league),
     leagueId: String(row.league).toLowerCase().replace(/\s+/g, "-"),
