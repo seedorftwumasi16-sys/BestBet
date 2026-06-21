@@ -9,8 +9,9 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { LeagueLogo } from "@/components/ui/LeagueLogo";
 import { betsApi } from "@/lib/api";
 import type { Match } from "@/lib/constants";
-import { applyMatchFeed, mergeApiMatches, applyOddsUpdate, toMatch } from "@/lib/match-utils";
+import { applyMatchFeed, mergeApiMatches, mergeMatchLists, applyOddsUpdate, toMatch } from "@/lib/match-utils";
 import { prefetchLeagueBadges } from "@/lib/sports-assets";
+import { useMatchPolling } from "@/hooks/useMatchPolling";
 import {
   getLiveMatches,
   getRealFootballMatches,
@@ -97,26 +98,28 @@ export default function HomePage() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadMatches = useCallback(() => {
-    setLoading(true);
-    Promise.all([
-      betsApi.getMatches({ sport: "football" }),
-      betsApi.getMatches({ sport: "football", live: true }),
-    ])
-      .then(([all, live]) => setMatches(mergeApiMatches(all, live).map(toMatch)))
-      .catch((err) => {
-        console.error("[homepage] failed to load matches", err);
-        setMatches([]);
-      })
-      .finally(() => setLoading(false));
+  const loadMatches = useCallback(async ({ silent }: { silent: boolean }) => {
+    if (!silent) setLoading(true);
+    try {
+      const [all, live] = await Promise.all([
+        betsApi.getMatches({ sport: "football" }),
+        betsApi.getMatches({ sport: "football", live: true }),
+      ]);
+      const incoming = mergeApiMatches(all, live).map(toMatch);
+      setMatches((prev) => (silent && prev.length > 0 ? mergeMatchLists(prev, incoming) : incoming));
+    } catch (err) {
+      console.error("[homepage] failed to load matches", err);
+      if (!silent) setMatches([]);
+    } finally {
+      if (!silent) setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    loadMatches();
     void prefetchLeagueBadges();
-    const interval = setInterval(loadMatches, 30_000);
-    return () => clearInterval(interval);
-  }, [loadMatches]);
+  }, []);
+
+  useMatchPolling(loadMatches, [loadMatches]);
 
   useLiveOdds({
     onMatchFeed: ({ action, match, matchId }) => {

@@ -17,7 +17,7 @@ export function useLiveMatchMinute(
 
     const interval = setInterval(() => {
       setState(computeClientLiveMinute(match));
-    }, 15_000);
+    }, 60_000);
 
     return () => clearInterval(interval);
   }, [

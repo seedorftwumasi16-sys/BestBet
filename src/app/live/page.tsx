@@ -1,33 +1,33 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { MatchCard } from "@/components/betting/MatchCard";
 import { FadeIn, StaggerContainer, StaggerItem } from "@/components/ui/Skeleton";
 import { Badge } from "@/components/ui/Badge";
 import { betsApi } from "@/lib/api";
 import type { Match } from "@/lib/constants";
-import { applyMatchFeed, applyOddsUpdate, toMatch } from "@/lib/match-utils";
+import { applyMatchFeed, mergeMatchLists, applyOddsUpdate, toMatch } from "@/lib/match-utils";
 import { getLiveMatches } from "@/lib/fixture-utils";
 import { useLiveOdds } from "@/hooks/useLiveOdds";
+import { useMatchPolling } from "@/hooks/useMatchPolling";
 import { useAuth } from "@/context/AuthContext";
 
 export default function LivePage() {
   const { user } = useAuth();
   const [liveMatches, setLiveMatches] = useState<Match[]>([]);
 
-  const loadMatches = useCallback(() => {
-    betsApi
-      .getMatches({ live: true, sport: "football" })
-      .then((data) => setLiveMatches(data.map(toMatch)))
-      .catch((err) => console.error("[live] failed to load matches", err));
+  const loadMatches = useCallback(async ({ silent }: { silent: boolean }) => {
+    try {
+      const data = await betsApi.getMatches({ live: true, sport: "football" });
+      const incoming = data.map(toMatch);
+      setLiveMatches((prev) => (silent && prev.length > 0 ? mergeMatchLists(prev, incoming) : incoming));
+    } catch (err) {
+      console.error("[live] failed to load matches", err);
+    }
   }, []);
 
-  useEffect(() => {
-    loadMatches();
-    const interval = setInterval(loadMatches, 30_000);
-    return () => clearInterval(interval);
-  }, [loadMatches]);
+  useMatchPolling(loadMatches, [loadMatches]);
 
   const { connected } = useLiveOdds({
     userId: user?.id,
@@ -70,7 +70,7 @@ export default function LivePage() {
           ))}
           {liveMatches.length === 0 && (
             <p className="text-center text-bestbet-gray-muted py-12">
-              No live events right now. Live scores sync from TheSportsDB every 5 minutes.
+              No live events right now. Live scores and odds update in the background without reloading the page.
             </p>
           )}
         </StaggerContainer>

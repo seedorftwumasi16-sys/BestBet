@@ -9,9 +9,10 @@ import { FadeIn, Skeleton } from "@/components/ui/Skeleton";
 import { betsApi } from "@/lib/api";
 import type { Match } from "@/lib/constants";
 import { SPORTS } from "@/lib/constants";
-import { applyMatchFeed, applyOddsUpdate, toMatch } from "@/lib/match-utils";
+import { applyMatchFeed, mergeMatchLists, applyOddsUpdate, toMatch } from "@/lib/match-utils";
 import { filterMatchesByLeague, filterMatchesBySearch } from "@/lib/fixture-utils";
 import { useLiveOdds } from "@/hooks/useLiveOdds";
+import { useMatchPolling } from "@/hooks/useMatchPolling";
 
 function SportPageContent({ sport }: { sport: string }) {
   const searchParams = useSearchParams();
@@ -21,25 +22,30 @@ function SportPageContent({ sport }: { sport: string }) {
   const [league, setLeague] = useState(searchParams.get("league") || "all");
   const [search, setSearch] = useState("");
 
-  const loadMatches = useCallback(() => {
-    setLoading(true);
-    const sportFilter = sport === "live" ? undefined : sport;
-    const live = sport === "live";
-    betsApi
-      .getMatches({
-        sport: sportFilter,
-        live,
-        league: league !== "all" ? league : undefined,
-        search: search || undefined,
-      })
-      .then((data) => setMatches(data.map(toMatch)))
-      .catch(() => setMatches([]))
-      .finally(() => setLoading(false));
-  }, [sport, league, search]);
+  const loadMatches = useCallback(
+    async ({ silent }: { silent: boolean }) => {
+      if (!silent) setLoading(true);
+      const sportFilter = sport === "live" ? undefined : sport;
+      const live = sport === "live";
+      try {
+        const data = await betsApi.getMatches({
+          sport: sportFilter,
+          live,
+          league: league !== "all" ? league : undefined,
+          search: search || undefined,
+        });
+        const incoming = data.map(toMatch);
+        setMatches((prev) => (silent && prev.length > 0 ? mergeMatchLists(prev, incoming) : incoming));
+      } catch {
+        if (!silent) setMatches([]);
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [sport, league, search]
+  );
 
-  useEffect(() => {
-    loadMatches();
-  }, [loadMatches]);
+  useMatchPolling(loadMatches, [loadMatches]);
 
   useEffect(() => {
     const fromUrl = searchParams.get("league");

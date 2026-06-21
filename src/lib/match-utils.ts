@@ -103,3 +103,43 @@ export function applyMatchFeed(
 
   return matches;
 }
+
+function matchSnapshotKey(m: Match): string {
+  return [
+    m.matchStatus,
+    m.isLive,
+    m.homeScore ?? "",
+    m.awayScore ?? "",
+    m.liveMinute ?? "",
+    m.liveMinuteDisplay ?? "",
+    m.timerPaused ?? "",
+    m.minuteTickAt ?? "",
+    m.bettingSuspended ?? "",
+    m.odds.home,
+    m.odds.draw ?? "",
+    m.odds.away,
+  ].join("|");
+}
+
+/** Merge incoming matches without replacing unchanged rows (reduces UI churn on silent poll). */
+export function mergeMatchLists(prev: Match[], incoming: Match[]): Match[] {
+  const incomingById = new Map(incoming.map((m) => [m.id, m]));
+  const merged: Match[] = [];
+
+  for (const existing of prev) {
+    const next = incomingById.get(existing.id);
+    if (!next) continue;
+    incomingById.delete(existing.id);
+    merged.push(matchSnapshotKey(existing) === matchSnapshotKey(next) ? existing : next);
+  }
+
+  for (const added of incomingById.values()) {
+    merged.push(added);
+  }
+
+  return merged.sort(
+    (a, b) =>
+      Number(b.isLive || b.matchStatus === "live") - Number(a.isLive || a.matchStatus === "live") ||
+      a.startTime.getTime() - b.startTime.getTime()
+  );
+}
