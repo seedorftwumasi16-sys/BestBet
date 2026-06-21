@@ -24,19 +24,37 @@ function pickConfiguredUrl(...candidates: Array<string | undefined>): string | u
   return undefined;
 }
 
-/** Base URL for REST API calls (no trailing slash). */
-export function getApiBaseUrl(): string {
-  const configured = pickConfiguredUrl(
-    process.env.NEXT_PUBLIC_API_URL,
-    typeof window === "undefined" ? process.env.API_URL : undefined
+function isDeployedFrontendHost(hostname: string): boolean {
+  return (
+    hostname.endsWith(".vercel.app") ||
+    hostname === "bestbet-nine.vercel.app" ||
+    hostname.endsWith(".bestbet.gh")
   );
+}
 
+/**
+ * Base URL for REST API calls (no trailing slash).
+ * - Browser on Vercel: empty string → same-origin `/api/*` proxy (no CORS).
+ * - Browser elsewhere in production: Railway URL or configured NEXT_PUBLIC_API_URL.
+ * - Local dev: http://127.0.0.1:5000
+ */
+export function getApiBaseUrl(): string {
+  if (typeof window !== "undefined") {
+    const { hostname } = window.location;
+    if (isDeployedFrontendHost(hostname)) {
+      return "";
+    }
+    const configured = pickConfiguredUrl(process.env.NEXT_PUBLIC_API_URL);
+    if (configured) return configured;
+    if (process.env.NODE_ENV === "production") return RAILWAY_API_URL;
+    return LOCAL_API_URL;
+  }
+
+  const configured = pickConfiguredUrl(process.env.API_URL, process.env.NEXT_PUBLIC_API_URL);
   if (configured) return configured;
-
   if (process.env.NODE_ENV === "production" || process.env.VERCEL === "1") {
     return RAILWAY_API_URL;
   }
-
   return LOCAL_API_URL;
 }
 
@@ -44,5 +62,8 @@ export function getApiBaseUrl(): string {
 export function getSocketUrl(): string {
   const wsUrl = process.env.NEXT_PUBLIC_WS_URL?.trim();
   if (wsUrl && !isLocalhostUrl(wsUrl)) return normalizeBaseUrl(wsUrl);
-  return getApiBaseUrl();
+  if (typeof window !== "undefined" && isDeployedFrontendHost(window.location.hostname)) {
+    return RAILWAY_API_URL;
+  }
+  return getApiBaseUrl() || RAILWAY_API_URL;
 }

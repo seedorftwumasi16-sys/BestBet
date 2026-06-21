@@ -1,6 +1,4 @@
-import { getApiBaseUrl, RAILWAY_API_URL } from "./config";
-
-const API_BASE = getApiBaseUrl();
+import { getApiBaseUrl } from "./config";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -31,14 +29,16 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   if (token) headers.Authorization = `Bearer ${token}`;
 
   let res: Response;
+  const apiBase = getApiBaseUrl();
   try {
-    res = await fetch(`${API_BASE}${path}`, { ...options, headers, credentials: "include" });
+    res = await fetch(`${apiBase}${path}`, { ...options, headers, credentials: "include" });
   } catch {
-    const hint =
-      process.env.NODE_ENV === "production" || process.env.VERCEL === "1"
-        ? `Unable to reach the BestBet API at ${API_BASE || RAILWAY_API_URL}. Check your connection or try again shortly.`
-        : "Unable to reach the server. Start the app with `npm run dev`.";
-    throw new ApiError(0, hint);
+    throw new ApiError(
+      0,
+      apiBase
+        ? `Unable to reach the BestBet API at ${apiBase}. Check your connection and try again.`
+        : "Unable to reach the BestBet API. Check your connection and try again."
+    );
   }
 
   if (!res.ok) {

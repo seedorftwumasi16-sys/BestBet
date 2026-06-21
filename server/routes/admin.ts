@@ -16,34 +16,39 @@ router.use("/admins", adminAdminsRoutes);
 router.use("/booking-codes", adminBookingCodesRoutes);
 
 router.get("/stats", authenticate, requireRole("super_admin", "sub_admin"), async (_req, res) => {
-  const db = await getDb();
-  const users = await db.query(`SELECT COUNT(*) as count FROM users`);
-  const bets = await db.query(`SELECT COUNT(*) as count FROM bets`);
-  const matches = await db.query(`SELECT COUNT(*) as count FROM matches`);
-  const liveMatches = await db.query(
-    `SELECT COUNT(*) as count FROM matches WHERE match_status = 'live' OR is_live = true OR is_live = 1`
-  );
-  const deposits = await db.query(`SELECT COALESCE(SUM(amount), 0) as total FROM deposits WHERE status = 'completed'`);
-  const withdrawals = await db.query(`SELECT COALESCE(SUM(amount), 0) as total FROM withdrawals WHERE status = 'completed'`);
-  const pendingDeposits = await db.query(`SELECT COUNT(*) as count FROM deposits WHERE status = 'pending'`);
-  const pendingWithdrawals = await db.query(`SELECT COUNT(*) as count FROM withdrawals WHERE status = 'pending'`);
-  const activeUsers = await db.query(`SELECT COUNT(*) as count FROM users WHERE status = 'active' OR status IS NULL`);
+  try {
+    const db = await getDb();
+    const users = await db.query(`SELECT COUNT(*) as count FROM users`);
+    const bets = await db.query(`SELECT COUNT(*) as count FROM bets`);
+    const matches = await db.query(`SELECT COUNT(*) as count FROM matches`);
+    const liveMatches = await db.query(
+      `SELECT COUNT(*) as count FROM matches WHERE match_status = 'live' OR is_live = TRUE`
+    );
+    const deposits = await db.query(`SELECT COALESCE(SUM(amount), 0) as total FROM deposits WHERE status = 'completed'`);
+    const withdrawals = await db.query(`SELECT COALESCE(SUM(amount), 0) as total FROM withdrawals WHERE status = 'completed'`);
+    const pendingDeposits = await db.query(`SELECT COUNT(*) as count FROM deposits WHERE status = 'pending'`);
+    const pendingWithdrawals = await db.query(`SELECT COUNT(*) as count FROM withdrawals WHERE status = 'pending'`);
+    const activeUsers = await db.query(`SELECT COUNT(*) as count FROM users WHERE status = 'active' OR status IS NULL`);
 
-  const totalDeposits = Number(deposits.rows[0].total);
-  const totalWithdrawals = Number(withdrawals.rows[0].total);
+    const totalDeposits = Number(deposits.rows[0].total);
+    const totalWithdrawals = Number(withdrawals.rows[0].total);
 
-  res.json({
-    totalUsers: Number(users.rows[0].count),
-    activeUsers: Number(activeUsers.rows[0]?.count ?? users.rows[0].count),
-    totalBets: Number(bets.rows[0].count),
-    totalMatches: Number(matches.rows[0]?.count ?? 0),
-    liveMatches: Number(liveMatches.rows[0]?.count ?? 0),
-    totalDeposits,
-    totalWithdrawals,
-    revenue: totalDeposits - totalWithdrawals,
-    pendingDeposits: Number(pendingDeposits.rows[0]?.count ?? 0),
-    pendingWithdrawals: Number(pendingWithdrawals.rows[0]?.count ?? 0),
-  });
+    res.json({
+      totalUsers: Number(users.rows[0].count),
+      activeUsers: Number(activeUsers.rows[0]?.count ?? users.rows[0].count),
+      totalBets: Number(bets.rows[0].count),
+      totalMatches: Number(matches.rows[0]?.count ?? 0),
+      liveMatches: Number(liveMatches.rows[0]?.count ?? 0),
+      totalDeposits,
+      totalWithdrawals,
+      revenue: totalDeposits - totalWithdrawals,
+      pendingDeposits: Number(pendingDeposits.rows[0]?.count ?? 0),
+      pendingWithdrawals: Number(pendingWithdrawals.rows[0]?.count ?? 0),
+    });
+  } catch (err) {
+    console.error("[admin/stats]", err);
+    res.status(500).json({ error: "Failed to load admin statistics" });
+  }
 });
 
 router.get("/users", authenticate, requirePermission("manage_users"), async (_req, res) => {

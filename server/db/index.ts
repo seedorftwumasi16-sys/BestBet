@@ -338,14 +338,20 @@ const PG_BOOL_COLUMNS = new Set([
 
 function normalizePgSql(sql: string): string {
   return sql
-    .replace(/is_live\s*=\s*1\s+OR\s+is_live\s*=\s*true/gi, "is_live = TRUE")
-    .replace(/active\s*=\s*1\s+OR\s+active\s*=\s*true/gi, "active = TRUE")
+    .replace(/\bis_live\s*=\s*1\b/gi, "is_live = TRUE")
+    .replace(/\bis_live\s*=\s*true\b/gi, "is_live = TRUE")
+    .replace(/\bactive\s*=\s*1\b/gi, "active = TRUE")
+    .replace(/\bactive\s*=\s*true\b/gi, "active = TRUE")
+    .replace(/\bbetting_suspended\s*=\s*1\b/gi, "betting_suspended = TRUE")
+    .replace(/\bbetting_suspended\s*=\s*0\b/gi, "betting_suspended = FALSE")
     .replace(/\bused\s*=\s*0\b/gi, "used = FALSE")
     .replace(/\bused\s*=\s*1\b/gi, "used = TRUE")
     .replace(/\brevoked\s*=\s*0\b/gi, "revoked = FALSE")
     .replace(/\brevoked\s*=\s*1\b/gi, "revoked = TRUE")
     .replace(/\bphone_verified\s*=\s*1\b/gi, "phone_verified = TRUE")
+    .replace(/\bphone_verified\s*=\s*0\b/gi, "phone_verified = FALSE")
     .replace(/\bread\s*=\s*1\b/gi, "read = TRUE")
+    .replace(/\bread\s*=\s*0\b/gi, "read = FALSE")
     .replace(/\bcashout_available\s*=\s*0\b/gi, "cashout_available = FALSE")
     .replace(/\bcashout_available\s*=\s*1\b/gi, "cashout_available = TRUE");
 }
