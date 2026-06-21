@@ -1,13 +1,20 @@
 "use client";
 
+import { useMemo, useState } from "react";
+import { motion } from "framer-motion";
+import { Plus, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import {
   CORRECT_SCORE_LABELS,
+  CORRECT_SCORE_PRESET_ODDS,
   CORRECT_SCORE_SCORES,
   CORRECT_SCORE_SPECIALS,
   DOUBLE_CHANCE_LABELS,
   MARKET_TAB_LABELS,
   MARKET_TABS,
+  formatCorrectScoreLabel,
+  normalizeCorrectScoreKey,
   type MarketTab,
 } from "@/lib/markets";
 
@@ -34,6 +41,109 @@ interface AdminMatchMarketsEditorProps {
   setOddsDraw: (v: string) => void;
   oddsAway: string;
   setOddsAway: (v: string) => void;
+}
+
+function CorrectScoreMarketsEditor({
+  correctScoreOdds,
+  setCorrectScoreOdds,
+}: {
+  correctScoreOdds: Record<string, string>;
+  setCorrectScoreOdds: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+}) {
+  const [newScore, setNewScore] = useState("");
+  const [newOdds, setNewOdds] = useState("");
+
+  const entries = useMemo(
+    () =>
+      Object.entries(correctScoreOdds).filter(([_, v]) => v !== "").sort(([a], [b]) => a.localeCompare(b)),
+    [correctScoreOdds]
+  );
+
+  const loadPresets = () => {
+    const next: Record<string, string> = { ...correctScoreOdds };
+    for (const [key, value] of Object.entries(CORRECT_SCORE_PRESET_ODDS)) {
+      next[key] = String(value);
+    }
+    setCorrectScoreOdds(next);
+  };
+
+  const addRow = () => {
+    const key = normalizeCorrectScoreKey(newScore);
+    if (!key || !newOdds) return;
+    setCorrectScoreOdds((prev) => ({ ...prev, [key]: newOdds }));
+    setNewScore("");
+    setNewOdds("");
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h4 className="text-sm font-bold text-bestbet-yellow">Correct Score Markets</h4>
+          <p className="text-xs text-bestbet-gray-muted mt-0.5">
+            Add unlimited score lines (e.g. 2-1 = 7.80). Stored separately from Match Result markets.
+          </p>
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={loadPresets}>
+          Load Presets
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-[1fr_120px_auto] gap-2 items-end">
+        <Input
+          label="Score (e.g. 2-1 or Any Other Home Win)"
+          value={newScore}
+          onChange={(e) => setNewScore(e.target.value)}
+          placeholder="2-1"
+        />
+        <Input
+          label="Odds"
+          type="number"
+          step="0.01"
+          value={newOdds}
+          onChange={(e) => setNewOdds(e.target.value)}
+          placeholder="7.80"
+        />
+        <Button type="button" variant="secondary" size="sm" className="mb-0.5" onClick={addRow}>
+          <Plus size={14} /> Add
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 max-h-80 overflow-y-auto pr-1">
+        {entries.map(([key, value]) => (
+          <div key={key} className="relative">
+            <Input
+              label={formatCorrectScoreLabel(key)}
+              type="number"
+              step="0.01"
+              value={value}
+              onChange={(e) => setCorrectScoreOdds((prev) => ({ ...prev, [key]: e.target.value }))}
+            />
+            <button
+              type="button"
+              onClick={() =>
+                setCorrectScoreOdds((prev) => {
+                  const next = { ...prev };
+                  delete next[key];
+                  return next;
+                })
+              }
+              className="absolute top-0 right-0 p-1 text-bestbet-danger hover:bg-white/5 rounded"
+              aria-label={`Remove ${key}`}
+            >
+              <Trash2 size={12} />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {entries.length === 0 && (
+        <p className="text-xs text-bestbet-gray-muted text-center py-4 border border-dashed border-white/10 rounded-lg">
+          No correct score markets yet. Load presets or add custom score lines.
+        </p>
+      )}
+    </div>
+  );
 }
 
 export function AdminMatchMarketsEditor(props: AdminMatchMarketsEditorProps) {
@@ -120,18 +230,7 @@ export function AdminMatchMarketsEditor(props: AdminMatchMarketsEditorProps) {
       )}
 
       {marketTab === "correct_score" && (
-        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2 max-h-80 overflow-y-auto pr-1">
-          {[...CORRECT_SCORE_SCORES, ...CORRECT_SCORE_SPECIALS].map((key) => (
-            <Input
-              key={key}
-              label={CORRECT_SCORE_LABELS[key]}
-              type="number"
-              step="0.01"
-              value={correctScoreOdds[key] || ""}
-              onChange={(e) => setCorrectScoreOdds((prev) => ({ ...prev, [key]: e.target.value }))}
-            />
-          ))}
-        </div>
+        <CorrectScoreMarketsEditor correctScoreOdds={correctScoreOdds} setCorrectScoreOdds={setCorrectScoreOdds} />
       )}
     </div>
   );
@@ -143,7 +242,7 @@ export function oddsRecordFromStrings(
 ) {
   const correctScore: Record<string, number> = {};
   for (const [k, v] of Object.entries(correctScoreOdds)) {
-    if (v) correctScore[k] = Number(v);
+    if (v) correctScore[normalizeCorrectScoreKey(k)] = Number(v);
   }
   const doubleChance: Record<string, number> = {};
   for (const [k, v] of Object.entries(doubleChanceOdds)) {
@@ -154,8 +253,15 @@ export function oddsRecordFromStrings(
 
 export function initCorrectScoreFromMatch(odds?: Record<string, number>) {
   const result: Record<string, string> = {};
-  for (const key of [...CORRECT_SCORE_SCORES, ...CORRECT_SCORE_SPECIALS]) {
-    if (odds?.[key] != null) result[key] = String(odds[key]);
+  if (odds) {
+    for (const [key, value] of Object.entries(odds)) {
+      if (value != null) result[key] = String(value);
+    }
+  }
+  if (Object.keys(result).length === 0) {
+    for (const key of [...CORRECT_SCORE_SCORES, ...CORRECT_SCORE_SPECIALS]) {
+      if (CORRECT_SCORE_PRESET_ODDS[key] != null) result[key] = String(CORRECT_SCORE_PRESET_ODDS[key]);
+    }
   }
   return result;
 }

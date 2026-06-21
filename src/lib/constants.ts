@@ -96,6 +96,13 @@ export interface Match {
   minuteTickAt?: string | null;
   homeScore?: number;
   awayScore?: number;
+  liveStatusShort?: string;
+  homeYellowCards?: number;
+  awayYellowCards?: number;
+  homeRedCards?: number;
+  awayRedCards?: number;
+  liveDataAvailable?: boolean;
+  liveDataError?: string | null;
   odds: {
     home: number;
     draw?: number;

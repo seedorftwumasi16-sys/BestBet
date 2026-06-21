@@ -12,6 +12,12 @@ interface LiveOddsUpdate {
   awayScore?: number;
   liveMinute?: number;
   liveMinuteDisplay?: string;
+  liveStatusShort?: string | null;
+  homeYellowCards?: number;
+  awayYellowCards?: number;
+  homeRedCards?: number;
+  awayRedCards?: number;
+  liveDataAvailable?: boolean;
   timerPaused?: boolean;
   minuteTickAt?: string | null;
   matchStatus?: "upcoming" | "live" | "finished";

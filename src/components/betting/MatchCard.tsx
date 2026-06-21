@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Star, BarChart3, Clock, ChevronDown } from "lucide-react";
+import { MatchDetailPanel } from "@/components/betting/MatchDetailPanel";
 import { CorrectScorePanel } from "@/components/betting/CorrectScorePanel";
 import { MatchMarkets } from "@/components/betting/MatchMarkets";
 import { Badge } from "@/components/ui/Badge";
@@ -155,11 +156,16 @@ export function MatchCard({ match, showStats = false }: MatchCardProps) {
           </div>
 
           <div className="text-center shrink-0 px-1 sm:px-2">
-            {match.isLive && match.homeScore !== undefined ? (
-              <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-black/40 border border-white/10">
-                <span className="text-base sm:text-xl font-black tabular-nums">{match.homeScore}</span>
-                <span className="text-bestbet-gray-muted text-[10px] sm:text-xs font-bold">:</span>
-                <span className="text-base sm:text-xl font-black tabular-nums">{match.awayScore}</span>
+            {(match.isLive || match.matchStatus === "finished") && match.homeScore !== undefined ? (
+              <div className="flex flex-col items-center gap-0.5">
+                <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-black/40 border border-white/10">
+                  <span className="text-base sm:text-xl font-black tabular-nums">{match.homeScore}</span>
+                  <span className="text-bestbet-gray-muted text-[10px] sm:text-xs font-bold">:</span>
+                  <span className="text-base sm:text-xl font-black tabular-nums">{match.awayScore}</span>
+                </div>
+                {!match.isSimulated && match.liveDataAvailable === false && match.isLive && (
+                  <span className="text-[8px] text-orange-400">Data unavailable</span>
+                )}
               </div>
             ) : (
               <span className="text-[10px] sm:text-xs font-bold text-bestbet-yellow/80 tracking-widest">VS</span>
@@ -209,6 +215,7 @@ export function MatchCard({ match, showStats = false }: MatchCardProps) {
 
       {expanded && (
         <>
+          <MatchDetailPanel match={match} />
           <MatchMarkets match={match} />
           {match.sport === "football" && <CorrectScorePanel match={match} />}
         </>

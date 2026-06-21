@@ -60,6 +60,13 @@ export interface MatchApiPayload {
   minuteTickAt?: string | null;
   homeScore?: number | null;
   awayScore?: number | null;
+  liveStatusShort?: string | null;
+  homeYellowCards?: number;
+  awayYellowCards?: number;
+  homeRedCards?: number;
+  awayRedCards?: number;
+  liveDataAvailable?: boolean;
+  liveDataError?: string | null;
   odds: {
     home: number;
     draw?: number;
@@ -149,6 +156,13 @@ export function mapMatchRow(
     minuteTickAt: row.minute_tick_at ? String(row.minute_tick_at) : null,
     homeScore: row.home_score != null ? Number(row.home_score) : null,
     awayScore: row.away_score != null ? Number(row.away_score) : null,
+    liveStatusShort: row.live_status_short ? String(row.live_status_short) : null,
+    homeYellowCards: row.home_yellow_cards != null ? Number(row.home_yellow_cards) : 0,
+    awayYellowCards: row.away_yellow_cards != null ? Number(row.away_yellow_cards) : 0,
+    homeRedCards: row.home_red_cards != null ? Number(row.home_red_cards) : 0,
+    awayRedCards: row.away_red_cards != null ? Number(row.away_red_cards) : 0,
+    liveDataAvailable: row.live_data_available == null ? true : boolFrom(row, "live_data_available"),
+    liveDataError: row.live_data_error ? String(row.live_data_error) : null,
     odds: {
       home: Number(row.odds_home),
       draw: row.odds_draw != null ? Number(row.odds_draw) : undefined,

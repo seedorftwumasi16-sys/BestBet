@@ -24,6 +24,7 @@ import sportsRoutes from "./routes/sports";
 import { startSportsSyncScheduler } from "./services/sports-sync";
 import { startMatchTimerScheduler } from "./services/match-timer";
 import { startKickoffScheduler } from "./services/kickoff-scheduler";
+import { startApiFootballSyncScheduler } from "./services/apifootball-sync";
 import { computeEffectiveLiveMinute } from "./lib/match-timer";
 import { sanitizeBetOdds } from "./lib/bet-odds";
 
@@ -133,6 +134,12 @@ async function broadcastLiveUpdates() {
         awayScore: match.away_score,
         liveMinute: Number(match.live_minute ?? 0),
         liveMinuteDisplay: timer.display,
+        liveStatusShort: match.live_status_short ? String(match.live_status_short) : null,
+        homeYellowCards: match.home_yellow_cards != null ? Number(match.home_yellow_cards) : 0,
+        awayYellowCards: match.away_yellow_cards != null ? Number(match.away_yellow_cards) : 0,
+        homeRedCards: match.home_red_cards != null ? Number(match.home_red_cards) : 0,
+        awayRedCards: match.away_red_cards != null ? Number(match.away_red_cards) : 0,
+        liveDataAvailable: match.live_data_available != null ? boolFrom(match, "live_data_available") : undefined,
         timerPaused: timer.paused,
         minuteTickAt: match.minute_tick_at ? String(match.minute_tick_at) : null,
         matchStatus: match.match_status,
@@ -160,6 +167,7 @@ async function start() {
     setInterval(broadcastLiveUpdates, 5000);
     startMatchTimerScheduler();
     startKickoffScheduler();
+    void startApiFootballSyncScheduler();
     startSportsSyncScheduler();
   } catch (err) {
     console.error("[Server] Failed to start:", err);

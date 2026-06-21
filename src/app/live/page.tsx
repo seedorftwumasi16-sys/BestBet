@@ -10,6 +10,7 @@ import type { Match } from "@/lib/constants";
 import { applyMatchFeed, mergeMatchLists, applyOddsUpdate, toMatch } from "@/lib/match-utils";
 import { getLiveMatches } from "@/lib/fixture-utils";
 import { useLiveOdds } from "@/hooks/useLiveOdds";
+import { useLiveScorePolling } from "@/hooks/useLiveScorePolling";
 import { useMatchPolling } from "@/hooks/useMatchPolling";
 import { useAuth } from "@/context/AuthContext";
 
@@ -28,6 +29,8 @@ export default function LivePage() {
   }, []);
 
   useMatchPolling(loadMatches, [loadMatches]);
+
+  useLiveScorePolling(setLiveMatches, true);
 
   const { connected } = useLiveOdds({
     userId: user?.id,

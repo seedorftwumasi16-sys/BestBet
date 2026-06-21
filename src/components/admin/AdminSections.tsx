@@ -10,7 +10,7 @@ import { isProtectedAdminEmail } from "@/lib/constants";
 import { normalizeAdminStats } from "@/lib/admin-utils";
 import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
-import { Smartphone, User } from "lucide-react";
+import { KeyRound, RefreshCw, Smartphone, User } from "lucide-react";
 
 export function AdminUsersSection() {
   const toast = useToast();
@@ -344,13 +344,18 @@ export function AdminSettingsSection() {
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [momoNumber, setMomoNumber] = useState("0203907314");
   const [momoRecipient, setMomoRecipient] = useState("RAHAMATU NUHU");
+  const [apiFootballKey, setApiFootballKey] = useState("");
+  const [apiFootballRefresh, setApiFootballRefresh] = useState("45");
   const [saving, setSaving] = useState(false);
+  const [savingApiFootball, setSavingApiFootball] = useState(false);
 
   useEffect(() => {
     contentApi.getSettings().then((data) => {
       setSettings(data);
       if (data.momo_number) setMomoNumber(data.momo_number);
       if (data.momo_recipient_name) setMomoRecipient(data.momo_recipient_name);
+      if (data.apifootball_api_key) setApiFootballKey(data.apifootball_api_key);
+      if (data.apifootball_refresh_interval) setApiFootballRefresh(data.apifootball_refresh_interval);
     }).catch((err) => toastRef.current.error(err instanceof Error ? err.message : "Failed to load settings"));
   }, []);
 
@@ -378,8 +383,68 @@ export function AdminSettingsSection() {
     }
   };
 
+  const saveApiFootballSettings = async () => {
+    if (user?.roleId !== "super_admin") {
+      toast.error("Only super admins can update settings");
+      return;
+    }
+    const interval = Math.max(30, Math.min(60, Number(apiFootballRefresh) || 45));
+    setSavingApiFootball(true);
+    try {
+      await contentApi.updateSettings({
+        apifootball_api_key: apiFootballKey.trim(),
+        apifootball_refresh_interval: String(interval),
+      });
+      setSettings((prev) => ({
+        ...prev,
+        apifootball_api_key: apiFootballKey.trim(),
+        apifootball_refresh_interval: String(interval),
+      }));
+      setApiFootballRefresh(String(interval));
+      toast.success("API-Football settings saved. Live sync uses the new interval on next server restart.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save API-Football settings");
+    } finally {
+      setSavingApiFootball(false);
+    }
+  };
+
+  const maskSettingValue = (key: string, value: string) => {
+    if (key === "apifootball_api_key" && value.length > 8) {
+      return `${value.slice(0, 4)}${"•".repeat(Math.min(12, value.length - 8))}${value.slice(-4)}`;
+    }
+    return value;
+  };
+
   return (
     <div className="space-y-6 max-w-lg">
+      <div className="card-premium p-5 space-y-4">
+        <h3 className="text-sm font-bold font-display text-bestbet-yellow">API-Football Live Scores</h3>
+        <p className="text-xs text-bestbet-gray-muted">
+          Powers real match live scores, minutes, cards, and automatic settlement at full time.
+        </p>
+        <Input
+          label="API Key"
+          type="password"
+          value={apiFootballKey}
+          onChange={(e) => setApiFootballKey(e.target.value)}
+          icon={<KeyRound size={18} />}
+          placeholder="Enter API-Football key"
+        />
+        <Input
+          label="Refresh Interval (seconds)"
+          type="number"
+          min={30}
+          max={60}
+          value={apiFootballRefresh}
+          onChange={(e) => setApiFootballRefresh(e.target.value)}
+          icon={<RefreshCw size={18} />}
+        />
+        <Button variant="primary" size="sm" loading={savingApiFootball} onClick={saveApiFootballSettings}>
+          Save API-Football Settings
+        </Button>
+      </div>
+
       <div className="card-premium p-5 space-y-4">
         <h3 className="text-sm font-bold font-display text-bestbet-yellow">Mobile Money Deposits</h3>
         <Input label="Phone Number" value={momoNumber} onChange={(e) => setMomoNumber(e.target.value)} icon={<Smartphone size={18} />} />
@@ -394,7 +459,7 @@ export function AdminSettingsSection() {
         {Object.entries(settings).map(([key, value]) => (
           <div key={key} className="flex justify-between p-3 bg-bestbet-dark-secondary rounded-lg border border-bestbet-gray gap-4">
             <span className="text-sm text-bestbet-gray-muted shrink-0">{key}</span>
-            <span className="text-sm font-medium text-right break-all">{value}</span>
+            <span className="text-sm font-medium text-right break-all">{maskSettingValue(key, value)}</span>
           </div>
         ))}
       </div>

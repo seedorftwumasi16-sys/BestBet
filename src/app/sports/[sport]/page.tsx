@@ -13,6 +13,7 @@ import { applyMatchFeed, mergeMatchLists, applyOddsUpdate, toMatch } from "@/lib
 import { filterMatchesByLeague, filterMatchesBySearch } from "@/lib/fixture-utils";
 import { useLiveOdds } from "@/hooks/useLiveOdds";
 import { useMatchPolling } from "@/hooks/useMatchPolling";
+import { useLiveScorePolling } from "@/hooks/useLiveScorePolling";
 
 function SportPageContent({ sport }: { sport: string }) {
   const searchParams = useSearchParams();
@@ -46,6 +47,7 @@ function SportPageContent({ sport }: { sport: string }) {
   );
 
   useMatchPolling(loadMatches, [loadMatches]);
+  useLiveScorePolling(setMatches, sport === "live" || sport === "football");
 
   useEffect(() => {
     const fromUrl = searchParams.get("league");

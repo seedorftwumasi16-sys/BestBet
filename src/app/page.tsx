@@ -12,6 +12,7 @@ import type { Match } from "@/lib/constants";
 import { applyMatchFeed, mergeApiMatches, mergeMatchLists, applyOddsUpdate, toMatch } from "@/lib/match-utils";
 import { prefetchLeagueBadges } from "@/lib/sports-assets";
 import { useMatchPolling } from "@/hooks/useMatchPolling";
+import { useLiveScorePolling } from "@/hooks/useLiveScorePolling";
 import {
   getLiveMatches,
   getRealFootballMatches,
@@ -120,6 +121,7 @@ export default function HomePage() {
   }, []);
 
   useMatchPolling(loadMatches, [loadMatches]);
+  useLiveScorePolling(setMatches, true);
 
   useLiveOdds({
     onMatchFeed: ({ action, match, matchId }) => {

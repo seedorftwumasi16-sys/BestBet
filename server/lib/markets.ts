@@ -4,6 +4,7 @@ export const CORRECT_SCORE_SCORES = [
   "1-0",
   "2-0",
   "2-1",
+  "2-2",
   "3-0",
   "3-1",
   "3-2",
@@ -30,6 +31,7 @@ export const CORRECT_SCORE_LABELS: Record<string, string> = {
   "1-0": "1-0",
   "2-0": "2-0",
   "2-1": "2-1",
+  "2-2": "2-2",
   "3-0": "3-0",
   "3-1": "3-1",
   "3-2": "3-2",
@@ -110,18 +112,21 @@ function isListedDraw(h: number, a: number): boolean {
 }
 
 export function evaluateCorrectScore(selection: string, homeScore: number, awayScore: number): boolean {
-  const key = selection.replace(/\s+/g, "_").toLowerCase();
+  const normalized = selection.trim();
   const labelKey = Object.entries(CORRECT_SCORE_LABELS).find(
-    ([, label]) => label.toLowerCase() === selection.toLowerCase()
+    ([, label]) => label.toLowerCase() === normalized.toLowerCase()
   )?.[0];
 
-  const sel = labelKey || key.replace("any_other_home_win", "any_other_home").replace("any_other_away_win", "any_other_away").replace("any_other_draw", "any_other_draw");
+  let sel = labelKey || normalized.toLowerCase().replace(/\s+/g, "_");
+  sel = sel.replace("any_other_home_win", "any_other_home")
+    .replace("any_other_away_win", "any_other_away");
 
   if (sel === "any_other_home") return homeScore > awayScore && !isListedHomeWin(homeScore, awayScore);
   if (sel === "any_other_away") return awayScore > homeScore && !isListedAwayWin(homeScore, awayScore);
   if (sel === "any_other_draw") return homeScore === awayScore && !isListedDraw(homeScore, awayScore);
 
-  const parsed = parseScore(sel.includes("-") ? sel : selection);
+  const scorePattern = sel.includes("-") ? sel : normalized;
+  const parsed = parseScore(scorePattern);
   if (!parsed) return false;
   return parsed[0] === homeScore && parsed[1] === awayScore;
 }

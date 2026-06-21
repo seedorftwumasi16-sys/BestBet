@@ -27,6 +27,12 @@ export function applyOddsUpdate(
     awayScore?: number;
     liveMinute?: number;
     liveMinuteDisplay?: string;
+    liveStatusShort?: string | null;
+    homeYellowCards?: number;
+    awayYellowCards?: number;
+    homeRedCards?: number;
+    awayRedCards?: number;
+    liveDataAvailable?: boolean;
     timerPaused?: boolean;
     minuteTickAt?: string | null;
     matchStatus?: Match["matchStatus"];
@@ -40,7 +46,12 @@ export function applyOddsUpdate(
     awayScore: update.awayScore ?? match.awayScore,
     liveMinute: update.liveMinute ?? match.liveMinute,
     liveMinuteDisplay: update.liveMinuteDisplay ?? match.liveMinuteDisplay,
-    timerPaused: update.timerPaused ?? match.timerPaused,
+    liveStatusShort: update.liveStatusShort ?? match.liveStatusShort,
+    homeYellowCards: update.homeYellowCards ?? match.homeYellowCards,
+    awayYellowCards: update.awayYellowCards ?? match.awayYellowCards,
+    homeRedCards: update.homeRedCards ?? match.homeRedCards,
+    awayRedCards: update.awayRedCards ?? match.awayRedCards,
+    liveDataAvailable: update.liveDataAvailable ?? match.liveDataAvailable,
     minuteTickAt: update.minuteTickAt !== undefined ? update.minuteTickAt : match.minuteTickAt,
     matchStatus: update.matchStatus ?? match.matchStatus,
     isLive: update.matchStatus ? update.matchStatus === "live" : match.isLive,
@@ -48,7 +59,8 @@ export function applyOddsUpdate(
   };
 }
 
-export function toMatch(m: MatchApi): Match {  return {
+export function toMatch(m: MatchApi): Match {
+  return {
     id: m.id,
     homeTeam: { id: m.id + "-h", ...m.homeTeam },
     awayTeam: { id: m.id + "-a", ...m.awayTeam },
@@ -69,6 +81,13 @@ export function toMatch(m: MatchApi): Match {  return {
     minuteTickAt: m.minuteTickAt,
     homeScore: m.homeScore,
     awayScore: m.awayScore,
+    liveStatusShort: m.liveStatusShort ?? undefined,
+    homeYellowCards: m.homeYellowCards,
+    awayYellowCards: m.awayYellowCards,
+    homeRedCards: m.homeRedCards,
+    awayRedCards: m.awayRedCards,
+    liveDataAvailable: m.liveDataAvailable,
+    liveDataError: m.liveDataError ?? undefined,
     odds: m.odds,
   };
 }
@@ -112,6 +131,12 @@ function matchSnapshotKey(m: Match): string {
     m.awayScore ?? "",
     m.liveMinute ?? "",
     m.liveMinuteDisplay ?? "",
+    m.liveStatusShort ?? "",
+    m.homeYellowCards ?? "",
+    m.awayYellowCards ?? "",
+    m.homeRedCards ?? "",
+    m.awayRedCards ?? "",
+    m.liveDataAvailable ?? "",
     m.timerPaused ?? "",
     m.minuteTickAt ?? "",
     m.bettingSuspended ?? "",
