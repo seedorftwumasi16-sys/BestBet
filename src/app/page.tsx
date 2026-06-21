@@ -20,6 +20,7 @@ import {
 } from "@/lib/fixture-utils";
 import { trendingBets } from "@/lib/mock-data";
 import { useLiveOdds } from "@/hooks/useLiveOdds";
+import { WorldCupSpecials } from "@/components/home/WorldCupSpecials";
 import { motion } from "framer-motion";
 
 function EmptyMatches({ message }: { message: string }) {
@@ -38,6 +39,17 @@ function MatchList({ matches, showStats }: { matches: Match[]; showStats?: boole
         <MatchCard key={match.id} match={match} showStats={showStats} />
       ))}
     </div>
+  );
+}
+
+function isWorldCupOrInternational(match: Match): boolean {
+  const league = match.league.toLowerCase();
+  return (
+    league.includes("world cup") ||
+    league.includes("international") ||
+    league.includes("fifa") ||
+    match.leagueId.includes("world-cup") ||
+    match.leagueId.includes("international")
   );
 }
 
@@ -96,6 +108,18 @@ export default function HomePage() {
     [filtered]
   );
 
+  const worldCupMatches = useMemo(
+    () =>
+      matches
+        .filter(isWorldCupOrInternational)
+        .filter((m) => m.matchStatus !== "finished")
+        .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
+        .slice(0, 12),
+    [matches]
+  );
+
+  const allLiveCount = useMemo(() => getLiveMatches(matches).length, [matches]);
+
   return (
     <MainLayout>
       <motion.div
@@ -104,7 +128,29 @@ export default function HomePage() {
         transition={{ duration: 0.4 }}
         className="p-4 md:p-6 pb-28 xl:pb-6 space-y-8 max-w-5xl mx-auto"
       >
-        <HeroBanner />
+        <HeroBanner liveMatchCount={allLiveCount} />
+
+        <section aria-labelledby="wc-fixtures-heading">
+          <SectionHeader
+            id="wc-fixtures-heading"
+            title="World Cup & International Matches"
+            actionLabel="All WC Markets"
+            actionHref="/sports/football?league=4429"
+          />
+          {loading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <MatchCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : worldCupMatches.length > 0 ? (
+            <MatchList matches={worldCupMatches} showStats />
+          ) : (
+            <EmptyMatches message="World Cup qualifiers and international fixtures will appear here after the next sync." />
+          )}
+        </section>
+
+        <WorldCupSpecials />
 
         <section aria-labelledby="promotions-heading">
           <SectionHeader id="promotions-heading" title="Promotions" />

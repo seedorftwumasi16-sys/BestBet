@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFE566"/>
+      <stop offset="45%" stop-color="#FFD700"/>
+      <stop offset="100%" stop-color="#FFC107"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFD700" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#FFD700" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <circle cx="100" cy="100" r="96" fill="url(#glow)"/>
+  <circle cx="100" cy="100" r="88" stroke="url(#gold)" stroke-width="3" fill="#0A0A0A"/>
+  <circle cx="100" cy="100" r="72" stroke="rgba(255,215,0,0.25)" stroke-width="1.5" fill="none"/>
+  <text x="100" y="78" text-anchor="middle" fill="url(#gold)" font-family="Arial Black, sans-serif" font-size="22" font-weight="900">FIFA</text>
+  <text x="100" y="108" text-anchor="middle" fill="#FFFFFF" font-family="Arial Black, sans-serif" font-size="18" font-weight="900">WORLD CUP</text>
+  <text x="100" y="138" text-anchor="middle" fill="url(#gold)" font-family="Arial Black, sans-serif" font-size="32" font-weight="900">2026</text>
+  <path d="M100 24 L104 34 L115 34 L106 41 L110 52 L100 45 L90 52 L94 41 L85 34 L96 34 Z" fill="url(#gold)"/>
+</svg>
