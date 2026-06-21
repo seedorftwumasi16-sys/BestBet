@@ -56,15 +56,15 @@ const MATCHES = [
 ];
 
 const PROMOTIONS = [
-  { id: "p1", title: "100% Welcome Bonus", description: "Double your first deposit up to GHS 500", cta: "Claim Now", badge: "NEW" },
-  { id: "p2", title: "Acca Boost", description: "Get up to 50% extra on multi-bets with 5+ selections", cta: "Bet Now", badge: "HOT" },
-  { id: "p3", title: "Refer & Earn", description: "Earn GHS 10 for every friend you refer", cta: "Share Code", badge: "EARN" },
+  { id: "p1", title: "100% Welcome Bonus", description: "Double your first deposit up to GHS 500", cta: "Claim Now", badge: "NEW", image_url: "/images/promotions/welcome.svg" },
+  { id: "p2", title: "Acca Boost", description: "Get up to 50% extra on multi-bets with 5+ selections", cta: "Bet Now", badge: "HOT", image_url: "/images/promotions/acca.svg" },
+  { id: "p3", title: "Refer & Earn", description: "Earn GHS 10 for every friend you refer", cta: "Share Code", badge: "EARN", image_url: "/images/promotions/refer.svg" },
 ];
 
 const BANNERS = [
   { id: "b1", title: "Bet Smarter. Win Bigger.", subtitle: "Premium odds on 9+ sports", sort_order: 0 },
   { id: "b2", title: "Live Betting", subtitle: "Real-time odds updates", sort_order: 1 },
-  { id: "b3", title: "Mobile Money Deposits", subtitle: "Fast & secure via 0245680115", sort_order: 2 },
+  { id: "b3", title: "Mobile Money Deposits", subtitle: "Fast & secure via 0203907314", sort_order: 2 },
 ];
 
 const VIRTUAL_GAMES = [
@@ -78,7 +78,8 @@ const VIRTUAL_GAMES = [
 const SETTINGS = [
   { key: "site_name", value: "BestBet" },
   { key: "site_slogan", value: "Bet Smarter. Win Bigger." },
-  { key: "momo_number", value: "0245680115" },
+  { key: "momo_number", value: "0203907314" },
+  { key: "momo_recipient_name", value: "RAHAMATU NUHU" },
   { key: "min_deposit", value: "5" },
   { key: "min_withdrawal", value: "10" },
   { key: "referral_bonus", value: "10" },
@@ -96,7 +97,10 @@ export async function seed(): Promise<void> {
       if (db.driver === "json") {
         await db.query(`INSERT OR IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)`, [roleId, permId]);
       } else {
-        await db.query(`INSERT INTO role_permissions (role_id, permission_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [roleId, permId]);
+        await db.query(
+          `INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?) ON CONFLICT DO NOTHING`,
+          [roleId, permId]
+        );
       }
     }
   }
@@ -152,7 +156,12 @@ export async function seed(): Promise<void> {
   for (const p of PROMOTIONS) {
     const exists = await db.query(`SELECT id FROM promotions WHERE id = ?`, [p.id]);
     if (exists.rows.length === 0) {
-      await db.query(`INSERT INTO promotions (id, title, description, cta, badge) VALUES (?, ?, ?, ?, ?)`, [p.id, p.title, p.description, p.cta, p.badge]);
+      await db.query(`INSERT INTO promotions (id, title, description, image_url, cta, badge) VALUES (?, ?, ?, ?, ?, ?)`, [p.id, p.title, p.description, p.image_url, p.cta, p.badge]);
+    } else {
+      await db.query(
+        `UPDATE promotions SET image_url = ? WHERE id = ? AND (image_url IS NULL OR image_url LIKE '/banners/%' OR image_url LIKE '/banner/%')`,
+        [p.image_url, p.id]
+      );
     }
   }
 
@@ -160,6 +169,8 @@ export async function seed(): Promise<void> {
     const exists = await db.query(`SELECT id FROM banners WHERE id = ?`, [b.id]);
     if (exists.rows.length === 0) {
       await db.query(`INSERT INTO banners (id, title, subtitle, sort_order) VALUES (?, ?, ?, ?)`, [b.id, b.title, b.subtitle, b.sort_order]);
+    } else if (b.id === "b3") {
+      await db.query(`UPDATE banners SET subtitle = ? WHERE id = ?`, [b.subtitle, b.id]);
     }
   }
 
@@ -174,6 +185,8 @@ export async function seed(): Promise<void> {
     const exists = await db.query(`SELECT key FROM site_settings WHERE key = ?`, [s.key]);
     if (exists.rows.length === 0) {
       await db.query(`INSERT INTO site_settings (key, value) VALUES (?, ?)`, [s.key, s.value]);
+    } else if (s.key === "momo_number" || s.key === "momo_recipient_name") {
+      await db.query(`UPDATE site_settings SET value = ? WHERE key = ?`, [s.value, s.key]);
     }
   }
 

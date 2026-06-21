@@ -7,10 +7,11 @@ import { getDb, getWalletBalance } from "../db";
 import { authenticate, requirePermission, logAudit } from "../middleware/auth";
 import { depositLimiter } from "../middleware/security";
 import { createNotification, notifyAdmins } from "../services/notifications";
+import { getMomoFromEnv, getMomoInfo } from "../lib/momo";
 
 const router = Router();
 
-export const MOMO_NUMBER = process.env.MOMO_NUMBER || "0245680115";
+export const MOMO_NUMBER = getMomoFromEnv().number;
 
 const uploadDir = process.env.UPLOAD_DIR || "./uploads/deposits";
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
@@ -41,8 +42,8 @@ router.get("/balance", authenticate, async (req, res) => {
   });
 });
 
-router.get("/momo-info", (_req, res) => {
-  res.json({ number: MOMO_NUMBER, provider: "Mobile Money", currency: "GHS" });
+router.get("/momo-info", async (_req, res) => {
+  res.json(await getMomoInfo());
 });
 
 router.post("/deposit", authenticate, depositLimiter, upload.single("screenshot"), async (req, res) => {

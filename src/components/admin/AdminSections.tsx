@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { adminApi, contentApi, type AdminStatsApi, type UserAdminApi, type DepositAdminApi, type WithdrawalAdminApi } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
@@ -211,16 +212,61 @@ export function AdminVirtualSection() {
 
 export function AdminSettingsSection() {
   const [settings, setSettings] = useState<Record<string, string>>({});
-  useEffect(() => { contentApi.getSettings().then(setSettings).catch(() => {}); }, []);
+  const [momoNumber, setMomoNumber] = useState("0203907314");
+  const [momoRecipient, setMomoRecipient] = useState("RAHAMATU NUHU");
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    contentApi.getSettings().then((data) => {
+      setSettings(data);
+      if (data.momo_number) setMomoNumber(data.momo_number);
+      if (data.momo_recipient_name) setMomoRecipient(data.momo_recipient_name);
+    }).catch(() => {});
+  }, []);
+
+  const saveMomoSettings = async () => {
+    setSaving(true);
+    setMessage("");
+    try {
+      await contentApi.updateSettings({
+        momo_number: momoNumber.trim(),
+        momo_recipient_name: momoRecipient.trim(),
+      });
+      setSettings((prev) => ({
+        ...prev,
+        momo_number: momoNumber.trim(),
+        momo_recipient_name: momoRecipient.trim(),
+      }));
+      setMessage("Mobile Money settings saved.");
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Failed to save settings");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
-    <div className="space-y-3 max-w-md">
-      {Object.entries(settings).map(([key, value]) => (
-        <div key={key} className="flex justify-between p-3 bg-bestbet-dark-secondary rounded-lg border border-bestbet-gray">
-          <span className="text-sm text-bestbet-gray-muted">{key}</span>
-          <span className="text-sm font-medium">{value}</span>
-        </div>
-      ))}
+    <div className="space-y-6 max-w-lg">
+      <div className="card-premium p-5 space-y-4">
+        <h3 className="text-sm font-bold font-display text-bestbet-yellow">Mobile Money Deposits</h3>
+        <Input label="Phone Number" value={momoNumber} onChange={(e) => setMomoNumber(e.target.value)} />
+        <Input label="Recipient Name" value={momoRecipient} onChange={(e) => setMomoRecipient(e.target.value)} />
+        <Button variant="primary" size="sm" loading={saving} onClick={saveMomoSettings}>
+          Save MoMo Settings
+        </Button>
+        {message && <p className="text-sm text-bestbet-gray-muted">{message}</p>}
+      </div>
+
+      <div className="space-y-3">
+        <h3 className="text-sm font-bold text-bestbet-gray-muted uppercase tracking-wider">All Settings</h3>
+        {Object.entries(settings).map(([key, value]) => (
+          <div key={key} className="flex justify-between p-3 bg-bestbet-dark-secondary rounded-lg border border-bestbet-gray gap-4">
+            <span className="text-sm text-bestbet-gray-muted shrink-0">{key}</span>
+            <span className="text-sm font-medium text-right break-all">{value}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

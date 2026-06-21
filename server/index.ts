@@ -133,7 +133,7 @@ async function start() {
       console.log(`[Server] BestBet API running on port ${PORT}`);
       console.log(`[Server] Health: http://localhost:${PORT}/api/health`);
       console.log(`[Server] Socket.io: http://localhost:${PORT}/socket.io`);
-      console.log(`[Server] Mobile Money: ${process.env.MOMO_NUMBER || "0245680115"}`);
+      console.log(`[Server] Mobile Money: ${process.env.MOMO_NUMBER || "0203907314"} (${process.env.MOMO_RECIPIENT_NAME || "RAHAMATU NUHU"})`);
     });
 
     setInterval(broadcastLiveUpdates, 5000);

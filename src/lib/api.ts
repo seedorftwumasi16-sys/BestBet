@@ -35,7 +35,11 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   try {
     res = await fetch(`${API_BASE}${path}`, { ...options, headers, credentials: "include" });
   } catch {
-    throw new ApiError(0, "Unable to reach the server. Start the app with `npm run dev`.");
+    const hint =
+      typeof window !== "undefined" && !API_BASE
+        ? "API URL is not configured. Set NEXT_PUBLIC_API_URL on Vercel and redeploy."
+        : "Unable to reach the server. Start the app with `npm run dev`.";
+    throw new ApiError(0, hint);
   }
 
   if (!res.ok) {
@@ -105,7 +109,7 @@ export const betsApi = {
 
 export const walletsApi = {
   getBalance: () => api<{ balance: number; bonusBalance: number; lockedBalance: number; available: number }>("/api/wallets/balance"),
-  getMomoInfo: () => api<{ number: string; provider: string; currency: string }>("/api/wallets/momo-info"),
+  getMomoInfo: () => api<{ number: string; recipientName: string; provider: string; currency: string }>("/api/wallets/momo-info"),
   deposit: (formData: FormData) =>
     api<{ id: string; amount: number; status: string }>("/api/wallets/deposit", { method: "POST", body: formData }),
   withdraw: (amount: number, method: string, accountDetails: string) =>
@@ -159,6 +163,8 @@ export const contentApi = {
   getPromotions: () => api<unknown[]>("/api/content/promotions"),
   getBanners: () => api<unknown[]>("/api/content/banners"),
   getSettings: () => api<Record<string, string>>("/api/content/settings"),
+  updateSettings: (data: Record<string, string>) =>
+    api<{ message: string }>("/api/content/settings", { method: "PUT", body: JSON.stringify(data) }),
   getVirtualGames: () => api<VirtualGameApi[]>("/api/content/virtual-games"),
 };
 
