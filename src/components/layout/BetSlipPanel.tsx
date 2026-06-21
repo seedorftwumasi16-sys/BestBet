@@ -469,16 +469,7 @@ function MobileBetSlipDrawer() {
   );
 }
 
-export function BetSlipPanel({ className, floating = false }: BetSlipPanelProps) {
-  if (floating) {
-    return (
-      <>
-        <MobileCollapsedBar />
-        <MobileBetSlipDrawer />
-      </>
-    );
-  }
-
+function DesktopBetSlipPanel({ className }: { className?: string }) {
   const [betError, setBetError] = useState("");
   const [placing, setPlacing] = useState(false);
   const [placed, setPlaced] = useState(false);
@@ -600,6 +591,19 @@ export function BetSlipPanel({ className, floating = false }: BetSlipPanelProps)
       />
     </aside>
   );
+}
+
+export function BetSlipPanel({ className, floating = false }: BetSlipPanelProps) {
+  if (floating) {
+    return (
+      <>
+        <MobileCollapsedBar />
+        <MobileBetSlipDrawer />
+      </>
+    );
+  }
+
+  return <DesktopBetSlipPanel className={className} />;
 }
 
 export function FloatingBetSlipButton() {
