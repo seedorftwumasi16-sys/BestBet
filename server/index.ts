@@ -24,6 +24,7 @@ import sportsRoutes from "./routes/sports";
 import { startSportsSyncScheduler } from "./services/sports-sync";
 import { startMatchTimerScheduler } from "./services/match-timer";
 import { computeEffectiveLiveMinute } from "./lib/match-timer";
+import { sanitizeBetOdds } from "./lib/bet-odds";
 
 dotenv.config();
 
@@ -118,8 +119,8 @@ async function broadcastLiveUpdates() {
       const timer = computeEffectiveLiveMinute(match);
 
       const oddsChange = {
-        home: +(Number(match.odds_home) + (Math.random() - 0.5) * 0.1).toFixed(2),
-        away: +(Number(match.odds_away) + (Math.random() - 0.5) * 0.1).toFixed(2),
+        home: sanitizeBetOdds(Number(match.odds_home) + (Math.random() - 0.5) * 0.1),
+        away: sanitizeBetOdds(Number(match.odds_away) + (Math.random() - 0.5) * 0.1),
       };
 
       await db.query(`UPDATE matches SET odds_home = ?, odds_away = ? WHERE id = ?`, [oddsChange.home, oddsChange.away, match.id]);

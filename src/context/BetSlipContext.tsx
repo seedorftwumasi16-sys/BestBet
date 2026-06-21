@@ -1,7 +1,8 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useMemo } from "react";
 import type { BetSelection } from "@/lib/constants";
+import { calculatePotentialWin, calculateTotalOdds, sanitizeOdds } from "@/lib/odds-utils";
 
 interface BetSlipContextType {
   selections: BetSelection[];
@@ -27,26 +28,29 @@ const BetSlipContext = createContext<BetSlipContextType | undefined>(undefined);
 
 export function BetSlipProvider({ children }: { children: React.ReactNode }) {
   const [selections, setSelections] = useState<BetSelection[]>([]);
-  const [stake, setStake] = useState(10);
+  const [stake, setStakeState] = useState(10);
   const [betType, setBetType] = useState<"single" | "multi">("single");
   const [bookingCode, setBookingCode] = useState("");
   const [savedBookingCode, setSavedBookingCode] = useState("");
   const [isOpen, setIsOpen] = useState(false);
 
-  const totalOdds = selections.reduce((acc, s) => acc * s.odds, selections.length ? 1 : 0);
-  const potentialWin = stake * totalOdds;
+  const totalOdds = useMemo(() => calculateTotalOdds(selections), [selections]);
+  const potentialWin = useMemo(() => calculatePotentialWin(stake, totalOdds), [stake, totalOdds]);
 
   const addSelection = useCallback((selection: BetSelection) => {
+    const sanitized: BetSelection = {
+      ...selection,
+      odds: sanitizeOdds(selection.odds),
+    };
     setSelections((prev) => {
-      const exists = prev.find((s) => s.matchId === selection.matchId && s.market === selection.market);
+      const exists = prev.find((s) => s.matchId === sanitized.matchId && s.market === sanitized.market);
       if (exists) {
         return prev.map((s) =>
-          s.matchId === selection.matchId && s.market === selection.market ? selection : s
+          s.matchId === sanitized.matchId && s.market === sanitized.market ? sanitized : s
         );
       }
-      return [...prev, selection];
+      return [...prev, sanitized];
     });
-    setIsOpen(true);
   }, []);
 
   const removeSelection = useCallback((id: string) => {
@@ -55,9 +59,14 @@ export function BetSlipProvider({ children }: { children: React.ReactNode }) {
 
   const clearSelections = useCallback(() => {
     setSelections([]);
-    setStake(10);
+    setStakeState(10);
     setBookingCode("");
     setSavedBookingCode("");
+    setIsOpen(false);
+  }, []);
+
+  const setStake = useCallback((value: number) => {
+    setStakeState(Math.max(1, Number(value) || 0));
   }, []);
 
   const clearSavedBookingCode = useCallback(() => {
@@ -77,8 +86,10 @@ export function BetSlipProvider({ children }: { children: React.ReactNode }) {
   const loadFromCode = useCallback((code: string, payload?: { selections?: BetSelection[]; stake?: number; betType?: "single" | "multi" }) => {
     setBookingCode(code);
     setSavedBookingCode(code);
-    if (payload?.selections) setSelections(payload.selections);
-    if (payload?.stake) setStake(payload.stake);
+    if (payload?.selections) {
+      setSelections(payload.selections.map((s) => ({ ...s, odds: sanitizeOdds(s.odds) })));
+    }
+    if (payload?.stake) setStakeState(Math.max(1, payload.stake));
     if (payload?.betType) setBetType(payload.betType);
     setIsOpen(true);
   }, []);

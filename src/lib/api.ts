@@ -53,11 +53,17 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
     const authBuild = typeof body.authBuild === "string" ? body.authBuild : res.headers.get("X-Auth-Build");
     let message = serverMessage || "Request failed";
     if (res.status === 401) {
-      message = serverMessage || "Invalid email or password";
+      message =
+        path.includes("/bets/") || path.includes("/wallets/")
+          ? serverMessage || "Please log in to continue"
+          : serverMessage || "Invalid email or password";
       if (typeof window !== "undefined" && token) {
         clearStoredAuth();
       }
     } else if (res.status === 403) message = serverMessage || "Access denied";
+    else if (res.status === 400 && serverMessage?.toLowerCase().includes("insufficient balance")) {
+      message = "Insufficient Balance";
+    }
     else if (res.status === 429) {
       message = serverMessage || "Too many attempts. Please wait a few minutes and try again.";
     }
