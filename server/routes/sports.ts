@@ -176,13 +176,20 @@ router.get("/standings", async (req, res) => {
     });
   } catch (err) {
     console.error("[sports/standings]", err);
-    const leagueId = Number(req.query.leagueId);
+    const leagueId = Number(req.query.leagueId || req.query.league);
     const season = Number(req.query.season) || currentFootballSeason();
     const stale = await cacheGet<unknown[]>(`apifootball:standings:public:${leagueId}:${season}`);
     if (stale) {
       return res.json({ leagueId, season, standings: stale, cached: true, fallback: true });
     }
-    res.status(502).json({ error: "Failed to load standings", standings: [] });
+    res.json({
+      leagueId,
+      season,
+      standings: [],
+      cached: false,
+      fallback: true,
+      message: "Standings temporarily unavailable",
+    });
   }
 });
 
