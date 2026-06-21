@@ -15,6 +15,7 @@
     "db:setup": "npm run db:migrate && npm run db:seed",
     "db:reset-admin": "tsx server/scripts/reset-admin-password.ts",
     "db:seed-simulated": "tsx server/scripts/seed-simulated-matches.ts",
+    "db:seed-production-simulated": "tsx server/scripts/seed-production-simulated.ts",
     "verify": "tsx server/scripts/verify-all.ts"
   },
   "dependencies": {
