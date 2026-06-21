@@ -257,3 +257,7 @@ ALTER TABLE matches ADD COLUMN IF NOT EXISTS is_simulated BOOLEAN DEFAULT FALSE;
 ALTER TABLE matches ADD COLUMN IF NOT EXISTS created_at TEXT;
 UPDATE matches SET created_at = COALESCE(created_at, start_time, NOW()::TEXT);
 `;
+
+export const STATUS_OVERRIDE_COLUMNS_SQL = `
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS status_override BOOLEAN DEFAULT FALSE;
+`;

@@ -2,6 +2,23 @@ import type { MatchApi } from "@/lib/api";
 import type { Match } from "@/lib/constants";
 import { getLeagueBadgeUrl } from "@/lib/sports-assets";
 
+export function mergeApiMatches(...lists: MatchApi[][]): MatchApi[] {
+  const map = new Map<string, MatchApi>();
+  for (const list of lists) {
+    for (const match of list) {
+      const existing = map.get(match.id);
+      if (!existing || match.isLive || match.matchStatus === "live") {
+        map.set(match.id, match);
+      }
+    }
+  }
+  return Array.from(map.values()).sort(
+    (a, b) =>
+      Number(b.isLive || b.matchStatus === "live") - Number(a.isLive || a.matchStatus === "live") ||
+      new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+  );
+}
+
 export function toMatch(m: MatchApi): Match {
   return {
     id: m.id,
@@ -42,10 +59,12 @@ export function applyMatchFeed(
   if (index >= 0) {
     const next = [...matches];
     next[index] = converted;
-    return next;
+    return next.sort(
+      (a, b) => Number(b.isLive) - Number(a.isLive) || a.startTime.getTime() - b.startTime.getTime()
+    );
   }
 
-  if (action === "created") {
+  if (action === "created" || converted.isLive || converted.matchStatus === "live") {
     return [...matches, converted].sort(
       (a, b) => Number(b.isLive) - Number(a.isLive) || a.startTime.getTime() - b.startTime.getTime()
     );

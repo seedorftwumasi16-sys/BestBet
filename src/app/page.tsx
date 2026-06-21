@@ -8,7 +8,7 @@ import { MatchCardSkeleton } from "@/components/ui/Skeleton";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { betsApi } from "@/lib/api";
 import type { Match } from "@/lib/constants";
-import { applyMatchFeed, toMatch } from "@/lib/match-utils";
+import { applyMatchFeed, mergeApiMatches, toMatch } from "@/lib/match-utils";
 import { prefetchLeagueBadges } from "@/lib/sports-assets";
 import {
   getLiveMatches,
@@ -95,16 +95,23 @@ export default function HomePage() {
 
   const loadMatches = useCallback(() => {
     setLoading(true);
-    betsApi
-      .getMatches({ sport: "football" })
-      .then((data) => setMatches(data.map(toMatch)))
-      .catch(() => setMatches([]))
+    Promise.all([
+      betsApi.getMatches({ sport: "football" }),
+      betsApi.getMatches({ sport: "football", live: true }),
+    ])
+      .then(([all, live]) => setMatches(mergeApiMatches(all, live).map(toMatch)))
+      .catch((err) => {
+        console.error("[homepage] failed to load matches", err);
+        setMatches([]);
+      })
       .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
     loadMatches();
     void prefetchLeagueBadges();
+    const interval = setInterval(loadMatches, 30_000);
+    return () => clearInterval(interval);
   }, [loadMatches]);
 
   useLiveOdds({
@@ -130,12 +137,12 @@ export default function HomePage() {
 
   const realFootball = useMemo(() => getRealFootballMatches(matches), [matches]);
   const simulatedMatches = useMemo(() => getSimulatedMatches(matches), [matches]);
-  const liveMatches = useMemo(() => getLiveMatches(realFootball), [realFootball]);
+  const liveMatches = useMemo(() => getLiveMatches(matches), [matches]);
   const upcomingMatches = useMemo(() => getUpcomingMatches(realFootball).slice(0, 12), [realFootball]);
   const recentlyAdded = useMemo(() => getRecentlyAddedMatches(realFootball, 8), [realFootball]);
   const liveSimulated = useMemo(
-    () => simulatedMatches.filter((m) => m.isLive || m.matchStatus === "live"),
-    [simulatedMatches]
+    () => simulatedMatches.filter((m) => (m.isLive || m.matchStatus === "live") && !liveMatches.some((l) => l.id === m.id)),
+    [simulatedMatches, liveMatches]
   );
   const upcomingSimulated = useMemo(
     () => simulatedMatches.filter((m) => m.matchStatus === "upcoming" && !m.isLive),
@@ -162,14 +169,14 @@ export default function HomePage() {
 
         <MatchSection
           id="live-heading"
-          title="Live Football Matches"
+          title="Live Matches"
           matches={liveMatches}
           loading={loading}
           showStats
           live
           actionLabel="View All"
           actionHref="/live"
-          emptyMessage="No live football matches right now. Fixtures sync from top leagues every 5 minutes."
+          emptyMessage="No live matches right now. Admin-started fixtures appear here instantly."
           skeletonCount={2}
         />
 

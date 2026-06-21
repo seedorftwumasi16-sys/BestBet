@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/Badge";
 import { betsApi } from "@/lib/api";
 import type { Match } from "@/lib/constants";
 import { applyMatchFeed, toMatch } from "@/lib/match-utils";
+import { getLiveMatches } from "@/lib/fixture-utils";
 import { useLiveOdds } from "@/hooks/useLiveOdds";
 import { useAuth } from "@/context/AuthContext";
 
@@ -16,11 +17,16 @@ export default function LivePage() {
   const [liveMatches, setLiveMatches] = useState<Match[]>([]);
 
   const loadMatches = useCallback(() => {
-    betsApi.getMatches({ live: true, sport: "football" }).then((data) => setLiveMatches(data.map(toMatch))).catch(() => {});
+    betsApi
+      .getMatches({ live: true, sport: "football" })
+      .then((data) => setLiveMatches(data.map(toMatch)))
+      .catch((err) => console.error("[live] failed to load matches", err));
   }, []);
 
   useEffect(() => {
     loadMatches();
+    const interval = setInterval(loadMatches, 30_000);
+    return () => clearInterval(interval);
   }, [loadMatches]);
 
   const { connected } = useLiveOdds({
@@ -28,7 +34,7 @@ export default function LivePage() {
     onMatchFeed: ({ action, match, matchId }) => {
       setLiveMatches((prev) => {
         const next = applyMatchFeed(prev, action, match, matchId);
-        return next.filter((m) => m.isLive);
+        return getLiveMatches(next);
       });
     },
     onUpdate: (update) => {

@@ -73,10 +73,19 @@ export interface MatchApiPayload {
 export function normalizeMatchStatus(row: Record<string, unknown>): MatchStatus {
   const status = String(row.match_status || "").toLowerCase();
   if (status === "live" || status === "finished" || status === "upcoming") {
+    if (status === "finished" && boolFrom(row, "status_override") && boolFrom(row, "is_live")) {
+      return "live";
+    }
     return status as MatchStatus;
   }
   if (boolFrom(row, "is_live")) return "live";
   return "upcoming";
+}
+
+/** True when a match should appear in live sections (admin override, status, or is_live flag). */
+export function isMatchLive(row: Record<string, unknown>): boolean {
+  if (boolFrom(row, "status_override") && boolFrom(row, "is_live")) return true;
+  return normalizeMatchStatus(row) === "live";
 }
 
 export function syncLiveFields(status: MatchStatus) {
@@ -123,7 +132,7 @@ export function mapMatchRow(
     sport: String(row.sport),
     startTime: String(row.start_time),
     matchStatus,
-    isLive: matchStatus === "live",
+    isLive: isMatchLive(row),
     isFeatured: boolFrom(row, "is_featured"),
     bettingSuspended: boolFrom(row, "betting_suspended"),
     isSimulated: boolFrom(row, "is_simulated"),
@@ -181,7 +190,7 @@ function matchesFixtureWindow(row: Record<string, unknown>, window: FixtureWindo
   const start = new Date(String(row.start_time));
   const now = new Date();
 
-  if (window === "live") return status === "live";
+  if (window === "live") return isMatchLive(row);
 
   if (window === "today") {
     return isSameCalendarDay(start, now) && status !== "finished";
@@ -248,11 +257,26 @@ export async function listMatches(filters?: {
   window?: FixtureWindow;
 }): Promise<MatchApiPayload[]> {
   const db = await getDb();
-  const result = await db.query(`SELECT * FROM matches ORDER BY is_live DESC, start_time ASC`);
+  await ensureMatchSchema(db);
+
+  let query = `SELECT * FROM matches`;
+  if (filters?.live === true && db.driver === "postgresql") {
+    query += ` WHERE (LOWER(COALESCE(match_status, '')) = 'live' OR is_live = TRUE OR (status_override = TRUE AND is_live = TRUE))`;
+  }
+  query += ` ORDER BY is_live DESC, start_time ASC`;
+
+  const result = await db.query(query);
   let rows = result.rows;
+  const totalRows = rows.length;
 
   if (filters?.sport) rows = rows.filter((m) => m.sport === filters.sport);
-  if (filters?.live === true) rows = rows.filter((m) => normalizeMatchStatus(m) === "live");
+  if (filters?.live === true) {
+    const before = rows.length;
+    rows = rows.filter((m) => isMatchLive(m));
+    console.log(
+      `[listMatches] live=true sport=${filters.sport ?? "all"}: ${before} -> ${rows.length} (db rows=${totalRows}) ids=${rows.map((m) => m.id).join(",") || "none"}`
+    );
+  }
   if (filters?.featured === true) rows = rows.filter((m) => boolFrom(m, "is_featured"));
   if (filters?.simulated === true) rows = rows.filter((m) => boolFrom(m, "is_simulated"));
   if (filters?.simulated === false) rows = rows.filter((m) => !boolFrom(m, "is_simulated"));
@@ -312,6 +336,7 @@ export async function createMatchRecord(id: string, input: MatchInput) {
   await ensureMatchSchema(db);
   const status = input.matchStatus || "upcoming";
   const live = syncLiveFields(status);
+  const statusOverride = status === "live" || !!input.isSimulated;
   const createdAt = new Date().toISOString();
   const leagueBadge = resolveLeagueBadgeUrl(input.league, leagueSlugFromName(input.league));
   const [homeLogo, awayLogo] = await Promise.all([
@@ -352,13 +377,17 @@ export async function createMatchRecord(id: string, input: MatchInput) {
     await db.query(
       `INSERT INTO matches (
         id, home_team, away_team, league, sport, start_time, is_live, match_status,
-        is_featured, betting_suspended, is_simulated, created_at,
+        is_featured, betting_suspended, is_simulated, status_override, created_at,
         odds_home, odds_draw, odds_away,
         odds_over, odds_under, odds_btts_yes, odds_btts_no, over_under_line,
         home_score, away_score, live_minute,
         home_team_logo, away_team_logo, league_badge
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      baseParams
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        ...baseParams.slice(0, 11),
+        boolVal(db, statusOverride),
+        ...baseParams.slice(11),
+      ]
     );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -408,17 +437,21 @@ export async function createMatchRecord(id: string, input: MatchInput) {
 
 export async function updateMatchRecord(id: string, input: Partial<MatchInput>) {
   const db = await getDb();
+  await ensureMatchSchema(db);
   const existing = await db.query(`SELECT * FROM matches WHERE id = ?`, [id]);
   if (existing.rows.length === 0) return null;
 
   const row = existing.rows[0];
   const status = (input.matchStatus || normalizeMatchStatus(row)) as MatchStatus;
   const live = syncLiveFields(status);
+  const statusOverride =
+    input.matchStatus !== undefined ? true : boolFrom(row, "status_override");
 
   await db.query(
     `UPDATE matches SET
       home_team = ?, away_team = ?, league = ?, sport = ?, start_time = ?,
       is_live = ?, match_status = ?, is_featured = ?, betting_suspended = ?, is_simulated = ?,
+      status_override = ?,
       odds_home = ?, odds_draw = ?, odds_away = ?,
       odds_over = ?, odds_under = ?, odds_btts_yes = ?, odds_btts_no = ?, over_under_line = ?,
       home_score = ?, away_score = ?, live_minute = ?
@@ -434,6 +467,7 @@ export async function updateMatchRecord(id: string, input: Partial<MatchInput>) 
       boolVal(db, input.isFeatured !== undefined ? input.isFeatured : boolFrom(row, "is_featured")),
       boolVal(db, input.bettingSuspended !== undefined ? input.bettingSuspended : boolFrom(row, "betting_suspended")),
       boolVal(db, input.isSimulated !== undefined ? input.isSimulated : boolFrom(row, "is_simulated")),
+      boolVal(db, statusOverride),
       input.oddsHome ?? row.odds_home,
       input.oddsDraw !== undefined ? input.oddsDraw : row.odds_draw,
       input.oddsAway ?? row.odds_away,

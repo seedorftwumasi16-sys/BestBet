@@ -104,7 +104,9 @@ io.on("connection", (socket) => {
 async function broadcastLiveUpdates() {
   try {
     const db = await getDb();
-    const result = await db.query(`SELECT * FROM matches WHERE match_status = 'live' OR is_live = TRUE`);
+    const result = await db.query(
+      `SELECT * FROM matches WHERE match_status = 'live' OR is_live = TRUE OR (status_override = TRUE AND is_live = TRUE)`
+    );
 
     for (const match of result.rows) {
       if (boolFrom(match, "betting_suspended")) continue;

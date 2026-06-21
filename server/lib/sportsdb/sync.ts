@@ -208,34 +208,63 @@ async function upsertEvent(db: Database, event: SportsDbEvent): Promise<boolean>
 
   const row = existing.rows[0];
   const prevStatus = String(row.match_status || "upcoming");
-  await db.query(
-    `UPDATE matches SET
-      home_team = ?, away_team = ?, league = ?, sport = ?, start_time = ?,
-      is_live = ?, match_status = ?, home_score = ?, away_score = ?, live_minute = ?,
-      home_team_logo = ?, away_team_logo = ?, league_badge = ?,
-      betting_suspended = ?
-     WHERE id = ?`,
-    [
-      event.strHomeTeam,
-      event.strAwayTeam,
-      event.strLeague,
-      sport,
-      startTime,
-      boolVal(db, live.is_live),
-      live.match_status,
-      homeScore,
-      awayScore,
-      liveMinute,
-      event.strHomeTeamBadge || row.home_team_logo,
-      event.strAwayTeamBadge || row.away_team_logo,
-      event.strLeagueBadge || row.league_badge,
-      boolVal(db, status === "finished"),
-      row.id,
-    ]
-  );
+  const statusLocked = boolFrom(row, "status_override") || boolFrom(row, "is_simulated");
 
-  if (status === "finished" && prevStatus !== "finished") {
-    await settleMatchBets(String(row.id));
+  if (statusLocked) {
+    await db.query(
+      `UPDATE matches SET
+        home_team = ?, away_team = ?, league = ?, sport = ?, start_time = ?,
+        home_score = ?, away_score = ?, live_minute = ?,
+        home_team_logo = ?, away_team_logo = ?, league_badge = ?
+       WHERE id = ?`,
+      [
+        event.strHomeTeam,
+        event.strAwayTeam,
+        event.strLeague,
+        sport,
+        startTime,
+        homeScore,
+        awayScore,
+        liveMinute,
+        event.strHomeTeamBadge || row.home_team_logo,
+        event.strAwayTeamBadge || row.away_team_logo,
+        event.strLeagueBadge || row.league_badge,
+        row.id,
+      ]
+    );
+    console.log(
+      `[sports-sync] Preserved admin/simulated status for ${row.id} (was ${prevStatus}, API=${status})`
+    );
+  } else {
+    await db.query(
+      `UPDATE matches SET
+        home_team = ?, away_team = ?, league = ?, sport = ?, start_time = ?,
+        is_live = ?, match_status = ?, home_score = ?, away_score = ?, live_minute = ?,
+        home_team_logo = ?, away_team_logo = ?, league_badge = ?,
+        betting_suspended = ?
+       WHERE id = ?`,
+      [
+        event.strHomeTeam,
+        event.strAwayTeam,
+        event.strLeague,
+        sport,
+        startTime,
+        boolVal(db, live.is_live),
+        live.match_status,
+        homeScore,
+        awayScore,
+        liveMinute,
+        event.strHomeTeamBadge || row.home_team_logo,
+        event.strAwayTeamBadge || row.away_team_logo,
+        event.strLeagueBadge || row.league_badge,
+        boolVal(db, status === "finished"),
+        row.id,
+      ]
+    );
+
+    if (status === "finished" && prevStatus !== "finished") {
+      await settleMatchBets(String(row.id));
+    }
   }
 
   const payload = await getMatchById(String(row.id));
