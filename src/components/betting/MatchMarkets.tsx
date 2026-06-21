@@ -10,13 +10,18 @@ interface MatchMarketsProps {
 }
 
 export function MatchMarkets({ match }: MatchMarketsProps) {
-  const { addSelection, selections } = useBetSlip();
+  const { addSelection, removeSelection, selections } = useBetSlip();
   const suspended = match.bettingSuspended;
 
   const pick = (market: string, selection: string, odds: number) => {
     if (suspended || !odds) return;
+    const id = `${match.id}-${market}-${selection}`;
+    if (isSel(market, selection)) {
+      removeSelection(id);
+      return;
+    }
     addSelection({
-      id: `${match.id}-${market}-${selection}`,
+      id,
       matchId: match.id,
       matchName: `${match.homeTeam.name} vs ${match.awayTeam.name}`,
       market,

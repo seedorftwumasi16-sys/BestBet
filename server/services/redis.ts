@@ -31,6 +31,7 @@ const memoryClient: CacheClient = {
 };
 
 let client: CacheClient = memoryClient;
+let redisScanClient: { scanIterator: (opts: { MATCH: string; COUNT: number }) => AsyncIterable<string>; del: (key: string) => Promise<number> } | null = null;
 
 export async function initRedis(): Promise<void> {
   const url = process.env.REDIS_URL;
@@ -43,6 +44,8 @@ export async function initRedis(): Promise<void> {
     const { createClient } = await import("redis");
     const redis = createClient({ url });
     await redis.connect();
+
+    redisScanClient = redis;
 
     client = {
       connected: true,
@@ -83,6 +86,16 @@ export async function cacheDel(key: string): Promise<void> {
 export async function cacheInvalidatePrefix(prefix: string): Promise<void> {
   for (const key of memoryCache.keys()) {
     if (key.startsWith(prefix)) memoryCache.delete(key);
+  }
+
+  if (redisScanClient) {
+    try {
+      for await (const key of redisScanClient.scanIterator({ MATCH: `${prefix}*`, COUNT: 100 })) {
+        await redisScanClient.del(key);
+      }
+    } catch (err) {
+      console.warn("[Redis] Prefix invalidation failed:", err instanceof Error ? err.message : err);
+    }
   }
 }
 

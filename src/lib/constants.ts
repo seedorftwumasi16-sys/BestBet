@@ -46,6 +46,7 @@ export const LEAGUES = [
   { id: "clubwc", name: "Club World Cup", country: "World", sport: "football", sportsdbId: "4503", slug: "fifa-club-world-cup" },
   { id: "worldcup", name: "World Cup", country: "World", sport: "football", sportsdbId: "4429", slug: "fifa-world-cup" },
   { id: "caf", name: "CAF Champions League", country: "Africa", sport: "football", sportsdbId: "4748", slug: "caf-champions-league" },
+  { id: "ghpl", name: "Ghana Premier League", country: "Ghana", sport: "football", sportsdbId: "4974", slug: "ghana-premier-league" },
   { id: "intl", name: "International", country: "World", sport: "football", sportsdbId: "4562", slug: "international-friendly" },
   { id: "nba", name: "NBA", country: "USA", sport: "basketball" },
 ] as const;
@@ -63,6 +64,7 @@ export const FOOTBALL_COMPETITIONS = [
   { id: "4481", label: "UEFA Europa League" },
   { id: "4748", label: "CAF Champions League" },
   { id: "4429", label: "FIFA World Cup" },
+  { id: "4974", label: "Ghana Premier League" },
   { id: "4562", label: "International" },
 ] as const;
 
@@ -79,6 +81,7 @@ export interface Match {
   awayTeam: Team;
   league: string;
   leagueId: string;
+  leagueBadge?: string;
   sport: string;
   startTime: Date;
   matchStatus?: "upcoming" | "live" | "finished";

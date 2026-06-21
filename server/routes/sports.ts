@@ -2,6 +2,7 @@ import { Router } from "express";
 import { getDb } from "../db";
 import { getLastSyncStatus } from "../lib/sportsdb/sync";
 import { pingSportsApi, getSportsApiKey } from "../lib/sportsdb/client";
+import { cacheGet, cacheSet } from "../services/redis";
 
 const router = Router();
 
@@ -69,6 +70,34 @@ router.get("/leagues", async (_req, res) => {
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: "Failed to load leagues" });
+  }
+});
+
+router.get("/badges", async (_req, res) => {
+  try {
+    const db = await getDb();
+    const { LEAGUE_BADGE_BY_SPORTSDB_ID, DEFAULT_LEAGUE_BADGE } = await import("../lib/sportsdb/badges");
+    const cached = await cacheGet<Record<string, string>>("sports:badges");
+    if (cached) return res.json(cached);
+
+    const fromDb = await db.query(
+      `SELECT external_id, name, badge_url FROM leagues WHERE badge_url IS NOT NULL`
+    ).catch(() => ({ rows: [] as Record<string, unknown>[] }));
+
+    const badges: Record<string, string> = { ...LEAGUE_BADGE_BY_SPORTSDB_ID, default: DEFAULT_LEAGUE_BADGE };
+    for (const row of fromDb.rows) {
+      const externalId = String(row.external_id ?? row.id ?? "");
+      const badge = row.badge_url ? String(row.badge_url) : "";
+      if (externalId && badge.startsWith("http")) badges[externalId] = badge;
+      const name = String(row.name ?? "").toLowerCase();
+      if (name && badge.startsWith("http")) badges[name] = badge;
+    }
+
+    await cacheSet("sports:badges", badges, 86400);
+    res.json(badges);
+  } catch (err) {
+    console.error("[sports/badges]", err);
+    res.status(500).json({ error: "Failed to load league badges" });
   }
 });
 

@@ -10,7 +10,8 @@ import { type Promotion } from "@/lib/constants";
 import { mockPromotions } from "@/lib/mock-data";
 import { contentApi } from "@/lib/api";
 import { DEFAULT_PROMOTION_IMAGE, resolvePromotionImage } from "@/lib/promotion-images";
-import { getLeagueBadgeUrl } from "@/lib/sports-assets";
+import { POPULAR_LEAGUE_CHIPS } from "@/lib/sports-assets";
+import { LeagueLogo } from "@/components/ui/LeagueLogo";
 import { HomeHero } from "@/components/home/HomeHero";
 
 export function HeroBanner({ liveMatchCount = 0 }: { liveMatchCount?: number }) {
@@ -85,15 +86,7 @@ export function PromotionCards() {
   );
 }
 
-const TOP_LEAGUE_CHIPS = [
-  { sportsdbId: "4328", label: "Premier League", badgeId: "epl", country: "England" },
-  { sportsdbId: "4334", label: "La Liga", badgeId: "laliga", country: "Spain" },
-  { sportsdbId: "4332", label: "Serie A", badgeId: "seriea", country: "Italy" },
-  { sportsdbId: "4331", label: "Bundesliga", badgeId: "bundesliga", country: "Germany" },
-  { sportsdbId: "4480", label: "Champions League", badgeId: "ucl", country: "Europe" },
-  { sportsdbId: "4429", label: "World Cup Qualifiers", badgeId: "worldcup", country: "World" },
-  { sportsdbId: "4562", label: "International Friendlies", badgeId: "intl", country: "World" },
-] as const;
+const TOP_LEAGUE_CHIPS = POPULAR_LEAGUE_CHIPS;
 
 export function PopularLeagues() {
   return (
@@ -104,15 +97,7 @@ export function PopularLeagues() {
           href={`/sports/football?league=${comp.sportsdbId}`}
           className="league-chip group snap-start min-w-[132px] sm:min-w-[148px] md:min-w-[168px]"
         >
-          <div className="relative w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 shrink-0">
-            <Image
-              src={getLeagueBadgeUrl(comp.badgeId)}
-              alt={comp.label}
-              fill
-              unoptimized
-              className="object-contain group-hover:scale-110 transition-transform duration-300"
-            />
-          </div>
+          <LeagueLogo sportsdbId={comp.sportsdbId} leagueName={comp.label} alt={comp.label} />
           <div className="min-w-0">
             <p className="text-xs sm:text-sm font-bold whitespace-nowrap font-display group-hover:text-bestbet-yellow transition-colors">
               {comp.label}

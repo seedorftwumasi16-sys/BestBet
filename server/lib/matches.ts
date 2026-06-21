@@ -5,6 +5,9 @@ import { getSocketServer } from "../services/notifications";
 import { syncOddsForMatch, deleteOddsForMatch, getOddsForMatch, buildDefaultCorrectScoreForSport } from "./odds";
 import { settleMatchBets } from "./settlement";
 import { TRACKED_LEAGUES, leagueSlugFromName } from "./sportsdb/leagues";
+import { resolveLeagueBadgeUrl } from "./sportsdb/badges";
+import { resolveTeamLogo } from "./team-logos";
+import { ensureMatchSchema } from "../db/schema-verify";
 
 export type MatchStatus = "upcoming" | "live" | "finished";
 export type FixtureWindow = "live" | "today" | "tomorrow" | "upcoming" | "week";
@@ -41,6 +44,7 @@ export interface MatchApiPayload {
   awayTeam: { name: string; shortName: string; logo: string };
   league: string;
   leagueId: string;
+  leagueBadge: string;
   sport: string;
   startTime: string;
   matchStatus: MatchStatus;
@@ -87,8 +91,20 @@ export function mapMatchRow(
   extra?: { correctScore?: Record<string, number>; doubleChance?: Record<string, number> }
 ): MatchApiPayload {
   const matchStatus = normalizeMatchStatus(row);
-  const homeLogo = row.home_team_logo ? String(row.home_team_logo) : "⚽";
-  const awayLogo = row.away_team_logo ? String(row.away_team_logo) : "⚽";
+  const leagueName = String(row.league ?? "");
+  const leagueSlug = leagueSlugFromName(leagueName);
+  const leagueBadge = resolveLeagueBadgeUrl(
+    leagueName,
+    leagueSlug,
+    null,
+    row.league_badge ? String(row.league_badge) : null
+  );
+  const homeLogoRaw = row.home_team_logo ? String(row.home_team_logo) : "";
+  const awayLogoRaw = row.away_team_logo ? String(row.away_team_logo) : "";
+  const homeLogo =
+    homeLogoRaw.startsWith("http") || homeLogoRaw.startsWith("/") ? homeLogoRaw : "⚽";
+  const awayLogo =
+    awayLogoRaw.startsWith("http") || awayLogoRaw.startsWith("/") ? awayLogoRaw : "⚽";
   return {
     id: String(row.id),
     homeTeam: {
@@ -101,8 +117,9 @@ export function mapMatchRow(
       shortName: String(row.away_team).slice(0, 3).toUpperCase(),
       logo: awayLogo,
     },
-    league: String(row.league),
-    leagueId: leagueSlugFromName(String(row.league)),
+    league: leagueName,
+    leagueId: leagueSlug,
+    leagueBadge,
     sport: String(row.sport),
     startTime: String(row.start_time),
     matchStatus,
@@ -130,12 +147,22 @@ export function mapMatchRow(
 }
 
 async function enrichMatch(row: Record<string, unknown>): Promise<MatchApiPayload> {
+  const db = await getDb();
   const id = String(row.id);
   const { correctScore, doubleChance } = await getOddsForMatch(id);
-  return mapMatchRow(row, {
+  const payload = mapMatchRow(row, {
     correctScore: Object.keys(correctScore).length ? correctScore : undefined,
     doubleChance: Object.keys(doubleChance).length ? doubleChance : undefined,
   });
+
+  const [homeLogo, awayLogo] = await Promise.all([
+    resolveTeamLogo(db, payload.homeTeam.name, row.home_team_logo ? String(row.home_team_logo) : null),
+    resolveTeamLogo(db, payload.awayTeam.name, row.away_team_logo ? String(row.away_team_logo) : null),
+  ]);
+
+  payload.homeTeam.logo = homeLogo;
+  payload.awayTeam.logo = awayLogo;
+  return payload;
 }
 
 export async function getMatchById(id: string): Promise<MatchApiPayload | null> {
@@ -282,8 +309,44 @@ export interface MatchInput {
 
 export async function createMatchRecord(id: string, input: MatchInput) {
   const db = await getDb();
+  await ensureMatchSchema(db);
   const status = input.matchStatus || "upcoming";
   const live = syncLiveFields(status);
+  const createdAt = new Date().toISOString();
+  const leagueBadge = resolveLeagueBadgeUrl(input.league, leagueSlugFromName(input.league));
+  const [homeLogo, awayLogo] = await Promise.all([
+    resolveTeamLogo(db, input.homeTeam),
+    resolveTeamLogo(db, input.awayTeam),
+  ]);
+
+  const baseParams = [
+    id,
+    input.homeTeam,
+    input.awayTeam,
+    input.league,
+    input.sport,
+    input.startTime || createdAt,
+    boolVal(db, live.is_live),
+    live.match_status,
+    boolVal(db, !!input.isFeatured),
+    boolVal(db, !!input.bettingSuspended),
+    boolVal(db, !!input.isSimulated),
+    createdAt,
+    input.oddsHome ?? 1.5,
+    input.oddsDraw ?? null,
+    input.oddsAway ?? 2.5,
+    input.oddsOver ?? null,
+    input.oddsUnder ?? null,
+    input.oddsBttsYes ?? null,
+    input.oddsBttsNo ?? null,
+    input.overUnderLine ?? 2.5,
+    input.homeScore ?? null,
+    input.awayScore ?? null,
+    input.liveMinute ?? null,
+    homeLogo.startsWith("http") || homeLogo.startsWith("/") ? homeLogo : null,
+    awayLogo.startsWith("http") || awayLogo.startsWith("/") ? awayLogo : null,
+    leagueBadge,
+  ];
 
   try {
     await db.query(
@@ -292,35 +355,30 @@ export async function createMatchRecord(id: string, input: MatchInput) {
         is_featured, betting_suspended, is_simulated, created_at,
         odds_home, odds_draw, odds_away,
         odds_over, odds_under, odds_btts_yes, odds_btts_no, over_under_line,
-        home_score, away_score, live_minute
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        id,
-        input.homeTeam,
-        input.awayTeam,
-        input.league,
-        input.sport,
-        input.startTime || new Date().toISOString(),
-        boolVal(db, live.is_live),
-        live.match_status,
-        boolVal(db, !!input.isFeatured),
-        boolVal(db, !!input.bettingSuspended),
-        boolVal(db, !!input.isSimulated),
-        new Date().toISOString(),
-        input.oddsHome ?? 1.5,
-        input.oddsDraw ?? null,
-        input.oddsAway ?? 2.5,
-        input.oddsOver ?? null,
-        input.oddsUnder ?? null,
-        input.oddsBttsYes ?? null,
-        input.oddsBttsNo ?? null,
-        input.overUnderLine ?? 2.5,
-        input.homeScore ?? null,
-        input.awayScore ?? null,
-        input.liveMinute ?? null,
-      ]
+        home_score, away_score, live_minute,
+        home_team_logo, away_team_logo, league_badge
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      baseParams
     );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("does not exist") && msg.includes("column")) {
+      await db.query(
+        `INSERT INTO matches (
+          id, home_team, away_team, league, sport, start_time, is_live, match_status,
+          is_featured, betting_suspended,
+          odds_home, odds_draw, odds_away,
+          odds_over, odds_under, odds_btts_yes, odds_btts_no, over_under_line,
+          home_score, away_score, live_minute
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        baseParams.slice(0, 10).concat(baseParams.slice(12, 23))
+      );
+    } else {
+      throw err;
+    }
+  }
 
+  try {
     const sport = input.sport;
     const oddsExtras =
       input.correctScoreOdds || input.doubleChanceOdds

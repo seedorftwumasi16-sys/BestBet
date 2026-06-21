@@ -36,6 +36,8 @@ export function normalizeMatchApi(match: MatchApi): MatchApi {
     homeTeam: match.homeTeam ?? { name: "Home", shortName: "HOM", logo: "⚽" },
     awayTeam: match.awayTeam ?? { name: "Away", shortName: "AWY", logo: "⚽" },
     league: match.league ?? "",
+    leagueId: match.leagueId ?? "",
+    leagueBadge: match.leagueBadge ?? "",
     sport: match.sport ?? "football",
     startTime: match.startTime ?? new Date().toISOString(),
     matchStatus: match.matchStatus ?? "upcoming",

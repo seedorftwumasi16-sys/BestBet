@@ -248,5 +248,12 @@ ALTER TABLE leagues ADD COLUMN IF NOT EXISTS badge_url TEXT;
 
 export const SIMULATED_MATCH_COLUMNS_SQL = `
 ALTER TABLE matches ADD COLUMN IF NOT EXISTS is_simulated BOOLEAN DEFAULT FALSE;
-ALTER TABLE matches ADD COLUMN IF NOT EXISTS created_at TEXT DEFAULT (datetime('now'));
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS created_at TEXT;
+UPDATE matches SET created_at = COALESCE(created_at, start_time, datetime('now'));
+`;
+
+export const PG_SIMULATED_MATCH_COLUMNS_SQL = `
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS is_simulated BOOLEAN DEFAULT FALSE;
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS created_at TEXT;
+UPDATE matches SET created_at = COALESCE(created_at, start_time, NOW()::TEXT);
 `;

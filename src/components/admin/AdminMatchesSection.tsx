@@ -232,9 +232,11 @@ export function AdminMatchesSection() {
         setMatches((prev) => prev.map((m) => (m.id === editingId ? normalizeMatchApi(updated) : m)));
         toast.success("Match updated successfully");
       } else {
-        const created = await adminApi.createMatch(payload);
+        const created = form.isSimulated
+          ? await adminApi.createSimulatedMatch(payload)
+          : await adminApi.createMatch(payload);
         setMatches((prev) => [normalizeMatchApi(created), ...prev]);
-        toast.success("Match created successfully");
+        toast.success(form.isSimulated ? "Simulated match created successfully" : "Match created successfully");
       }
       closeForm();
       load();

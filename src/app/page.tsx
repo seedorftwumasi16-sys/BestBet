@@ -9,6 +9,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { betsApi } from "@/lib/api";
 import type { Match } from "@/lib/constants";
 import { applyMatchFeed, toMatch } from "@/lib/match-utils";
+import { prefetchLeagueBadges } from "@/lib/sports-assets";
 import {
   getLiveMatches,
   getRealFootballMatches,
@@ -103,6 +104,7 @@ export default function HomePage() {
 
   useEffect(() => {
     loadMatches();
+    void prefetchLeagueBadges();
   }, [loadMatches]);
 
   useLiveOdds({

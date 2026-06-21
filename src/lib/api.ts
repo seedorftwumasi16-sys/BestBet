@@ -210,6 +210,11 @@ export const adminApi = {
   getMatches: () => api<MatchApi[]>("/api/admin/matches"),
   createMatch: (data: AdminMatchInput) =>
     api<MatchApi>("/api/admin/matches", { method: "POST", body: JSON.stringify(data) }),
+  createSimulatedMatch: (data: AdminMatchInput) =>
+    api<MatchApi>("/api/admin/matches/simulated-matches", {
+      method: "POST",
+      body: JSON.stringify({ ...data, isSimulated: true }),
+    }),
   updateMatch: (id: string, data: Partial<AdminMatchInput>) =>
     api<MatchApi>(`/api/admin/matches/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteMatch: (id: string) =>
@@ -280,6 +285,7 @@ export const sportsApi = {
     api<Array<{ id: string; external_id: string; name: string; sport: string; badge_url?: string }>>(
       "/api/sports/leagues"
     ),
+  getBadges: () => api<Record<string, string>>("/api/sports/badges"),
 };
 
 export interface MatchApi {
@@ -288,6 +294,7 @@ export interface MatchApi {
   awayTeam: { name: string; shortName: string; logo: string };
   league: string;
   leagueId: string;
+  leagueBadge: string;
   sport: string;
   startTime: string;
   matchStatus: "upcoming" | "live" | "finished";

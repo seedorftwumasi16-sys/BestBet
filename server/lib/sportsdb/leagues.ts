@@ -16,6 +16,7 @@ export const TRACKED_LEAGUES: TrackedLeague[] = [
   { id: "4481", name: "UEFA Europa League", slug: "uefa-europa-league" },
   { id: "4748", name: "CAF Champions League", slug: "caf-champions-league" },
   { id: "4429", name: "FIFA World Cup", slug: "fifa-world-cup" },
+  { id: "4974", name: "Ghana Premier League", slug: "ghana-premier-league" },
   { id: "4562", name: "International Friendly", slug: "international-friendly" },
 ];
 

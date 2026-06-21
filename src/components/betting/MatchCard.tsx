@@ -5,12 +5,11 @@ import { motion } from "framer-motion";
 import { Star, BarChart3, Clock, ChevronDown } from "lucide-react";
 import { CorrectScorePanel } from "@/components/betting/CorrectScorePanel";
 import { MatchMarkets } from "@/components/betting/MatchMarkets";
-import Image from "next/image";
 import { Badge } from "@/components/ui/Badge";
 import { TeamLogo } from "@/components/ui/TeamLogo";
+import { LeagueLogo } from "@/components/ui/LeagueLogo";
 import { useBetSlip } from "@/context/BetSlipContext";
 import { formatOdds, formatMatchTime, formatMatchDate, cn } from "@/lib/utils";
-import { getLeagueBadgeUrl } from "@/lib/sports-assets";
 import type { Match } from "@/lib/constants";
 
 interface MatchCardProps {
@@ -20,11 +19,10 @@ interface MatchCardProps {
 }
 
 export function MatchCard({ match, showStats = false }: MatchCardProps) {
-  const { addSelection, selections } = useBetSlip();
+  const { addSelection, removeSelection, selections } = useBetSlip();
   const [favorited, setFavorited] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [flashOdds, setFlashOdds] = useState<Record<string, "up" | "down" | null>>({});
-  const leagueBadge = getLeagueBadgeUrl(match.leagueId, match.league);
 
   useEffect(() => {
     if (!match.isLive) return;
@@ -43,8 +41,13 @@ export function MatchCard({ match, showStats = false }: MatchCardProps) {
 
   const handleOddsClick = (type: string, odds: number, label: string) => {
     if (match.bettingSuspended) return;
+    const id = `${match.id}-${type}`;
+    if (isSelected(label)) {
+      removeSelection(id);
+      return;
+    }
     addSelection({
-      id: `${match.id}-${type}`,
+      id,
       matchId: match.id,
       matchName: `${match.homeTeam.name} vs ${match.awayTeam.name}`,
       market: "Match Result",
@@ -91,9 +94,13 @@ export function MatchCard({ match, showStats = false }: MatchCardProps) {
       {/* Header */}
       <div className="px-3 sm:px-4 pt-2.5 sm:pt-3 pb-1.5 sm:pb-2 flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between border-b border-white/5">
         <div className="flex items-center gap-2 min-w-0">
-          <div className="relative w-5 h-5 sm:w-6 sm:h-6 shrink-0">
-            <Image src={leagueBadge} alt={match.league} fill unoptimized className="object-contain" />
-          </div>
+          <LeagueLogo
+            leagueId={match.leagueId}
+            leagueName={match.league}
+            badgeUrl={match.leagueBadge}
+            alt={match.league}
+            className="!w-6 !h-6 md:!w-7 md:!h-7 !rounded-md"
+          />
           <span className="text-[11px] sm:text-xs font-semibold text-bestbet-gray-muted truncate">{match.league}</span>
         </div>
         <div className="flex items-center gap-1 shrink-0 self-end sm:self-auto flex-wrap justify-end">
@@ -137,7 +144,7 @@ export function MatchCard({ match, showStats = false }: MatchCardProps) {
       <div className="px-3 sm:px-4 py-2.5 sm:py-3">
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-3">
           <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-            <TeamLogo name={match.homeTeam.name} shortName={match.homeTeam.shortName} logo={match.homeTeam.logo} size="md" />
+            <TeamLogo name={match.homeTeam.name} shortName={match.homeTeam.shortName} logo={match.homeTeam.logo} size="card" />
             <span className="text-xs sm:text-sm font-bold truncate leading-tight">{match.homeTeam.name}</span>
           </div>
 
@@ -155,7 +162,7 @@ export function MatchCard({ match, showStats = false }: MatchCardProps) {
 
           <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 justify-end">
             <span className="text-xs sm:text-sm font-bold truncate text-right leading-tight">{match.awayTeam.name}</span>
-            <TeamLogo name={match.awayTeam.name} shortName={match.awayTeam.shortName} logo={match.awayTeam.logo} size="md" />
+            <TeamLogo name={match.awayTeam.name} shortName={match.awayTeam.shortName} logo={match.awayTeam.logo} size="card" />
           </div>
         </div>
       </div>

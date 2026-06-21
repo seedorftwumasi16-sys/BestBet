@@ -12,7 +12,7 @@ interface CorrectScorePanelProps {
 }
 
 export function CorrectScorePanel({ match }: CorrectScorePanelProps) {
-  const { addSelection, selections } = useBetSlip();
+  const { addSelection, removeSelection, selections } = useBetSlip();
   const [activeTab, setActiveTab] = useState<"grid" | "specials">("grid");
   const odds = match.odds.correctScore || {};
 
@@ -27,8 +27,13 @@ export function CorrectScorePanel({ match }: CorrectScorePanelProps) {
 
   const pick = (key: string, label: string, value: number) => {
     if (match.bettingSuspended || !value) return;
+    const id = `${match.id}-cs-${key}`;
+    if (isSelected(label)) {
+      removeSelection(id);
+      return;
+    }
     addSelection({
-      id: `${match.id}-cs-${key}`,
+      id,
       matchId: match.id,
       matchName: `${match.homeTeam.name} vs ${match.awayTeam.name}`,
       market: "Correct Score",

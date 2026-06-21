@@ -7,7 +7,7 @@ const router = Router();
 router.get("/", async (req, res) => {
   const { sport, live, featured, league, search, window } = req.query;
   const validWindows = new Set(["live", "today", "tomorrow", "upcoming", "week"]);
-  const cacheKey = `matches:${sport || "all"}:${live || "all"}:${featured || "all"}:${league || "all"}:${search || "all"}:${window || "all"}`;
+  const cacheKey = `matches:v2:${sport || "all"}:${live || "all"}:${featured || "all"}:${league || "all"}:${search || "all"}:${window || "all"}`;
   const cached = await cacheGet<unknown[]>(cacheKey);
   if (cached) return res.json(cached);
 
