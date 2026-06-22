@@ -336,6 +336,8 @@ export interface MatchApi {
   liveDataAvailable?: boolean;
   liveDataError?: string | null;
   scoresPending?: boolean;
+  matchDurationMinutes?: number;
+  autoStart?: boolean;
   odds: {
     home: number;
     draw?: number;
@@ -423,6 +425,8 @@ export interface AdminMatchInput {
   homeScore?: number;
   awayScore?: number;
   liveMinute?: number;
+  matchDurationMinutes?: number;
+  autoStart?: boolean;
   correctScoreOdds?: Record<string, number>;
   doubleChanceOdds?: Record<string, number>;
 }
@@ -456,6 +460,7 @@ export interface AdminStatsApi {
   totalUsers: number;
   activeUsers: number;
   totalBets: number;
+  activeBets?: number;
   totalMatches: number;
   liveMatches: number;
   totalDeposits: number;
