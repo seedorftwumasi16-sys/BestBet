@@ -25,6 +25,7 @@ import { logLiveMatchPayload } from "@/lib/live-score-utils";
 import { loadCachedMatches, saveCachedMatches } from "@/lib/match-cache";
 
 import { getLiveMatches } from "@/lib/fixture-utils";
+import { isFinishedMatch } from "@/lib/match-status";
 
 import { useLiveOdds } from "@/hooks/useLiveOdds";
 
@@ -78,18 +79,13 @@ export default function LivePage() {
 
       const data = await betsApi.getMatches({ live: true, sport: "football" });
 
-      const incoming = data.map(toMatch);
+      const incoming = data.map(toMatch).filter((m) => !isFinishedMatch(m));
 
       setLiveMatches((prev) => {
-
-        if (incoming.length === 0 && prev.length > 0) return prev;
-
         const next = silent && prev.length > 0 ? mergeMatchLists(prev, incoming) : incoming;
-
-        saveCachedMatches(LIVE_CACHE_KEY, next);
-
-        return next;
-
+        const live = getLiveMatches(next.length > 0 ? next : prev);
+        saveCachedMatches(LIVE_CACHE_KEY, live);
+        return live;
       });
 
       logLiveMatchPayload(silent ? "live-poll" : "live-load", incoming);
@@ -108,7 +104,7 @@ export default function LivePage() {
 
 
 
-  useMatchPolling(loadMatches, [loadMatches], { enabled: hydrated });
+  useMatchPolling(loadMatches, [loadMatches], { enabled: hydrated, intervalMs: 30_000 });
 
 
 
@@ -138,9 +134,11 @@ export default function LivePage() {
 
         const next = prev.map((m) => (m.id === update.matchId ? applyOddsUpdate(m, update) : m));
 
-        saveCachedMatches(LIVE_CACHE_KEY, next);
+        const live = getLiveMatches(next);
 
-        return next;
+        saveCachedMatches(LIVE_CACHE_KEY, live);
+
+        return live;
 
       });
 

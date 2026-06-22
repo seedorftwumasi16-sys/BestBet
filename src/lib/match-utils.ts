@@ -1,13 +1,20 @@
 import type { MatchApi } from "@/lib/api";
 import type { Match } from "@/lib/constants";
 import { getLeagueBadgeUrl } from "@/lib/sports-assets";
+import { FINISHED_STATUS_SHORT, getMatchFullTimeMinute, isFinishedMatch, isMatchInPlay } from "@/lib/match-status";
 
 export function mergeApiMatches(...lists: MatchApi[][]): MatchApi[] {
   const map = new Map<string, MatchApi>();
   for (const list of lists) {
     for (const match of list) {
       const existing = map.get(match.id);
-      if (!existing || match.isLive || match.matchStatus === "live") {
+      if (!existing) {
+        map.set(match.id, match);
+        continue;
+      }
+      const incomingFinished = match.matchStatus === "finished";
+      const existingFinished = existing.matchStatus === "finished";
+      if (incomingFinished || (!existingFinished && (match.isLive || match.matchStatus === "live"))) {
         map.set(match.id, match);
       }
     }
@@ -39,23 +46,35 @@ export function applyOddsUpdate(
     bettingSuspended?: boolean;
   }
 ): Match {
+  const fullTime = getMatchFullTimeMinute(match);
+  const finished =
+    update.matchStatus === "finished" ||
+    update.liveMinuteDisplay === "FT" ||
+    FINISHED_STATUS_SHORT.has(String(update.liveStatusShort || "").toUpperCase()) ||
+    ((update.liveMinute ?? match.liveMinute ?? 0) >= fullTime &&
+      (update.matchStatus ?? match.matchStatus) !== "upcoming");
+
+  const nextStatus = finished ? "finished" : (update.matchStatus ?? match.matchStatus);
+  const nextIsLive = finished ? false : nextStatus === "live";
+
   return {
     ...match,
     odds: { ...match.odds, home: update.odds.home, away: update.odds.away },
     homeScore: update.homeScore ?? match.homeScore,
     awayScore: update.awayScore ?? match.awayScore,
     liveMinute: update.liveMinute ?? match.liveMinute,
-    liveMinuteDisplay: update.liveMinuteDisplay ?? match.liveMinuteDisplay,
-    liveStatusShort: update.liveStatusShort ?? match.liveStatusShort,
+    liveMinuteDisplay: finished ? "FT" : (update.liveMinuteDisplay ?? match.liveMinuteDisplay),
+    liveStatusShort: finished ? "FT" : (update.liveStatusShort ?? match.liveStatusShort),
     homeYellowCards: update.homeYellowCards ?? match.homeYellowCards,
     awayYellowCards: update.awayYellowCards ?? match.awayYellowCards,
     homeRedCards: update.homeRedCards ?? match.homeRedCards,
     awayRedCards: update.awayRedCards ?? match.awayRedCards,
     liveDataAvailable: update.liveDataAvailable ?? match.liveDataAvailable,
     minuteTickAt: update.minuteTickAt !== undefined ? update.minuteTickAt : match.minuteTickAt,
-    matchStatus: update.matchStatus ?? match.matchStatus,
-    isLive: update.matchStatus ? update.matchStatus === "live" : match.isLive,
-    bettingSuspended: update.bettingSuspended ?? match.bettingSuspended,
+    timerPaused: finished ? false : (update.timerPaused ?? match.timerPaused),
+    matchStatus: nextStatus,
+    isLive: nextIsLive,
+    bettingSuspended: finished ? true : (update.bettingSuspended ?? match.bettingSuspended),
   };
 }
 
@@ -82,6 +101,8 @@ export function toMatch(m: MatchApi): Match {
     homeScore: m.homeScore,
     awayScore: m.awayScore,
     liveStatusShort: m.liveStatusShort ?? undefined,
+    matchDurationMinutes: m.matchDurationMinutes,
+    autoStart: m.autoStart,
     homeYellowCards: m.homeYellowCards,
     awayYellowCards: m.awayYellowCards,
     homeRedCards: m.homeRedCards,
@@ -105,6 +126,13 @@ export function applyMatchFeed(
   if (!match) return matches;
 
   const converted = toMatch(match);
+  if (isFinishedMatch(converted)) {
+    if (action === "deleted" || action === "updated") {
+      return matches.filter((m) => m.id !== match.id);
+    }
+    return matches;
+  }
+
   const index = matches.findIndex((m) => m.id === match.id);
 
   if (index >= 0) {
@@ -115,7 +143,7 @@ export function applyMatchFeed(
     );
   }
 
-  if (action === "created" || converted.isLive || converted.matchStatus === "live") {
+  if (action === "created" || isMatchInPlay(converted)) {
     return [...matches, converted].sort(
       (a, b) => Number(b.isLive) - Number(a.isLive) || a.startTime.getTime() - b.startTime.getTime()
     );

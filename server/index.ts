@@ -23,9 +23,9 @@ import supportRoutes from "./routes/support";
 import sportsRoutes from "./routes/sports";
 import { startSportsSyncScheduler } from "./services/sports-sync";
 import { startMatchTimerScheduler } from "./services/match-timer";
-import { startKickoffScheduler } from "./services/kickoff-scheduler";
 import { startApiFootballSyncScheduler } from "./services/apifootball-sync";
 import { computeEffectiveLiveMinute } from "./lib/match-timer";
+import { isMatchLive, normalizeMatchStatus } from "./lib/matches";
 import { sanitizeBetOdds } from "./lib/bet-odds";
 
 dotenv.config();
@@ -110,11 +110,13 @@ async function broadcastLiveUpdates() {
   try {
     const db = await getDb();
     const result = await db.query(
-      `SELECT * FROM matches WHERE match_status = 'live' OR is_live = TRUE OR (status_override = TRUE AND is_live = TRUE)`
+      `SELECT * FROM matches
+       WHERE (match_status = 'live' OR is_live = TRUE)
+       AND LOWER(COALESCE(match_status, '')) != 'finished'`
     );
 
     for (const match of result.rows) {
-      if (boolFrom(match, "betting_suspended") || String(match.match_status || "").toLowerCase() === "finished") {
+      if (!isMatchLive(match) || boolFrom(match, "betting_suspended")) {
         continue;
       }
 
@@ -142,7 +144,7 @@ async function broadcastLiveUpdates() {
         liveDataAvailable: match.live_data_available != null ? boolFrom(match, "live_data_available") : undefined,
         timerPaused: timer.paused,
         minuteTickAt: match.minute_tick_at ? String(match.minute_tick_at) : null,
-        matchStatus: match.match_status,
+        matchStatus: normalizeMatchStatus(match),
         bettingSuspended: boolFrom(match, "betting_suspended"),
       });
     }
@@ -166,7 +168,6 @@ async function start() {
 
     setInterval(broadcastLiveUpdates, 5000);
     startMatchTimerScheduler();
-    startKickoffScheduler();
     void startApiFootballSyncScheduler();
     startSportsSyncScheduler();
   } catch (err) {

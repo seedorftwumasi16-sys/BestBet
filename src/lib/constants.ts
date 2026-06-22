@@ -96,6 +96,8 @@ export interface Match {
   minuteTickAt?: string | null;
   homeScore?: number;
   awayScore?: number;
+  matchDurationMinutes?: number;
+  autoStart?: boolean;
   liveStatusShort?: string;
   homeYellowCards?: number;
   awayYellowCards?: number;

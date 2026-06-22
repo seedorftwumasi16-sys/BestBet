@@ -8,10 +8,19 @@ import { TRACKED_LEAGUES, leagueSlugFromName } from "./sportsdb/leagues";
 import { resolveLeagueBadgeUrl } from "./sportsdb/badges";
 import { resolveTeamLogo } from "./team-logos";
 import { ensureMatchSchema } from "../db/schema-verify";
-import { computeEffectiveLiveMinute, timerFieldsForStatusChange, FULL_TIME_MINUTE } from "./match-timer";
+import {
+  computeEffectiveLiveMinute,
+  FULL_TIME_MINUTE,
+  getMatchDurationMinutes,
+  buildTimerFieldsForStatus,
+  DEFAULT_MATCH_DURATION_MINUTES,
+} from "./match-timer";
+import { isMatchInPlayRow, shouldFinishMatch } from "./match-status";
 
 export type MatchStatus = "upcoming" | "live" | "finished";
-export type FixtureWindow = "live" | "today" | "tomorrow" | "upcoming" | "week";
+export type FixtureWindow = "live" | "today" | "tomorrow" | "upcoming" | "week" | "results";
+
+export const RESULTS_RETENTION_DAYS = 30;
 
 export interface MatchRow {
   id: string;
@@ -68,6 +77,8 @@ export interface MatchApiPayload {
   liveDataAvailable?: boolean;
   liveDataError?: string | null;
   scoresPending?: boolean;
+  matchDurationMinutes?: number;
+  autoStart?: boolean;
   odds: {
     home: number;
     draw?: number;
@@ -84,20 +95,48 @@ export interface MatchApiPayload {
 
 export function normalizeMatchStatus(row: Record<string, unknown>): MatchStatus {
   const status = String(row.match_status || "").toLowerCase();
-  if (status === "live" || status === "finished" || status === "upcoming") {
-    if (status === "finished" && boolFrom(row, "status_override") && boolFrom(row, "is_live")) {
-      return "live";
-    }
+  const short = String(row.live_status_short || "").toUpperCase();
+  const minute = Math.max(0, Number(row.live_minute ?? 0));
+  const fullTime = getMatchDurationMinutes(row);
+  const statusOverride = boolFrom(row, "status_override");
+
+  if (status === "finished") return "finished";
+
+  if (minute >= fullTime && status !== "upcoming") return "finished";
+
+  if (statusOverride && status === "live") return "live";
+
+  if (["FT", "AET", "PEN"].includes(short)) return "finished";
+
+  if (status === "live" || status === "upcoming") {
     return status as MatchStatus;
   }
+
   if (boolFrom(row, "is_live")) return "live";
   return "upcoming";
 }
 
-/** True when a match should appear in live sections (admin override, status, or is_live flag). */
+function resolveLiveStatusShortForStatus(
+  status: MatchStatus,
+  row: Record<string, unknown>
+): string | null {
+  if (status === "finished") return "FT";
+  if (status === "upcoming") return "NS";
+  if (status === "live") {
+    const existing = String(row.live_status_short || "")
+      .trim()
+      .toUpperCase();
+    if (["1H", "2H", "HT", "LIVE", "INT", "ET", "P", "BT", "IN PLAY"].includes(existing)) {
+      return existing;
+    }
+    return boolFrom(row, "is_simulated") ? "1H" : "LIVE";
+  }
+  return null;
+}
+
+/** True when a match should appear in live sections. */
 export function isMatchLive(row: Record<string, unknown>): boolean {
-  if (boolFrom(row, "status_override") && boolFrom(row, "is_live")) return true;
-  return normalizeMatchStatus(row) === "live";
+  return isMatchInPlayRow(row);
 }
 
 export function syncLiveFields(status: MatchStatus) {
@@ -172,7 +211,7 @@ export function mapMatchRow(
     matchStatus,
     isLive,
     isFeatured: boolFrom(row, "is_featured"),
-    bettingSuspended: boolFrom(row, "betting_suspended"),
+    bettingSuspended: matchStatus === "finished" || boolFrom(row, "betting_suspended"),
     isSimulated: boolFrom(row, "is_simulated"),
     createdAt: String(row.created_at || row.start_time),
     liveMinute: timer.minute,
@@ -182,7 +221,14 @@ export function mapMatchRow(
     homeScore: scores.homeScore,
     awayScore: scores.awayScore,
     scoresPending: scores.scoresPending,
-    liveStatusShort: row.live_status_short ? String(row.live_status_short) : null,
+    matchDurationMinutes: getMatchDurationMinutes(row),
+    autoStart: row.auto_start != null ? boolFrom(row, "auto_start") : true,
+    liveStatusShort:
+      matchStatus === "finished"
+        ? String(row.live_status_short || "FT")
+        : row.live_status_short
+          ? String(row.live_status_short)
+          : null,
     homeYellowCards: row.home_yellow_cards != null ? Number(row.home_yellow_cards) : 0,
     awayYellowCards: row.away_yellow_cards != null ? Number(row.away_yellow_cards) : 0,
     homeRedCards: row.home_red_cards != null ? Number(row.home_red_cards) : 0,
@@ -272,6 +318,15 @@ function matchesFixtureWindow(row: Record<string, unknown>, window: FixtureWindo
   return true;
 }
 
+function isWithinResultsRetention(row: Record<string, unknown>): boolean {
+  const start = new Date(String(row.start_time || row.created_at || ""));
+  if (Number.isNaN(start.getTime())) return true;
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - RESULTS_RETENTION_DAYS);
+  cutoff.setHours(0, 0, 0, 0);
+  return start >= cutoff;
+}
+
 function matchesLeagueFilter(row: Record<string, unknown>, league: string): boolean {
   const q = league.toLowerCase().trim();
   if (!q || q === "all") return true;
@@ -314,7 +369,8 @@ export async function listMatches(filters?: {
 
   let query = `SELECT * FROM matches`;
   if (filters?.live === true && db.driver === "postgresql") {
-    query += ` WHERE (LOWER(COALESCE(match_status, '')) = 'live' OR is_live = TRUE OR (status_override = TRUE AND is_live = TRUE))`;
+    query += ` WHERE (LOWER(COALESCE(match_status, '')) = 'live' OR is_live = TRUE)
+      AND LOWER(COALESCE(match_status, '')) != 'finished'`;
   }
   query += ` ORDER BY is_live DESC, start_time ASC`;
 
@@ -334,6 +390,13 @@ export async function listMatches(filters?: {
   if (filters?.simulated === true) rows = rows.filter((m) => boolFrom(m, "is_simulated"));
   if (filters?.simulated === false) rows = rows.filter((m) => !boolFrom(m, "is_simulated"));
   if (filters?.status) rows = rows.filter((m) => normalizeMatchStatus(m) === filters.status);
+  if (filters?.status === "finished") {
+    rows = rows.filter((m) => isWithinResultsRetention(m));
+    rows.sort(
+      (a, b) =>
+        new Date(String(b.start_time)).getTime() - new Date(String(a.start_time)).getTime()
+    );
+  }
   if (filters?.league) rows = rows.filter((m) => matchesLeagueFilter(m, filters.league!));
   if (filters?.search) rows = rows.filter((m) => matchesSearchQuery(m, filters.search!));
   if (filters?.window) rows = rows.filter((m) => matchesFixtureWindow(m, filters.window!));
@@ -380,6 +443,8 @@ export interface MatchInput {
   homeScore?: number | null;
   awayScore?: number | null;
   liveMinute?: number | null;
+  matchDurationMinutes?: number;
+  autoStart?: boolean;
   correctScoreOdds?: Record<string, number>;
   doubleChanceOdds?: Record<string, number>;
 }
@@ -389,11 +454,18 @@ export async function createMatchRecord(id: string, input: MatchInput) {
   await ensureMatchSchema(db);
   const status = input.matchStatus || "upcoming";
   const live = syncLiveFields(status);
-  const statusOverride = status === "live" || !!input.isSimulated;
+  const statusOverride = status === "live";
+  const duration = input.matchDurationMinutes ?? DEFAULT_MATCH_DURATION_MINUTES;
+  const autoStart = input.autoStart !== false;
   const timerInit =
     status === "live"
-      ? timerFieldsForStatusChange("live", input.liveMinute ?? 0, input.liveMinute ?? 0)
-      : { minuteTickAt: null as string | null, timerPaused: false, liveMinute: input.liveMinute ?? 0 };
+      ? buildTimerFieldsForStatus("live", {
+          minuteInput: input.liveMinute ?? 0,
+          durationMinutes: duration,
+        })
+      : status === "finished"
+        ? buildTimerFieldsForStatus("finished", { durationMinutes: duration })
+        : buildTimerFieldsForStatus("upcoming", { durationMinutes: duration });
   const createdAt = new Date().toISOString();
   const leagueBadge = resolveLeagueBadgeUrl(
     input.league,
@@ -443,13 +515,19 @@ export async function createMatchRecord(id: string, input: MatchInput) {
         is_featured, betting_suspended, is_simulated, status_override, created_at,
         odds_home, odds_draw, odds_away,
         odds_over, odds_under, odds_btts_yes, odds_btts_no, over_under_line,
-        home_score, away_score, live_minute,
+        home_score, away_score, live_minute, timer_paused, minute_tick_at,
+        match_duration_minutes, auto_start,
         home_team_logo, away_team_logo, league_badge
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         ...baseParams.slice(0, 11),
         boolVal(db, statusOverride),
-        ...baseParams.slice(11),
+        ...baseParams.slice(11, 23),
+        boolVal(db, timerInit.timerPaused),
+        timerInit.minuteTickAt,
+        duration,
+        boolVal(db, autoStart),
+        ...baseParams.slice(23),
       ]
     );
   } catch (err) {
@@ -468,6 +546,16 @@ export async function createMatchRecord(id: string, input: MatchInput) {
     } else {
       throw err;
     }
+  }
+
+  try {
+    await db.query(`UPDATE matches SET match_duration_minutes = ?, auto_start = ? WHERE id = ?`, [
+      duration,
+      boolVal(db, autoStart),
+      id,
+    ]);
+  } catch (err) {
+    console.warn("[matches] Could not set scheduling columns:", err instanceof Error ? err.message : err);
   }
 
   if (status === "live") {
@@ -509,6 +597,11 @@ export async function createMatchRecord(id: string, input: MatchInput) {
     }
     throw err;
   }
+
+  if (status === "upcoming" && autoStart) {
+    const { promoteMatchIfDue } = await import("./kickoff-scheduler");
+    await promoteMatchIfDue(id);
+  }
 }
 
 export async function updateMatchRecord(id: string, input: Partial<MatchInput>) {
@@ -522,36 +615,44 @@ export async function updateMatchRecord(id: string, input: Partial<MatchInput>) 
   const live = syncLiveFields(status);
   const statusOverride =
     input.matchStatus !== undefined ? true : boolFrom(row, "status_override");
+  const duration =
+    input.matchDurationMinutes !== undefined
+      ? input.matchDurationMinutes
+      : getMatchDurationMinutes(row);
+  const autoStart =
+    input.autoStart !== undefined ? input.autoStart : row.auto_start != null ? boolFrom(row, "auto_start") : true;
 
-  const timerInit =
-    input.matchStatus === "live"
-      ? timerFieldsForStatusChange(
-          "live",
-          input.liveMinute !== undefined ? input.liveMinute : Number(row.live_minute ?? 0),
-          row.live_minute
-        )
-      : input.matchStatus === "finished"
-        ? timerFieldsForStatusChange("finished", FULL_TIME_MINUTE, row.live_minute)
-        : input.liveMinute !== undefined
-          ? timerFieldsForStatusChange("live", input.liveMinute, row.live_minute)
-          : status !== "live"
-            ? { minuteTickAt: null as string | null, timerPaused: false }
-            : {};
+  let timerInit: {
+    liveMinute: number;
+    timerPaused: boolean;
+    minuteTickAt: string | null;
+  };
 
-  const resolvedLiveMinute =
-    timerInit.liveMinute !== undefined
-      ? timerInit.liveMinute
-      : input.liveMinute !== undefined
-        ? input.liveMinute
-        : row.live_minute;
-  const resolvedTimerPaused =
-    timerInit.timerPaused !== undefined ? timerInit.timerPaused : boolFrom(row, "timer_paused");
-  const resolvedMinuteTickAt =
-    timerInit.minuteTickAt !== undefined
-      ? timerInit.minuteTickAt
-      : input.liveMinute !== undefined
-        ? new Date().toISOString()
-        : row.minute_tick_at ?? null;
+  if (status === "finished") {
+    timerInit = buildTimerFieldsForStatus("finished", { durationMinutes: duration });
+  } else if (status === "live") {
+    const minute =
+      input.liveMinute !== undefined ? input.liveMinute : Math.max(0, Number(row.live_minute ?? 0));
+    timerInit = buildTimerFieldsForStatus("live", {
+      minuteInput: minute,
+      existingMinute: row.live_minute != null ? Number(row.live_minute) : 0,
+      durationMinutes: duration,
+    });
+  } else {
+    timerInit = buildTimerFieldsForStatus("upcoming", { durationMinutes: duration });
+  }
+
+  const resolvedLiveMinute = timerInit.liveMinute;
+  const resolvedTimerPaused = timerInit.timerPaused;
+  const resolvedMinuteTickAt = timerInit.minuteTickAt;
+  const isSimulated =
+    input.isSimulated !== undefined ? input.isSimulated : boolFrom(row, "is_simulated");
+  const liveStatusShort = resolveLiveStatusShortForStatus(status, {
+    ...row,
+    is_simulated: isSimulated,
+    live_status_short:
+      input.matchStatus !== undefined ? undefined : row.live_status_short,
+  });
 
   await db.query(
     `UPDATE matches SET
@@ -560,7 +661,8 @@ export async function updateMatchRecord(id: string, input: Partial<MatchInput>) 
       status_override = ?,
       odds_home = ?, odds_draw = ?, odds_away = ?,
       odds_over = ?, odds_under = ?, odds_btts_yes = ?, odds_btts_no = ?, over_under_line = ?,
-      home_score = ?, away_score = ?, live_minute = ?, timer_paused = ?, minute_tick_at = ?
+      home_score = ?, away_score = ?, live_minute = ?, timer_paused = ?, minute_tick_at = ?,
+      match_duration_minutes = ?, auto_start = ?, live_status_short = ?
      WHERE id = ?`,
     [
       input.homeTeam ?? row.home_team,
@@ -594,6 +696,9 @@ export async function updateMatchRecord(id: string, input: Partial<MatchInput>) 
       resolvedLiveMinute,
       boolVal(db, resolvedTimerPaused),
       resolvedMinuteTickAt,
+      duration,
+      boolVal(db, autoStart),
+      liveStatusShort,
       id,
     ]
   );
@@ -602,6 +707,11 @@ export async function updateMatchRecord(id: string, input: Partial<MatchInput>) 
 
   if (status === "finished" && normalizeMatchStatus(row) !== "finished") {
     await settleMatchBets(id);
+  }
+
+  if (status === "upcoming" && autoStart) {
+    const { promoteMatchIfDue } = await import("./kickoff-scheduler");
+    await promoteMatchIfDue(id);
   }
 
   return getMatchById(id);

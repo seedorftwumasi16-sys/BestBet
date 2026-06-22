@@ -44,6 +44,8 @@ import {
 
 } from "@/lib/fixture-utils";
 
+import { isMatchInPlay, isFinishedMatch, isMatchUpcoming } from "@/lib/match-status";
+
 import { useLiveOdds } from "@/hooks/useLiveOdds";
 
 import { motion } from "framer-motion";
@@ -234,7 +236,9 @@ export default function HomePage() {
         betsApi.getMatches({ sport: "football" }),
         betsApi.getMatches({ sport: "football", live: true }),
       ]);
-      const incoming = mergeApiMatches(all, live).map(toMatch);
+      const incoming = mergeApiMatches(all, live)
+        .map(toMatch)
+        .filter((m) => !isFinishedMatch(m));
 
       setMatches((prev) => {
         if (incoming.length === 0 && prev.length > 0) {
@@ -242,8 +246,9 @@ export default function HomePage() {
           return prev;
         }
         const next = silent && prev.length > 0 ? mergeMatchLists(prev, incoming) : incoming;
-        saveCachedMatches(HOMEPAGE_MATCH_CACHE_KEY, next);
-        return next;
+        const active = next.filter((m) => !isFinishedMatch(m));
+        saveCachedMatches(HOMEPAGE_MATCH_CACHE_KEY, active);
+        return active;
       });
       logLiveMatchPayload(silent ? "homepage-poll" : "homepage-load", incoming);
     } catch (err) {
@@ -263,7 +268,7 @@ export default function HomePage() {
 
 
 
-  useMatchPolling(loadMatches, [loadMatches], { enabled: hydrated });
+  useMatchPolling(loadMatches, [loadMatches], { enabled: hydrated, intervalMs: 30_000 });
 
 
 
@@ -273,7 +278,7 @@ export default function HomePage() {
 
       setMatches((prev) => {
 
-        const next = applyMatchFeed(prev, action, match, matchId);
+        const next = applyMatchFeed(prev, action, match, matchId).filter((m) => !isFinishedMatch(m));
 
         saveCachedMatches(HOMEPAGE_MATCH_CACHE_KEY, next);
 
@@ -287,7 +292,9 @@ export default function HomePage() {
 
       setMatches((prev) => {
 
-        const next = prev.map((m) => (m.id === update.matchId ? applyOddsUpdate(m, update) : m));
+        const next = prev
+          .map((m) => (m.id === update.matchId ? applyOddsUpdate(m, update) : m))
+          .filter((m) => !isFinishedMatch(m));
 
         saveCachedMatches(HOMEPAGE_MATCH_CACHE_KEY, next);
 
@@ -313,7 +320,7 @@ export default function HomePage() {
 
   const liveSimulated = useMemo(
 
-    () => simulatedMatches.filter((m) => (m.isLive || m.matchStatus === "live") && !liveMatches.some((l) => l.id === m.id)),
+    () => simulatedMatches.filter((m) => isMatchInPlay(m) && !liveMatches.some((l) => l.id === m.id)),
 
     [simulatedMatches, liveMatches]
 
@@ -321,7 +328,7 @@ export default function HomePage() {
 
   const upcomingSimulated = useMemo(
 
-    () => simulatedMatches.filter((m) => m.matchStatus === "upcoming" && !m.isLive),
+    () => simulatedMatches.filter((m) => isMatchUpcoming(m)),
 
     [simulatedMatches]
 
@@ -408,6 +415,26 @@ export default function HomePage() {
 
 
 
+        <section aria-labelledby="leagues-heading">
+
+          <SectionHeader
+
+            id="leagues-heading"
+
+            title="Popular Leagues"
+
+            actionLabel="All Football"
+
+            actionHref="/sports/football"
+
+          />
+
+          <PopularLeagues />
+
+        </section>
+
+
+
         <MatchSection
 
           id="upcoming-heading"
@@ -427,26 +454,6 @@ export default function HomePage() {
           skeletonCount={4}
 
         />
-
-
-
-        <section aria-labelledby="leagues-heading">
-
-          <SectionHeader
-
-            id="leagues-heading"
-
-            title="Popular Leagues"
-
-            actionLabel="All Football"
-
-            actionHref="/sports/football"
-
-          />
-
-          <PopularLeagues />
-
-        </section>
 
 
 
