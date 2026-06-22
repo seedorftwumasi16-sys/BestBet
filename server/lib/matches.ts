@@ -315,6 +315,10 @@ function matchesFixtureWindow(row: Record<string, unknown>, window: FixtureWindo
     return start >= now && start <= end && status !== "finished";
   }
 
+  if (window === "results") {
+    return status === "finished" && isWithinResultsRetention(row);
+  }
+
   return true;
 }
 

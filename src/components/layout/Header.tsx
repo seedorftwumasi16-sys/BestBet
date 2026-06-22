@@ -32,6 +32,7 @@ const NAV_LINKS = [
   { href: "/sports/football", label: "Football", match: (p: string) => p.startsWith("/sports/football") },
   { href: "/sports/basketball", label: "Basketball", match: (p: string) => p.startsWith("/sports/basketball") },
   { href: "/live", label: "Live", match: (p: string) => p === "/live", live: true },
+  { href: "/results", label: "Results", match: (p: string) => p === "/results" },
   { href: "/virtual", label: "Virtual", match: (p: string) => p === "/virtual" },
   { href: "/casino", label: "Casino", match: (p: string) => p === "/casino" },
 ];

@@ -11,8 +11,9 @@ const router = Router();
 
 router.get("/matches", async (req, res) => {
   try {
-    const { sport, live, featured, league, search, window } = req.query;
-    const validWindows = new Set(["live", "today", "tomorrow", "upcoming", "week"]);
+    const { sport, live, featured, league, search, window, status } = req.query;
+    const validWindows = new Set(["live", "today", "tomorrow", "upcoming", "week", "results"]);
+    const validStatuses = new Set(["upcoming", "live", "finished"]);
     const matches = await listMatches({
       sport: sport ? String(sport) : undefined,
       live: live === "true" ? true : undefined,
@@ -20,6 +21,10 @@ router.get("/matches", async (req, res) => {
       league: league ? String(league) : undefined,
       search: search ? String(search) : undefined,
       window: window && validWindows.has(String(window)) ? (String(window) as FixtureWindow) : undefined,
+      status:
+        status && validStatuses.has(String(status))
+          ? (String(status) as "upcoming" | "live" | "finished")
+          : undefined,
     });
     res.json(matches);
   } catch (err) {

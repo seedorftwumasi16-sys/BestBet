@@ -120,7 +120,7 @@ export const authApi = {
     }),
 };
 
-export type FixtureWindow = "live" | "today" | "tomorrow" | "upcoming" | "week";
+export type FixtureWindow = "live" | "today" | "tomorrow" | "upcoming" | "week" | "results";
 
 export interface MatchQueryOptions {
   sport?: string;
@@ -129,6 +129,7 @@ export interface MatchQueryOptions {
   league?: string;
   search?: string;
   window?: FixtureWindow;
+  status?: "upcoming" | "live" | "finished";
 }
 
 export const betsApi = {
@@ -144,6 +145,7 @@ export const betsApi = {
     if (options.league && options.league !== "all") params.set("league", options.league);
     if (options.search) params.set("search", options.search);
     if (options.window) params.set("window", options.window);
+    if (options.status) params.set("status", options.status);
     const q = params.toString();
     return api<MatchApi[]>(`/api/bets/matches${q ? `?${q}` : ""}`);
   },

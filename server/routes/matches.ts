@@ -5,12 +5,13 @@ import { cacheGet, cacheSet } from "../services/redis";
 const router = Router();
 
 router.get("/", async (req, res) => {
-  const { sport, live, featured, league, search, window } = req.query;
-  const validWindows = new Set(["live", "today", "tomorrow", "upcoming", "week"]);
+  const { sport, live, featured, league, search, window, status } = req.query;
+  const validWindows = new Set(["live", "today", "tomorrow", "upcoming", "week", "results"]);
+  const validStatuses = new Set(["upcoming", "live", "finished"]);
   const isLiveQuery = live === "true";
-  const cacheKey = `matches:v3:${sport || "all"}:${live || "all"}:${featured || "all"}:${league || "all"}:${search || "all"}:${window || "all"}`;
+  const cacheKey = `matches:v3:${sport || "all"}:${live || "all"}:${featured || "all"}:${league || "all"}:${search || "all"}:${window || "all"}:${status || "all"}`;
 
-  if (!isLiveQuery) {
+  if (!isLiveQuery && status !== "finished") {
     const cached = await cacheGet<unknown[]>(cacheKey);
     if (cached) return res.json(cached);
   }
@@ -22,6 +23,8 @@ router.get("/", async (req, res) => {
     league: league ? String(league) : undefined,
     search: search ? String(search) : undefined,
     window: window && validWindows.has(String(window)) ? (String(window) as FixtureWindow) : undefined,
+    status:
+      status && validStatuses.has(String(status)) ? (String(status) as "upcoming" | "live" | "finished") : undefined,
   });
 
   if (isLiveQuery) {
@@ -39,7 +42,7 @@ router.get("/", async (req, res) => {
     );
   }
 
-  if (!isLiveQuery) {
+  if (!isLiveQuery && status !== "finished") {
     await cacheSet(cacheKey, matches, 30);
   }
   res.json(matches);

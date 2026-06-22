@@ -4,7 +4,7 @@ import { getDb } from "../db";
 import { getMatchSchemaStatus } from "../db/schema-verify";
 import { PROTECTED_SUPER_ADMIN_EMAIL } from "../lib/super-admin";
 
-const AUTH_BUILD = "homepage-match-cache-v1";
+const AUTH_BUILD = "match-scheduling-v1";
 
 const router = Router();
 
