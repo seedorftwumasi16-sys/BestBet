@@ -14,8 +14,22 @@ import { POPULAR_LEAGUE_CHIPS } from "@/lib/sports-assets";
 import { LeagueLogo } from "@/components/ui/LeagueLogo";
 import { HomeHero } from "@/components/home/HomeHero";
 
-export function HeroBanner({ liveMatchCount = 0 }: { liveMatchCount?: number }) {
-  return <HomeHero liveMatchCount={liveMatchCount} />;
+export function HeroBanner({
+  liveMatchCount = 0,
+  todayFixturesCount = 0,
+  featuredOdds = 2.85,
+}: {
+  liveMatchCount?: number;
+  todayFixturesCount?: number;
+  featuredOdds?: number;
+}) {
+  return (
+    <HomeHero
+      liveMatchCount={liveMatchCount}
+      todayFixturesCount={todayFixturesCount}
+      featuredOdds={featuredOdds}
+    />
+  );
 }
 
 function PromotionCard({ promo }: { promo: Promotion }) {

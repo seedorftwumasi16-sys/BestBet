@@ -1,13 +1,16 @@
-/** Local hero banner images — served from /public/images (never blocked by third-party CDNs). */
-export const HERO_FALLBACK_IMAGE = "/images/hero-football.jpg";
+/** Premium homepage hero — local stadium imagery (Unsplash, royalty-free). */
+export const HERO_STADIUM_IMAGE = "/images/hero-stadium-night.jpg";
+export const HERO_FALLBACK_IMAGE = HERO_STADIUM_IMAGE;
+
+/** Optional looped background video; falls back to HERO_STADIUM_IMAGE when missing. */
+export const HERO_STADIUM_VIDEO = "/videos/hero-stadium.mp4";
 
 export const HERO_SLIDE_BACKGROUNDS = {
-  live: "/images/hero-football-live.jpg",
-  leagues: "/images/hero-football.jpg",
-  bonus: "/images/hero-football-bonus.jpg",
+  live: HERO_STADIUM_IMAGE,
+  leagues: HERO_STADIUM_IMAGE,
+  bonus: HERO_STADIUM_IMAGE,
 } as const;
 
-/** Resolve slide background with guaranteed local fallback. */
 export function resolveHeroBackground(preferred?: string): string {
   if (!preferred) return HERO_FALLBACK_IMAGE;
   if (preferred.startsWith("/")) return preferred;

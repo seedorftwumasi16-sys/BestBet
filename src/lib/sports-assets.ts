@@ -201,11 +201,7 @@ export function getTeamInitials(name: string, shortName?: string): string {
     .toUpperCase();
 }
 
-export const HERO_BACKGROUNDS = [
-  "/images/hero-football-live.jpg",
-  "/images/hero-football.jpg",
-  "/images/hero-football-bonus.jpg",
-] as const;
+export const HERO_BACKGROUNDS = ["/images/hero-stadium-night.jpg"] as const;
 
 export const POPULAR_LEAGUE_CHIPS = [
   { sportsdbId: "4328", label: "Premier League", country: "England" },

@@ -110,7 +110,7 @@ export function AuthShell({
 
               backgroundImage:
 
-                "url(/images/hero-football.jpg)",
+                "url(/images/hero-stadium-night.jpg)",
 
             }}
 

@@ -337,6 +337,25 @@ export default function HomePage() {
 
   const allLiveCount = useMemo(() => getLiveMatches(matches).length, [matches]);
 
+  const todayFixturesCount = useMemo(() => {
+    const now = new Date();
+    return realFootball.filter((m) => {
+      const start = new Date(m.startTime);
+      return (
+        start.getFullYear() === now.getFullYear() &&
+        start.getMonth() === now.getMonth() &&
+        start.getDate() === now.getDate()
+      );
+    }).length;
+  }, [realFootball]);
+
+  const featuredOdds = useMemo(() => {
+    const pool = [...liveMatches, ...upcomingMatches].slice(0, 16);
+    if (pool.length === 0) return 2.85;
+    const best = Math.max(...pool.map((m) => Math.max(m.odds.home, m.odds.away, m.odds.draw ?? 0)));
+    return Math.round(best * 100) / 100;
+  }, [liveMatches, upcomingMatches]);
+
   const sectionLoading = loading && matches.length === 0;
 
 
@@ -344,6 +363,12 @@ export default function HomePage() {
   return (
 
     <MainLayout>
+
+      <HeroBanner
+        liveMatchCount={allLiveCount}
+        todayFixturesCount={todayFixturesCount}
+        featuredOdds={featuredOdds}
+      />
 
       <motion.div
 
@@ -356,10 +381,6 @@ export default function HomePage() {
         className="p-3 sm:p-4 md:p-6 pb-20 sm:pb-24 xl:pb-6 space-y-4 sm:space-y-5 md:space-y-6 max-w-5xl mx-auto w-full min-w-0"
 
       >
-
-        <HeroBanner liveMatchCount={allLiveCount} />
-
-
 
         <MatchSection
 
