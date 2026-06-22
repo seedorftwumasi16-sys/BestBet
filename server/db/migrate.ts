@@ -19,6 +19,7 @@ import {
   MATCH_TIMER_COLUMNS_SQL,
   APIFOOTBALL_COLUMNS_SQL,
   LIVE_DATA_RESET_SQL,
+  MATCH_SCHEDULING_COLUMNS_SQL,
 } from "./schema-ext";
 import { recreateProtectedSuperAdmin } from "../lib/super-admin";
 import { ensureMatchSchema } from "./schema-verify";
@@ -67,6 +68,7 @@ export async function migrate(): Promise<{ driver: string }> {
     await runStatements(db, MATCH_TIMER_COLUMNS_SQL);
     await runStatements(db, APIFOOTBALL_COLUMNS_SQL);
     await runStatements(db, LIVE_DATA_RESET_SQL);
+    await runStatements(db, MATCH_SCHEDULING_COLUMNS_SQL);
   } else {
     await runStatements(db, MATCH_COLUMNS_SQL.replace(/ADD COLUMN IF NOT EXISTS/g, "ADD COLUMN"));
     await runStatements(db, LOGIN_LOG_COLUMNS_SQL.replace(/ADD COLUMN IF NOT EXISTS/g, "ADD COLUMN"));

@@ -8,6 +8,8 @@ type PollOptions = {
   skipInitial?: boolean;
   /** When false, polling is disabled entirely. */
   enabled?: boolean;
+  /** Override default poll interval (ms). */
+  intervalMs?: number;
 };
 
 /**
@@ -19,7 +21,7 @@ export function useMatchPolling(
   deps: readonly unknown[] = [],
   options: PollOptions = {}
 ) {
-  const { skipInitial = false, enabled = true } = options;
+  const { skipInitial = false, enabled = true, intervalMs = MATCH_DATA_REFRESH_INTERVAL_MS } = options;
   const fetchRef = useRef(fetchLatest);
   fetchRef.current = fetchLatest;
 
@@ -32,9 +34,9 @@ export function useMatchPolling(
 
     const intervalId = setInterval(() => {
       void fetchRef.current({ silent: true });
-    }, MATCH_DATA_REFRESH_INTERVAL_MS);
+    }, intervalMs);
 
     return () => clearInterval(intervalId);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- caller controls fetch identity via deps
-  }, [enabled, skipInitial, ...deps]);
+  }, [enabled, skipInitial, intervalMs, ...deps]);
 }

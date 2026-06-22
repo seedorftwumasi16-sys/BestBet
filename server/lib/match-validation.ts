@@ -57,6 +57,13 @@ export function validateMatchInput(input: Partial<MatchInput>, mode: "create" | 
     return { ok: false, error: "Match status must be upcoming, live, or finished" };
   }
 
+  if (input.matchDurationMinutes !== undefined) {
+    const duration = Number(input.matchDurationMinutes);
+    if (!Number.isFinite(duration) || duration < 1 || duration > 120) {
+      return { ok: false, error: "Match duration must be between 1 and 120 minutes" };
+    }
+  }
+
   return { ok: true };
 }
 

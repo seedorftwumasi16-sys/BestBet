@@ -80,6 +80,10 @@ function parseMatchInput(body: Record<string, unknown>): Partial<MatchInput> {
 
   if (body.liveMinute !== undefined) input.liveMinute = Number(body.liveMinute);
 
+  if (body.matchDurationMinutes !== undefined) input.matchDurationMinutes = Number(body.matchDurationMinutes);
+
+  if (body.autoStart !== undefined) input.autoStart = body.autoStart === true || body.autoStart === "true";
+
   if (body.correctScoreOdds !== undefined && typeof body.correctScoreOdds === "object") {
 
     input.correctScoreOdds = body.correctScoreOdds as Record<string, number>;
@@ -141,6 +145,10 @@ function buildCreatePayload(input: Partial<MatchInput>): MatchInput {
     awayScore: input.awayScore,
 
     liveMinute: input.liveMinute,
+
+    matchDurationMinutes: input.matchDurationMinutes ?? 90,
+
+    autoStart: input.autoStart !== false,
 
     correctScoreOdds: input.correctScoreOdds,
 

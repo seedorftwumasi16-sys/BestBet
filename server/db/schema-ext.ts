@@ -282,3 +282,16 @@ ALTER TABLE matches ADD COLUMN IF NOT EXISTS live_data_error TEXT;
 export const LIVE_DATA_RESET_SQL = `
 UPDATE matches SET live_data_available = TRUE, live_data_error = NULL WHERE live_data_available = FALSE;
 `;
+
+export const MATCH_SCHEDULING_COLUMNS_SQL = `
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS match_duration_minutes INTEGER DEFAULT 90;
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS auto_start BOOLEAN DEFAULT TRUE;
+`;
+
+/** Raise legacy minimum deposit from GH₵5 to GH₵50. */
+export const MIN_DEPOSIT_MIGRATION_SQL = `
+UPDATE site_settings SET value = '50', updated_at = NOW()::TEXT WHERE key = 'min_deposit' AND value = '5';
+INSERT INTO site_settings (key, value, updated_at)
+SELECT 'min_deposit', '50', NOW()::TEXT
+WHERE NOT EXISTS (SELECT 1 FROM site_settings WHERE key = 'min_deposit');
+`;

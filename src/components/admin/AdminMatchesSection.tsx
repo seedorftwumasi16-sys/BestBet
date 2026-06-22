@@ -15,7 +15,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
-import { adminApi, type MatchApi } from "@/lib/api";
+import { adminApi, type MatchApi, type AdminMatchInput } from "@/lib/api";
 import { SPORTS } from "@/lib/constants";
 import { formatMatchDate, formatMatchTime } from "@/lib/utils";
 import { normalizeMatchApi, safeToFixed } from "@/lib/admin-utils";
@@ -35,7 +35,10 @@ interface MatchFormState {
   awayTeam: string;
   league: string;
   sport: string;
-  startTime: string;
+  kickoffDate: string;
+  kickoffTime: string;
+  matchDurationMinutes: string;
+  autoStart: boolean;
   matchStatus: MatchStatus;
   isFeatured: boolean;
   isSimulated: boolean;
@@ -53,41 +56,69 @@ interface MatchFormState {
   liveMinute: string;
 }
 
-const emptyForm = (): MatchFormState => ({
-  homeTeam: "",
-  awayTeam: "",
-  league: "",
-  sport: "football",
-  startTime: new Date(Date.now() + 86400000).toISOString().slice(0, 16),
-  matchStatus: "upcoming",
-  isFeatured: false,
-  isSimulated: false,
-  bettingSuspended: false,
-  oddsHome: "1.85",
-  oddsDraw: "3.40",
-  oddsAway: "4.20",
-  oddsOver: "1.90",
-  oddsUnder: "1.90",
-  overUnderLine: "2.5",
-  oddsBttsYes: "1.75",
-  oddsBttsNo: "2.05",
-  homeScore: "0",
-  awayScore: "0",
-  liveMinute: "0",
-});
+function defaultKickoffParts() {
+  const kickoff = new Date(Date.now() + 86400000);
+  const local = new Date(kickoff.getTime() - kickoff.getTimezoneOffset() * 60000);
+  return {
+    date: local.toISOString().slice(0, 10),
+    time: local.toISOString().slice(11, 16),
+  };
+}
+
+const emptyForm = (): MatchFormState => {
+  const { date, time } = defaultKickoffParts();
+  return {
+    homeTeam: "",
+    awayTeam: "",
+    league: "",
+    sport: "football",
+    kickoffDate: date,
+    kickoffTime: time,
+    matchDurationMinutes: "90",
+    autoStart: true,
+    matchStatus: "upcoming",
+    isFeatured: false,
+    isSimulated: false,
+    bettingSuspended: false,
+    oddsHome: "1.85",
+    oddsDraw: "3.40",
+    oddsAway: "4.20",
+    oddsOver: "1.90",
+    oddsUnder: "1.90",
+    overUnderLine: "2.5",
+    oddsBttsYes: "1.75",
+    oddsBttsNo: "2.05",
+    homeScore: "0",
+    awayScore: "0",
+    liveMinute: "0",
+  };
+};
+
+function combineKickoff(date: string, time: string): string {
+  return new Date(`${date}T${time}`).toISOString();
+}
+
+function splitKickoff(iso: string): { date: string; time: string } {
+  const start = new Date(iso);
+  const local = new Date(start.getTime() - start.getTimezoneOffset() * 60000);
+  return {
+    date: local.toISOString().slice(0, 10),
+    time: local.toISOString().slice(11, 16),
+  };
+}
 
 function formFromMatch(match: MatchApi): MatchFormState {
-  const start = new Date(match.startTime);
-  const local = new Date(start.getTime() - start.getTimezoneOffset() * 60000)
-    .toISOString()
-    .slice(0, 16);
+  const kickoff = splitKickoff(match.startTime);
 
   return {
     homeTeam: match.homeTeam.name,
     awayTeam: match.awayTeam.name,
     league: match.league,
     sport: match.sport,
-    startTime: local,
+    kickoffDate: kickoff.date,
+    kickoffTime: kickoff.time,
+    matchDurationMinutes: String(match.matchDurationMinutes ?? 90),
+    autoStart: match.autoStart !== false,
     matchStatus: match.matchStatus,
     isFeatured: match.isFeatured,
     isSimulated: match.isSimulated,
@@ -110,14 +141,17 @@ function formToPayload(
   form: MatchFormState,
   correctScoreOdds: Record<string, string>,
   doubleChanceOdds: Record<string, string>
-) {
-  return {
+): AdminMatchInput {
+  const duration = Math.min(120, Math.max(1, Number(form.matchDurationMinutes) || 90));
+  const payload: AdminMatchInput = {
     homeTeam: form.homeTeam.trim(),
     awayTeam: form.awayTeam.trim(),
     league: form.league.trim(),
     sport: form.sport,
-    startTime: new Date(form.startTime).toISOString(),
+    startTime: combineKickoff(form.kickoffDate, form.kickoffTime),
     matchStatus: form.matchStatus,
+    matchDurationMinutes: duration,
+    autoStart: form.autoStart,
     isFeatured: form.isFeatured,
     isSimulated: form.isSimulated,
     bettingSuspended: form.bettingSuspended,
@@ -129,17 +163,22 @@ function formToPayload(
     overUnderLine: Number(form.overUnderLine),
     oddsBttsYes: form.oddsBttsYes ? Number(form.oddsBttsYes) : null,
     oddsBttsNo: form.oddsBttsNo ? Number(form.oddsBttsNo) : null,
-    homeScore: Number(form.homeScore),
-    awayScore: Number(form.awayScore),
-    liveMinute: Number(form.liveMinute),
     ...oddsRecordFromStrings(correctScoreOdds, doubleChanceOdds),
   };
+
+  if (form.matchStatus === "live" || form.matchStatus === "finished") {
+    payload.homeScore = Number(form.homeScore);
+    payload.awayScore = Number(form.awayScore);
+    payload.liveMinute = Number(form.liveMinute);
+  }
+
+  return payload;
 }
 
 function statusBadge(status: MatchStatus) {
   if (status === "live") return <Badge variant="live">Live</Badge>;
   if (status === "finished") return <Badge variant="default">Finished</Badge>;
-  return <Badge variant="warning">Upcoming</Badge>;
+  return <Badge variant="warning">Scheduled</Badge>;
 }
 
 export function AdminMatchesSection() {
@@ -175,6 +214,8 @@ export function AdminMatchesSection() {
 
   useEffect(() => {
     load();
+    const interval = setInterval(load, 30_000);
+    return () => clearInterval(interval);
   }, [load]);
 
   const openCreate = (simulated = false) => {
@@ -221,6 +262,12 @@ export function AdminMatchesSection() {
     }
     if (Number.isNaN(Number(form.oddsAway)) || Number(form.oddsAway) <= 1) {
       toast.error("Away odds must be greater than 1.00");
+      return;
+    }
+
+    const kickoffIso = combineKickoff(form.kickoffDate, form.kickoffTime);
+    if (Number.isNaN(new Date(kickoffIso).getTime())) {
+      toast.error("Kickoff date and time are invalid");
       return;
     }
 
@@ -386,11 +433,36 @@ export function AdminMatchesSection() {
               </select>
             </label>
             <Input
-              label="Kickoff Date & Time"
-              type="datetime-local"
-              value={form.startTime}
-              onChange={(e) => setField("startTime", e.target.value)}
+              label="Kickoff Date"
+              type="date"
+              value={form.kickoffDate}
+              onChange={(e) => setField("kickoffDate", e.target.value)}
             />
+            <Input
+              label="Kickoff Time"
+              type="time"
+              value={form.kickoffTime}
+              onChange={(e) => setField("kickoffTime", e.target.value)}
+            />
+            <Input
+              label="Match Duration (minutes)"
+              type="number"
+              min={1}
+              max={120}
+              value={form.matchDurationMinutes}
+              onChange={(e) => setField("matchDurationMinutes", e.target.value)}
+            />
+            <label className="block space-y-1.5">
+              <span className="text-xs font-medium text-bestbet-gray-muted">Auto Start</span>
+              <select
+                value={form.autoStart ? "on" : "off"}
+                onChange={(e) => setField("autoStart", e.target.value === "on")}
+                className="w-full rounded-lg bg-bestbet-gray/80 border border-bestbet-yellow/10 px-3 py-2.5 text-sm outline-none focus:border-bestbet-yellow/40"
+              >
+                <option value="on">ON — start automatically at kickoff</option>
+                <option value="off">OFF — manual start only</option>
+              </select>
+            </label>
             <label className="block space-y-1.5">
               <span className="text-xs font-medium text-bestbet-gray-muted">Match Status</span>
               <select
@@ -398,12 +470,17 @@ export function AdminMatchesSection() {
                 onChange={(e) => setField("matchStatus", e.target.value as MatchStatus)}
                 className="w-full rounded-lg bg-bestbet-gray/80 border border-bestbet-yellow/10 px-3 py-2.5 text-sm outline-none focus:border-bestbet-yellow/40"
               >
-                <option value="upcoming">Upcoming</option>
-                <option value="live">Live</option>
+                <option value="upcoming">Scheduled (auto-starts at kickoff)</option>
+                <option value="live">Live now</option>
                 <option value="finished">Finished</option>
               </select>
             </label>
           </div>
+
+          <p className="text-xs text-bestbet-gray-muted -mt-2">
+            Scheduled matches go Live automatically when kickoff time is reached (server checks every 30 seconds).
+            Simulated matches use the score engine after kickoff; real API fixtures follow API-Football status.
+          </p>
 
           <AdminMatchMarketsEditor
             marketTab={marketTab}
@@ -519,6 +596,8 @@ export function AdminMatchesSection() {
                   <p className="text-xs text-bestbet-gray-muted mt-1">
                     {match.league} · {match.sport} · {formatMatchDate(new Date(match.startTime))}{" "}
                     {formatMatchTime(new Date(match.startTime))}
+                    {match.matchDurationMinutes ? ` · ${match.matchDurationMinutes} min` : ""}
+                    {match.autoStart !== false ? " · Auto-start ON" : " · Manual start"}
                   </p>
                   {match.matchStatus === "live" && (
                     <p className="text-sm font-bold text-bestbet-yellow mt-1 tabular-nums">
