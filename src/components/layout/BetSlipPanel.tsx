@@ -28,6 +28,12 @@ import { cn } from "@/lib/utils";
 
 import { betsApi, ApiError } from "@/lib/api";
 
+import {
+  BookingCodeShareModal,
+  buildShareDataFromRecord,
+} from "@/components/booking/BookingCodeShareModal";
+import { deriveBetSlipName, type BookingShareData } from "@/lib/booking-share";
+
 
 
 interface BetSlipPanelProps {
@@ -60,6 +66,10 @@ function useBetSlipActions() {
 
   const [codeInput, setCodeInput] = useState("");
 
+  const [showShareModal, setShowShareModal] = useState(false);
+
+  const [shareData, setShareData] = useState<BookingShareData | null>(null);
+
 
 
   const {
@@ -73,6 +83,10 @@ function useBetSlipActions() {
     bookingCode,
 
     savedBookingCode,
+
+    totalOdds,
+
+    potentialWin,
 
     clearSelections,
 
@@ -184,6 +198,10 @@ function useBetSlipActions() {
 
       loadFromCode(record.code, { selections, stake: record.stake, betType: record.betType });
 
+      setShareData(buildShareDataFromRecord(record, selections));
+
+      setShowShareModal(true);
+
       navigator.clipboard.writeText(record.code);
 
       setCopied(true);
@@ -254,6 +272,44 @@ function useBetSlipActions() {
 
 
 
+  const handleOpenShareCard = () => {
+
+    if (!bookingCode || selections.length === 0) return;
+
+    setShareData({
+
+      code: bookingCode,
+
+      name: deriveBetSlipName(selections.length),
+
+      stake,
+
+      totalOdds,
+
+      potentialWin,
+
+      selections,
+
+      createdAt: new Date().toISOString(),
+
+      status: "active",
+
+    });
+
+    setShowShareModal(true);
+
+  };
+
+
+
+  const handleCloseShareCard = () => {
+
+    setShowShareModal(false);
+
+  };
+
+
+
   return {
 
     betError,
@@ -281,6 +337,14 @@ function useBetSlipActions() {
     handleCopyCode,
 
     handleLoadCode,
+
+    handleOpenShareCard,
+
+    handleCloseShareCard,
+
+    showShareModal,
+
+    shareData,
 
     bookingCode,
 
@@ -545,6 +609,8 @@ function BetSlipFormFields({
 
   onLoadCode,
 
+  onShareCode,
+
   bookingCode,
 
 }: {
@@ -568,6 +634,8 @@ function BetSlipFormFields({
   setCodeInput: (v: string) => void;
 
   onLoadCode: () => void;
+
+  onShareCode: () => void;
 
   bookingCode: string;
 
@@ -731,7 +799,7 @@ function BetSlipFormFields({
 
               </button>
 
-              <button type="button" className="p-2 hover:bg-[var(--card-hover)] rounded-lg shrink-0" aria-label="Share code">
+              <button type="button" onClick={onShareCode} className="p-2 hover:bg-[var(--card-hover)] rounded-lg shrink-0" aria-label="Share code">
 
                 <Share2 size={16} />
 
@@ -941,13 +1009,11 @@ function MobileCollapsedBar() {
 
 
 
-function MobileBetSlipDrawer() {
+function MobileBetSlipDrawer({ actions }: { actions: ReturnType<typeof useBetSlipActions> }) {
 
   const { isOpen, setIsOpen, selections } = useBetSlip();
 
   const dragY = useMotionValue(0);
-
-  const actions = useBetSlipActions();
 
 
 
@@ -1033,6 +1099,8 @@ function MobileBetSlipDrawer() {
 
               onLoadCode={actions.handleLoadCode}
 
+              onShareCode={actions.handleOpenShareCard}
+
               bookingCode={actions.bookingCode}
 
             />
@@ -1061,9 +1129,13 @@ function MobileBetSlipDrawer() {
 
 
 
-function DesktopBetSlipPanel({ className }: { className?: string }) {
-
-  const actions = useBetSlipActions();
+function DesktopBetSlipPanel({
+  className,
+  actions,
+}: {
+  className?: string;
+  actions: ReturnType<typeof useBetSlipActions>;
+}) {
 
   const { selections } = useBetSlip();
 
@@ -1117,6 +1189,8 @@ function DesktopBetSlipPanel({ className }: { className?: string }) {
 
             onLoadCode={actions.handleLoadCode}
 
+            onShareCode={actions.handleOpenShareCard}
+
             bookingCode={actions.bookingCode}
 
           />
@@ -1145,6 +1219,16 @@ function DesktopBetSlipPanel({ className }: { className?: string }) {
 
 export function BetSlipPanel({ className, floating = false }: BetSlipPanelProps) {
 
+  const actions = useBetSlipActions();
+
+  const shareModal = (
+    <BookingCodeShareModal
+      open={actions.showShareModal}
+      data={actions.shareData}
+      onClose={actions.handleCloseShareCard}
+    />
+  );
+
   if (floating) {
 
     return (
@@ -1153,7 +1237,9 @@ export function BetSlipPanel({ className, floating = false }: BetSlipPanelProps)
 
         <MobileCollapsedBar />
 
-        <MobileBetSlipDrawer />
+        <MobileBetSlipDrawer actions={actions} />
+
+        {shareModal}
 
       </>
 
@@ -1163,7 +1249,17 @@ export function BetSlipPanel({ className, floating = false }: BetSlipPanelProps)
 
 
 
-  return <DesktopBetSlipPanel className={className} />;
+  return (
+
+    <>
+
+      <DesktopBetSlipPanel className={className} actions={actions} />
+
+      {shareModal}
+
+    </>
+
+  );
 
 }
 

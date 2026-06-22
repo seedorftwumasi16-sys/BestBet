@@ -943,3 +943,152 @@ body {
     padding: 0.75rem 1rem;
   }
 }
+
+/* Booking code share card */
+.bb-booking-share-card {
+  background: #0a0a0a;
+  border: 1px solid rgba(255, 215, 0, 0.25);
+  border-radius: 20px;
+  box-shadow:
+    0 0 40px rgba(255, 215, 0, 0.08),
+    0 24px 48px rgba(0, 0, 0, 0.55);
+  color: #ffffff;
+}
+
+.bb-booking-share-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.25rem 1rem 1rem;
+  border-bottom: 1px solid rgba(255, 215, 0, 0.15);
+  background: linear-gradient(180deg, rgba(255, 215, 0, 0.06) 0%, transparent 100%);
+}
+
+.bb-booking-share-tagline {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: #ffd700;
+  text-align: center;
+}
+
+.bb-booking-share-body {
+  padding: 1.25rem 1rem 1rem;
+}
+
+.bb-booking-share-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #bdbdbd;
+  text-align: center;
+}
+
+.bb-booking-share-code-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.bb-booking-share-code {
+  font-size: clamp(1.5rem, 6vw, 2rem);
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: #ffd700;
+  text-shadow:
+    0 0 12px rgba(255, 215, 0, 0.55),
+    0 0 28px rgba(255, 193, 7, 0.35);
+  animation: yellow-glow-pulse 2.5s ease-in-out infinite;
+}
+
+.bb-booking-share-copy-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  color: #ffd700;
+  transition: background-color 0.15s ease;
+}
+
+.bb-booking-share-copy-btn:hover {
+  background: rgba(255, 215, 0, 0.1);
+}
+
+.bb-booking-share-name {
+  margin-top: 1rem;
+  text-align: center;
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.bb-booking-share-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding: 0.875rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.bb-booking-share-summary div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.bb-booking-share-summary dt {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #bdbdbd;
+}
+
+.bb-booking-share-summary dd {
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.bb-booking-share-selections {
+  margin-top: 1.25rem;
+}
+
+.bb-booking-share-selections-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #bdbdbd;
+  margin-bottom: 0.65rem;
+}
+
+.bb-booking-share-selection-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  padding: 0.5rem 0.625rem;
+  border-radius: 8px;
+  background: rgba(255, 215, 0, 0.04);
+  border: 1px solid rgba(255, 215, 0, 0.08);
+}
+
+.bb-booking-share-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  border-top: 1px solid rgba(255, 215, 0, 0.12);
+  background: rgba(0, 0, 0, 0.35);
+  font-size: 0.75rem;
+}

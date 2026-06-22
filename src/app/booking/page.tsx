@@ -1,40 +1,85 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { BookingCodeShareModal } from "@/components/booking/BookingCodeShareModal";
 import { useBetSlip } from "@/context/BetSlipContext";
 import { useAuth } from "@/context/AuthContext";
 import { betsApi } from "@/lib/api";
 import type { BetSelection } from "@/lib/constants";
+import { deriveBetSlipName, type BookingShareData } from "@/lib/booking-share";
 import { formatCurrency, formatOdds } from "@/lib/utils";
-import { Ticket, Search, ChevronRight } from "lucide-react";
+import { Ticket, Search, ChevronRight, Share2 } from "lucide-react";
 import { useToast } from "@/context/ToastContext";
 
 export default function BookingPage() {
   const toast = useToast();
+  const searchParams = useSearchParams();
   const { isLoggedIn, refreshUser } = useAuth();
-  const { loadFromCode, selections, stake, betType, totalOdds, potentialWin, savedBookingCode, setIsOpen } = useBetSlip();
+  const {
+    loadFromCode,
+    selections,
+    stake,
+    betType,
+    totalOdds,
+    potentialWin,
+    savedBookingCode,
+    setIsOpen,
+  } = useBetSlip();
   const [code, setCode] = useState("");
-  const [loadedMeta, setLoadedMeta] = useState<{ expiresAt?: string; status?: string } | null>(null);
+  const [loadedMeta, setLoadedMeta] = useState<{ expiresAt?: string; status?: string; createdAt?: string } | null>(
+    null
+  );
   const [placing, setPlacing] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareData, setShareData] = useState<BookingShareData | null>(null);
 
-  const handleLoad = async () => {
-    if (!code.trim()) return;
-    try {
-      const result = await betsApi.loadBookingCode(code.trim());
-      loadFromCode(result.code, {
-        ...result.payload,
-        selections: result.payload.selections as BetSelection[],
-      });
-      setLoadedMeta({ expiresAt: result.expiresAt, status: result.status });
-      toast.success(`Loaded ${result.payload.selections.length} selection(s)`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Booking code not found");
-    }
-  };
+  const handleLoad = useCallback(
+    async (rawCode?: string) => {
+      const trimmed = (rawCode ?? code).trim();
+      if (!trimmed) return;
+      try {
+        const result = await betsApi.loadBookingCode(trimmed);
+        loadFromCode(result.code, {
+          ...result.payload,
+          selections: result.payload.selections as BetSelection[],
+        });
+        setCode(result.code);
+        setLoadedMeta({
+          expiresAt: result.expiresAt,
+          status: result.status,
+          createdAt: result.createdAt,
+        });
+        setShareData({
+          code: result.code,
+          name: deriveBetSlipName(result.payload.selections.length, result.createdAt),
+          stake: result.payload.stake,
+          totalOdds: result.payload.totalOdds,
+          potentialWin: result.payload.potentialWin,
+          selections: result.payload.selections as BetSelection[],
+          createdAt: result.createdAt ?? new Date().toISOString(),
+          status: result.status ?? "active",
+        });
+        toast.success(`Loaded ${result.payload.selections.length} selection(s)`);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Booking code not found");
+      }
+    },
+    [code, loadFromCode, toast]
+  );
+
+  useEffect(() => {
+    const queryCode = searchParams.get("code")?.trim();
+    if (!queryCode) return;
+    setCode(queryCode.toUpperCase());
+    void handleLoad(queryCode);
+    // Only react to URL code changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const handlePlace = async () => {
     if (!isLoggedIn || selections.length === 0) return;
@@ -78,20 +123,31 @@ export default function BookingPage() {
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             icon={<Ticket size={18} />}
           />
-          <Button variant="primary" className="w-full" onClick={handleLoad}>
+          <Button variant="primary" className="w-full" onClick={() => void handleLoad()}>
             <Search size={16} className="mr-1" /> Load Bet Slip
           </Button>
         </div>
 
         {selections.length > 0 && (
           <div className="card-premium p-4 space-y-4 border border-bestbet-yellow/20">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <h2 className="font-bold text-bestbet-yellow">Loaded Slip</h2>
-              {loadedMeta?.expiresAt && (
-                <span className="text-[10px] text-bestbet-gray-muted">
-                  Expires {new Date(loadedMeta.expiresAt).toLocaleDateString()}
-                </span>
-              )}
+              <div className="flex items-center gap-2 shrink-0">
+                {loadedMeta?.expiresAt && (
+                  <span className="text-[10px] text-bestbet-gray-muted">
+                    Expires {new Date(loadedMeta.expiresAt).toLocaleDateString()}
+                  </span>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-bestbet-yellow"
+                  onClick={() => setShowShareModal(true)}
+                >
+                  <Share2 size={14} className="mr-1" />
+                  Share
+                </Button>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -140,6 +196,12 @@ export default function BookingPage() {
           </div>
         )}
       </div>
+
+      <BookingCodeShareModal
+        open={showShareModal}
+        data={shareData}
+        onClose={() => setShowShareModal(false)}
+      />
     </MainLayout>
   );
 }
