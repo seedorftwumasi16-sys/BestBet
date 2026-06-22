@@ -6,6 +6,8 @@ import { createNotification } from "../services/notifications";
 import { getUserWithWallet } from "../db/helpers";
 import { canChangeUserStatus } from "../lib/super-admin";
 import { formatCurrency } from "../lib/currency";
+import { isValidPlatformResetConfirmation, resetPlatformData } from "../lib/platform-reset";
+import { cacheInvalidatePrefix } from "../services/redis";
 import adminMatchesRoutes from "./admin/matches";
 import adminAdminsRoutes from "./admin/admins";
 import adminBookingCodesRoutes from "./admin/booking-codes";
@@ -208,6 +210,43 @@ router.post("/notifications/broadcast", authenticate, requireRole("super_admin")
   }
   await logAudit(req.user!.id, "broadcast_notification", title);
   res.json({ message: "Notification broadcast", count: users.rows.length });
+});
+
+router.post("/platform/reset", authenticate, requireRole("super_admin"), async (req, res) => {
+  const { confirmText } = req.body ?? {};
+  if (!isValidPlatformResetConfirmation(confirmText)) {
+    return res.status(400).json({
+      error: `Confirmation required. Type "${"RESET PLATFORM"}" exactly to proceed.`,
+    });
+  }
+
+  try {
+    const db = await getDb();
+    const result = await resetPlatformData(db);
+    await cacheInvalidatePrefix("matches:");
+
+    try {
+      await logAudit(
+        req.user!.id,
+        "platform_reset",
+        `Platform reset completed. Backup: ${result.backupPath}. Admin: ${result.adminUserId}`
+      );
+    } catch (auditErr) {
+      console.warn("[admin/platform/reset] Audit log failed after reset:", auditErr);
+    }
+
+    res.json({
+      message: "Platform reset completed successfully",
+      backupPath: result.backupPath,
+      adminUserId: result.adminUserId,
+      clearedTables: result.clearedTables,
+    });
+  } catch (err) {
+    console.error("[admin/platform/reset]", err);
+    res.status(500).json({
+      error: err instanceof Error ? err.message : "Platform reset failed",
+    });
+  }
 });
 
 export default router;

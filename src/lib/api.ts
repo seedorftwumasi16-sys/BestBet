@@ -253,6 +253,14 @@ export const adminApi = {
   },
   deleteBookingCode: (id: string) =>
     api<{ message: string }>(`/api/admin/booking-codes/${id}`, { method: "DELETE" }),
+  resetPlatform: (confirmText: string) =>
+    api<{ message: string; backupPath: string; adminUserId: string; clearedTables?: string[] }>(
+      "/api/admin/platform/reset",
+      {
+        method: "POST",
+        body: JSON.stringify({ confirmText }),
+      }
+    ),
 };
 
 export const contentApi = {

@@ -11,6 +11,7 @@ import { normalizeAdminStats } from "@/lib/admin-utils";
 import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
 import { KeyRound, RefreshCw, Smartphone, User } from "lucide-react";
+import { AdminPlatformReset } from "@/components/admin/AdminPlatformReset";
 
 export function AdminUsersSection() {
   const toast = useToast();
@@ -336,7 +337,7 @@ export function AdminVirtualSection() {
   );
 }
 
-export function AdminSettingsSection() {
+export function AdminSettingsSection({ onPlatformReset }: { onPlatformReset?: () => void } = {}) {
   const toast = useToast();
   const toastRef = useRef(toast);
   toastRef.current = toast;
@@ -464,6 +465,10 @@ export function AdminSettingsSection() {
           </div>
         ))}
       </div>
+
+      {user?.roleId === "super_admin" && (
+        <AdminPlatformReset onResetComplete={onPlatformReset} />
+      )}
     </div>
   );
 }
@@ -472,14 +477,19 @@ export function useAdminStats() {
   const [stats, setStats] = useState<AdminStatsApi | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
   const [statsError, setStatsError] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const refreshStats = () => setRefreshKey((key) => key + 1);
 
   useEffect(() => {
+    setStatsLoading(true);
+    setStatsError("");
     adminApi
       .getStats()
       .then((data) => setStats(normalizeAdminStats(data)))
       .catch((err) => setStatsError(err instanceof Error ? err.message : "Failed to load stats"))
       .finally(() => setStatsLoading(false));
-  }, []);
+  }, [refreshKey]);
 
-  return { stats, statsLoading, statsError };
+  return { stats, statsLoading, statsError, refreshStats };
 }

@@ -128,7 +128,7 @@ export default function AdminPage() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const { stats, statsLoading, statsError } = useAdminStats();
+  const { stats, statsLoading, statsError, refreshStats } = useAdminStats();
 
 
 
@@ -456,7 +456,7 @@ export default function AdminPage() {
 
           {activeSection === "settings" && (
             <AdminErrorBoundary section="Settings">
-              <AdminSettingsSection />
+              <AdminSettingsSection onPlatformReset={refreshStats} />
             </AdminErrorBoundary>
           )}
 

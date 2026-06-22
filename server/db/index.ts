@@ -263,7 +263,14 @@ function createJsonDb(filePath: string): Database {
         const table = match?.[1] ?? "";
         ensureTable(table);
 
-        if (sql.includes("balance = balance - ?")) {
+        if (sql.includes("balance = ?, bonus_balance = ?, locked_balance = ?")) {
+          const wallet = store.tables.wallets.find((w) => w.user_id === params[3]);
+          if (wallet) {
+            wallet.balance = params[0];
+            wallet.bonus_balance = params[1];
+            wallet.locked_balance = params[2];
+          }
+        } else if (sql.includes("balance = balance - ?")) {
           const wallet = store.tables.wallets.find((w) => w.user_id === params[1]);
           if (wallet) wallet.balance = Number(wallet.balance) - Number(params[0]);
         } else if (sql.includes("balance = balance + ?")) {
@@ -357,6 +364,15 @@ function createJsonDb(filePath: string): Database {
           );
         } else if (sql.includes("match_id = ?")) {
           store.tables[table] = store.tables[table].filter((r) => r.match_id !== params[0]);
+        } else if (sql.includes("user_id != ?")) {
+          store.tables[table] = store.tables[table].filter((r) => r.user_id === params[0]);
+        } else if (sql.includes("LOWER(email) != ?") || sql.includes("LOWER(email) <> ?")) {
+          const keepEmail = String(params[0]).toLowerCase();
+          store.tables[table] = store.tables[table].filter(
+            (r) => String(r.email || "").toLowerCase() === keepEmail
+          );
+        } else if (!/\bWHERE\b/i.test(sql)) {
+          store.tables[table] = [];
         } else if (sql.includes("id = ?")) {
           store.tables[table] = store.tables[table].filter((r) => r.id !== params[0]);
         }
