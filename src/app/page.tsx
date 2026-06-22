@@ -40,6 +40,8 @@ import {
 
   getSimulatedMatches,
 
+  getTodayMatches,
+
   getUpcomingMatches,
 
 } from "@/lib/fixture-utils";
@@ -342,26 +344,22 @@ export default function HomePage() {
 
   );
 
-  const allLiveCount = useMemo(() => getLiveMatches(matches).length, [matches]);
+  const heroStats = useMemo(() => {
+    const todayMatches = getTodayMatches(realFootball);
+    const oddsPool = [...liveMatches, ...upcomingMatches].slice(0, 16);
+    const featuredOdds =
+      oddsPool.length === 0
+        ? 2.85
+        : Math.round(
+            Math.max(...oddsPool.map((m) => Math.max(m.odds.home, m.odds.away, m.odds.draw ?? 0))) * 100
+          ) / 100;
 
-  const todayFixturesCount = useMemo(() => {
-    const now = new Date();
-    return realFootball.filter((m) => {
-      const start = new Date(m.startTime);
-      return (
-        start.getFullYear() === now.getFullYear() &&
-        start.getMonth() === now.getMonth() &&
-        start.getDate() === now.getDate()
-      );
-    }).length;
-  }, [realFootball]);
-
-  const featuredOdds = useMemo(() => {
-    const pool = [...liveMatches, ...upcomingMatches].slice(0, 16);
-    if (pool.length === 0) return 2.85;
-    const best = Math.max(...pool.map((m) => Math.max(m.odds.home, m.odds.away, m.odds.draw ?? 0)));
-    return Math.round(best * 100) / 100;
-  }, [liveMatches, upcomingMatches]);
+    return {
+      liveMatchCount: liveMatches.length,
+      todayFixturesCount: todayMatches.length,
+      featuredOdds,
+    };
+  }, [liveMatches, realFootball, upcomingMatches]);
 
   const sectionLoading = loading && matches.length === 0;
 
@@ -372,9 +370,9 @@ export default function HomePage() {
     <MainLayout>
 
       <HeroBanner
-        liveMatchCount={allLiveCount}
-        todayFixturesCount={todayFixturesCount}
-        featuredOdds={featuredOdds}
+        liveMatchCount={heroStats.liveMatchCount}
+        todayFixturesCount={heroStats.todayFixturesCount}
+        featuredOdds={heroStats.featuredOdds}
       />
 
       <motion.div

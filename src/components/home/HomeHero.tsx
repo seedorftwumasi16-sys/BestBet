@@ -19,12 +19,12 @@ export interface HomeHeroProps {
 
 function useAnimatedCounter(target: number, durationMs = 1400) {
   const [value, setValue] = useState(0);
-  const started = useRef(false);
+  const valueRef = useRef(0);
 
   useEffect(() => {
-    if (started.current) return;
-    started.current = true;
     const safeTarget = Math.max(0, Math.floor(target));
+    const from = valueRef.current;
+    if (from === safeTarget) return;
 
     const start = performance.now();
     let frame = 0;
@@ -32,8 +32,15 @@ function useAnimatedCounter(target: number, durationMs = 1400) {
     const tick = (now: number) => {
       const progress = Math.min(1, (now - start) / durationMs);
       const eased = 1 - Math.pow(1 - progress, 3);
-      setValue(Math.round(safeTarget * eased));
-      if (progress < 1) frame = requestAnimationFrame(tick);
+      const next = Math.round(from + (safeTarget - from) * eased);
+      valueRef.current = next;
+      setValue(next);
+      if (progress < 1) {
+        frame = requestAnimationFrame(tick);
+      } else {
+        valueRef.current = safeTarget;
+        setValue(safeTarget);
+      }
     };
 
     frame = requestAnimationFrame(tick);
@@ -45,16 +52,12 @@ function useAnimatedCounter(target: number, durationMs = 1400) {
 
 function useAnimatedDecimal(target: number, durationMs = 1400) {
   const [value, setValue] = useState(0);
-  const started = useRef(false);
+  const valueRef = useRef(0);
 
   useEffect(() => {
-    if (started.current) return;
-    started.current = true;
     const safeTarget = Math.max(0, Number(target) || 0);
-    if (safeTarget === 0) {
-      setValue(0);
-      return;
-    }
+    const from = valueRef.current;
+    if (from === safeTarget) return;
 
     const start = performance.now();
     let frame = 0;
@@ -62,8 +65,15 @@ function useAnimatedDecimal(target: number, durationMs = 1400) {
     const tick = (now: number) => {
       const progress = Math.min(1, (now - start) / durationMs);
       const eased = 1 - Math.pow(1 - progress, 3);
-      setValue(Math.round(safeTarget * eased * 100) / 100);
-      if (progress < 1) frame = requestAnimationFrame(tick);
+      const next = Math.round((from + (safeTarget - from) * eased) * 100) / 100;
+      valueRef.current = next;
+      setValue(next);
+      if (progress < 1) {
+        frame = requestAnimationFrame(tick);
+      } else {
+        valueRef.current = safeTarget;
+        setValue(safeTarget);
+      }
     };
 
     frame = requestAnimationFrame(tick);

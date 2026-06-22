@@ -13,11 +13,22 @@ import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "bestbet-floating-booking-pos";
 const DEFAULT_POSITION = { x: 91, y: 62 };
-const DRAG_THRESHOLD_PX = 8;
+const DRAG_THRESHOLD_PX = 10;
 
 interface StoredPosition {
   x: number;
   y: number;
+}
+
+interface GestureState {
+  active: boolean;
+  dragging: boolean;
+  suppressTap: boolean;
+  inputKind: "none" | "touch" | "mouse";
+  startX: number;
+  startY: number;
+  originX: number;
+  originY: number;
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -67,18 +78,28 @@ export function FloatingBookingCode() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const dragState = useRef({
-    pointerId: -1,
+  const fabRef = useRef<HTMLButtonElement>(null);
+  const positionRef = useRef<StoredPosition>(DEFAULT_POSITION);
+  const gestureRef = useRef<GestureState>({
+    active: false,
+    dragging: false,
+    suppressTap: false,
+    inputKind: "none",
     startX: 0,
     startY: 0,
     originX: 0,
     originY: 0,
-    moved: false,
   });
 
   useEffect(() => {
+    positionRef.current = position;
+  }, [position]);
+
+  useEffect(() => {
     setMounted(true);
-    setPosition(readStoredPosition());
+    const stored = readStoredPosition();
+    setPosition(stored);
+    positionRef.current = stored;
   }, []);
 
   useEffect(() => {
@@ -89,6 +110,111 @@ export function FloatingBookingCode() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open]);
+
+  const openModal = useCallback(() => {
+    setError("");
+    setOpen(true);
+  }, []);
+
+  const beginGesture = useCallback((clientX: number, clientY: number, kind: "touch" | "mouse") => {
+    gestureRef.current = {
+      active: true,
+      dragging: false,
+      suppressTap: false,
+      inputKind: kind,
+      startX: clientX,
+      startY: clientY,
+      originX: positionRef.current.x,
+      originY: positionRef.current.y,
+    };
+  }, []);
+
+  const moveGesture = useCallback((clientX: number, clientY: number): boolean => {
+    const gesture = gestureRef.current;
+    if (!gesture.active) return false;
+
+    const dx = clientX - gesture.startX;
+    const dy = clientY - gesture.startY;
+
+    if (!gesture.dragging) {
+      if (Math.hypot(dx, dy) <= DRAG_THRESHOLD_PX) return false;
+      gesture.dragging = true;
+      setIsDragging(true);
+    }
+
+    const viewportW = window.innerWidth;
+    const viewportH = window.innerHeight;
+    const originLeft = (gesture.originX / 100) * viewportW;
+    const originTop = (gesture.originY / 100) * viewportH;
+
+    const next = {
+      x: clamp(((originLeft + dx) / viewportW) * 100, 6, 94),
+      y: clamp(((originTop + dy) / viewportH) * 100, 8, 86),
+    };
+    positionRef.current = next;
+    setPosition(next);
+    return true;
+  }, []);
+
+  const endGesture = useCallback(() => {
+    const gesture = gestureRef.current;
+    if (!gesture.active) return;
+
+    if (gesture.dragging) {
+      persistPosition(positionRef.current);
+      gesture.suppressTap = true;
+      window.setTimeout(() => {
+        gestureRef.current.suppressTap = false;
+      }, 400);
+    } else if (gesture.inputKind === "touch") {
+      openModal();
+      gesture.suppressTap = true;
+      window.setTimeout(() => {
+        gestureRef.current.suppressTap = false;
+      }, 400);
+    }
+
+    gesture.active = false;
+    gesture.dragging = false;
+    gesture.inputKind = "none";
+    setIsDragging(false);
+  }, [openModal]);
+
+  useEffect(() => {
+    const el = fabRef.current;
+    if (!el || !mounted) return;
+
+    const onTouchStart = (event: TouchEvent) => {
+      if (event.touches.length !== 1) return;
+      if (gestureRef.current.inputKind === "mouse") return;
+      beginGesture(event.touches[0].clientX, event.touches[0].clientY, "touch");
+    };
+
+    const onTouchMove = (event: TouchEvent) => {
+      if (gestureRef.current.inputKind !== "touch" || !gestureRef.current.active) return;
+      const touch = event.touches[0];
+      if (!touch) return;
+      const dragging = moveGesture(touch.clientX, touch.clientY);
+      if (dragging) event.preventDefault();
+    };
+
+    const onTouchEnd = () => {
+      if (gestureRef.current.inputKind !== "touch") return;
+      endGesture();
+    };
+
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd, { passive: true });
+    el.addEventListener("touchcancel", onTouchEnd, { passive: true });
+
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+      el.removeEventListener("touchcancel", onTouchEnd);
+    };
+  }, [mounted, beginGesture, moveGesture, endGesture]);
 
   const showBadge = selections.length > 0 && Boolean(savedBookingCode);
 
@@ -120,64 +246,27 @@ export function FloatingBookingCode() {
 
   const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
     if (event.button !== 0) return;
-    event.currentTarget.setPointerCapture(event.pointerId);
-    dragState.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      originX: position.x,
-      originY: position.y,
-      moved: false,
-    };
-    setIsDragging(true);
+    if (event.pointerType === "touch") return;
+    beginGesture(event.clientX, event.clientY, "mouse");
   };
 
   const handlePointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
-    if (dragState.current.pointerId !== event.pointerId) return;
-
-    const dx = event.clientX - dragState.current.startX;
-    const dy = event.clientY - dragState.current.startY;
-
-    if (!dragState.current.moved && Math.hypot(dx, dy) > DRAG_THRESHOLD_PX) {
-      dragState.current.moved = true;
-    }
-
-    if (!dragState.current.moved) return;
-
-    const viewportW = window.innerWidth;
-    const viewportH = window.innerHeight;
-    const originLeft = (dragState.current.originX / 100) * viewportW;
-    const originTop = (dragState.current.originY / 100) * viewportH;
-
-    setPosition({
-      x: clamp(((originLeft + dx) / viewportW) * 100, 6, 94),
-      y: clamp(((originTop + dy) / viewportH) * 100, 8, 86),
-    });
+    if (gestureRef.current.inputKind !== "mouse" || !gestureRef.current.active) return;
+    moveGesture(event.clientX, event.clientY);
   };
 
-  const finishPointer = (event: React.PointerEvent<HTMLButtonElement>) => {
-    if (dragState.current.pointerId !== event.pointerId) return;
+  const handlePointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (gestureRef.current.inputKind !== "mouse") return;
+    if (event.button !== 0) return;
+    endGesture();
+  };
 
-    try {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    } catch {
-      /* ignore */
-    }
-
-    const moved = dragState.current.moved;
-    dragState.current.pointerId = -1;
-    setIsDragging(false);
-
-    if (moved) {
-      setPosition((current) => {
-        persistPosition(current);
-        return current;
-      });
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    if (gestureRef.current.suppressTap || gestureRef.current.dragging) {
+      event.preventDefault();
       return;
     }
-
-    setError("");
-    setOpen(true);
+    openModal();
   };
 
   if (!mounted) return null;
@@ -185,9 +274,10 @@ export function FloatingBookingCode() {
   return (
     <>
       <button
+        ref={fabRef}
         type="button"
         className={cn(
-          "bb-floating-booking-fab fixed z-[52] touch-none select-none",
+          "bb-floating-booking-fab fixed z-[52] select-none touch-manipulation",
           isDragging && "bb-floating-booking-fab--dragging"
         )}
         style={{
@@ -197,16 +287,17 @@ export function FloatingBookingCode() {
         aria-label="Load bet using booking code"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
-        onPointerUp={finishPointer}
-        onPointerCancel={finishPointer}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onClick={handleClick}
       >
         {showBadge && (
           <span className="bb-floating-booking-badge" aria-hidden="true">
             {selections.length > 9 ? "9+" : selections.length}
           </span>
         )}
-        <Ticket size={18} strokeWidth={2.5} className="shrink-0" aria-hidden="true" />
-        <span className="text-[9px] font-extrabold leading-none tracking-wide">Code</span>
+        <Ticket size={18} strokeWidth={2.5} className="shrink-0 pointer-events-none" aria-hidden="true" />
+        <span className="text-[9px] font-extrabold leading-none tracking-wide pointer-events-none">Code</span>
       </button>
 
       <AnimatePresence>
