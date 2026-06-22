@@ -4,6 +4,7 @@ import { SportsSidebar } from "@/components/layout/SportsSidebar";
 import { BetSlipPanel, FloatingBetSlipButton } from "@/components/layout/BetSlipPanel";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { MobileMainPadding } from "@/components/layout/MobileMainPadding";
+import { FloatingBookingCode } from "@/components/booking/FloatingBookingCode";
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -17,6 +18,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       <Footer />
       <BetSlipPanel floating />
       <FloatingBetSlipButton />
+      <FloatingBookingCode />
       <MobileBottomNav />
     </div>
   );

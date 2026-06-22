@@ -1092,3 +1092,85 @@ body {
   background: rgba(0, 0, 0, 0.35);
   font-size: 0.75rem;
 }
+
+/* Floating booking code widget */
+.bb-floating-booking-fab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.125rem;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 9999px;
+  color: #ffd000;
+  background: linear-gradient(145deg, rgba(26, 26, 26, 0.96), rgba(10, 10, 10, 0.98));
+  border: 1px solid rgba(255, 208, 0, 0.35);
+  box-shadow:
+    0 0 20px rgba(255, 208, 0, 0.28),
+    0 8px 24px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  cursor: grab;
+  transform: translate(-50%, -50%);
+}
+
+.bb-floating-booking-fab:hover {
+  box-shadow:
+    0 0 28px rgba(255, 208, 0, 0.42),
+    0 10px 28px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.bb-floating-booking-fab:active {
+  transform: translate(-50%, -50%) scale(0.96);
+}
+
+.bb-floating-booking-fab--dragging {
+  cursor: grabbing;
+  transform: translate(-50%, -50%) scale(1.04);
+  box-shadow:
+    0 0 36px rgba(255, 208, 0, 0.5),
+    0 12px 32px rgba(0, 0, 0, 0.65);
+}
+
+.bb-floating-booking-badge {
+  position: absolute;
+  top: -0.125rem;
+  right: -0.125rem;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  padding: 0 0.25rem;
+  border-radius: 9999px;
+  background: #ffd000;
+  color: #0a0a0a;
+  font-size: 0.625rem;
+  font-weight: 800;
+  line-height: 1.125rem;
+  text-align: center;
+  box-shadow: 0 0 10px rgba(255, 208, 0, 0.65);
+}
+
+.bb-floating-booking-sheet {
+  padding: 1.25rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  border-radius: 1.25rem 1.25rem 0 0;
+  background: rgba(10, 10, 10, 0.82);
+  border: 1px solid rgba(255, 208, 0, 0.18);
+  border-bottom: none;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow:
+    0 -8px 40px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.04),
+    inset 0 1px 0 rgba(255, 208, 0, 0.08);
+}
+
+@media (min-width: 640px) {
+  .bb-floating-booking-sheet {
+    padding: 1.5rem;
+    border-radius: 1.25rem;
+    border-bottom: 1px solid rgba(255, 208, 0, 0.18);
+  }
+}
