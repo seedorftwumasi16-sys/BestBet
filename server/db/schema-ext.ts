@@ -162,12 +162,25 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS role_id TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT;
+`;
+
+export const PG_ADMINS_TABLE_SQL = `
+CREATE TABLE IF NOT EXISTS admins (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL UNIQUE,
+  role TEXT NOT NULL DEFAULT 'sub_admin',
+  status TEXT NOT NULL DEFAULT 'active',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 `;
 
 export const PG_ROLE_ID_BACKFILL_SQL = `
 UPDATE users SET role_id = role WHERE role_id IS NULL AND role IS NOT NULL;
 UPDATE users SET password_hash = password WHERE password_hash IS NULL AND password IS NOT NULL;
 UPDATE users SET name = username WHERE name IS NULL AND username IS NOT NULL;
+UPDATE users SET username = COALESCE(username, NULLIF(split_part(email, '@', 1), ''), 'superadmin') WHERE username IS NULL;
 UPDATE users SET name = COALESCE(name, NULLIF(split_part(email, '@', 1), ''), 'User') WHERE name IS NULL;
 UPDATE users SET role_id = COALESCE(role_id, 'user') WHERE role_id IS NULL;
 `;

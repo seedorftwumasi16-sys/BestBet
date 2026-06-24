@@ -88,8 +88,8 @@ export async function recreateProtectedSuperAdmin(db: Database): Promise<string>
     );
   } else {
     await db.query(
-      `INSERT INTO users (id, email, password_hash, name, role_id, referral_code, status) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [adminId, email, hash, "Super Admin", "super_admin", "BBADMIN", "active"]
+      `INSERT INTO users (id, email, password_hash, name, role_id, referral_code, status, username) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [adminId, email, hash, "Super Admin", "super_admin", "BBADMIN", "active", "superadmin"]
     );
 
     const wallet = await db.query(`SELECT id FROM wallets WHERE user_id = ?`, [adminId]);

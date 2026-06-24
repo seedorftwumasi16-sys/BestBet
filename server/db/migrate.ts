@@ -5,6 +5,7 @@ import {
   PG_SCHEMA_EXT_SQL,
   USER_COLUMNS_SQL,
   PG_ROLE_ID_BACKFILL_SQL,
+  PG_ADMINS_TABLE_SQL,
   WALLET_COLUMNS_SQL,
   DEPOSIT_COLUMNS_SQL,
   WITHDRAWAL_COLUMNS_SQL,
@@ -56,6 +57,7 @@ export async function migrate(): Promise<{ driver: string }> {
 
   if (db.driver === "postgresql") {
     await runStatements(db, USER_COLUMNS_SQL);
+    await runStatements(db, PG_ADMINS_TABLE_SQL);
     await runStatements(db, PG_ROLE_ID_BACKFILL_SQL);
     await runStatements(db, WALLET_COLUMNS_SQL);
     await runStatements(db, DEPOSIT_COLUMNS_SQL);

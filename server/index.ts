@@ -157,7 +157,11 @@ async function start() {
   try {
     await initRedis();
     await migrate();
-    await seed();
+    try {
+      await seed();
+    } catch (err) {
+      console.warn("[Server] Seed incomplete:", err instanceof Error ? err.message : err);
+    }
 
     server.listen(PORT, "0.0.0.0", () => {
       console.log(`[Server] BestBet API running on port ${PORT}`);

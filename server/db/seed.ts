@@ -117,21 +117,25 @@ export async function seed(): Promise<void> {
     );
   }
 
-  const legacyAdmins = await db.query(
-    `SELECT u.id, u.role_id FROM users u
-     LEFT JOIN admins a ON a.user_id = u.id
-     WHERE u.role_id IN ('super_admin', 'sub_admin') AND a.id IS NULL`
-  );
-  for (const row of legacyAdmins.rows) {
-    await db.query(`INSERT INTO admins (id, user_id, role, status) VALUES (?, ?, ?, ?)`, [
-      uuidv4(),
-      row.id,
-      row.role_id,
-      "active",
-    ]);
-  }
+  try {
+    const legacyAdmins = await db.query(
+      `SELECT u.id, u.role_id FROM users u
+       LEFT JOIN admins a ON a.user_id = u.id
+       WHERE u.role_id IN ('super_admin', 'sub_admin') AND a.id IS NULL`
+    );
+    for (const row of legacyAdmins.rows) {
+      await db.query(`INSERT INTO admins (id, user_id, role, status) VALUES (?, ?, ?, ?)`, [
+        uuidv4(),
+        row.id,
+        row.role_id,
+        "active",
+      ]);
+    }
 
-  await repairProtectedSuperAdmin(db);
+    await repairProtectedSuperAdmin(db);
+  } catch (err) {
+    console.warn("[seed] Admin link seed deferred:", err instanceof Error ? err.message : err);
+  }
 
   console.log(`Seeded admin: ${adminEmail} (password from ADMIN_PASSWORD env or Admin123@ default)`);
 
