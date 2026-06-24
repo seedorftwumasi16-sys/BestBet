@@ -89,7 +89,14 @@ export async function migrate(): Promise<{ driver: string }> {
 
   await cacheInvalidatePrefix("matches:");
 
-  await ensureProtectedSuperAdmin(db);
+  try {
+    await ensureProtectedSuperAdmin(db);
+  } catch (err) {
+    console.warn(
+      "[Migrate] Protected admin bootstrap deferred:",
+      err instanceof Error ? err.message : err
+    );
+  }
 
   return { driver: db.driver };
 }

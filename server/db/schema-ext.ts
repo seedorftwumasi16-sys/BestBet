@@ -153,6 +153,9 @@ export const PG_SCHEMA_EXT_SQL = SCHEMA_EXT_SQL
   .replace(/REAL/g, "DECIMAL(12,2)");
 
 export const USER_COLUMNS_SQL = `
+ALTER TABLE users ADD COLUMN IF NOT EXISTS name TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_verified BOOLEAN DEFAULT FALSE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';
@@ -163,6 +166,9 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS role_id TEXT;
 
 export const PG_ROLE_ID_BACKFILL_SQL = `
 UPDATE users SET role_id = role WHERE role_id IS NULL AND role IS NOT NULL;
+UPDATE users SET password_hash = password WHERE password_hash IS NULL AND password IS NOT NULL;
+UPDATE users SET name = username WHERE name IS NULL AND username IS NOT NULL;
+UPDATE users SET name = COALESCE(name, NULLIF(split_part(email, '@', 1), ''), 'User') WHERE name IS NULL;
 UPDATE users SET role_id = COALESCE(role_id, 'user') WHERE role_id IS NULL;
 `;
 
