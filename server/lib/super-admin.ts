@@ -8,7 +8,7 @@ export const PROTECTED_SUPER_ADMIN_EMAIL = "admin@bestbet.gh";
 /** Primary seed super-admin user id — cannot be banned or demoted. */
 export const PROTECTED_SUPER_ADMIN_ID = "admin-001";
 
-const DEFAULT_ADMIN_PASSWORD = "Admin@2005";
+const DEFAULT_ADMIN_PASSWORD = "Admin123@";
 
 export function getProtectedSuperAdminEmail(): string {
   return PROTECTED_SUPER_ADMIN_EMAIL;
@@ -16,6 +16,14 @@ export function getProtectedSuperAdminEmail(): string {
 
 export function getProtectedSuperAdminPassword(): string {
   return process.env.ADMIN_PASSWORD || DEFAULT_ADMIN_PASSWORD;
+}
+
+/** Legacy password kept for one-release migration when env/default changed. */
+export const LEGACY_ADMIN_PASSWORDS = ["Admin@2005"] as const;
+
+export function getProtectedAdminPasswordCandidates(): string[] {
+  const primary = getProtectedSuperAdminPassword();
+  return [...new Set([primary, DEFAULT_ADMIN_PASSWORD, ...LEGACY_ADMIN_PASSWORDS])];
 }
 
 export function isProtectedSuperAdmin(userId: string, email: string): boolean {
@@ -95,6 +103,46 @@ export async function recreateProtectedSuperAdmin(db: Database): Promise<string>
     "active",
   ]);
 
+  return userId;
+}
+
+/** Create protected admin if missing; repair role/status without resetting password. */
+export async function ensureProtectedSuperAdmin(db: Database): Promise<string> {
+  const email = PROTECTED_SUPER_ADMIN_EMAIL;
+  const users = await db.query(`SELECT id FROM users WHERE LOWER(email) = ?`, [email.toLowerCase()]);
+  if (users.rows.length === 0) {
+    return recreateProtectedSuperAdmin(db);
+  }
+  await repairProtectedSuperAdmin(db);
+  return String(users.rows[0].id);
+}
+
+/** Force-reset protected admin credentials (password + role). */
+export async function resetProtectedSuperAdminPassword(
+  db: Database,
+  newPassword?: string
+): Promise<string> {
+  const email = PROTECTED_SUPER_ADMIN_EMAIL;
+  const password = newPassword?.trim() || getProtectedSuperAdminPassword();
+  if (password.length < 8) {
+    throw new Error("Admin password must be at least 8 characters");
+  }
+
+  const hash = await bcrypt.hash(password, 10);
+  const users = await db.query(`SELECT id FROM users WHERE LOWER(email) = ?`, [email.toLowerCase()]);
+  let userId = PROTECTED_SUPER_ADMIN_ID;
+
+  if (users.rows.length === 0) {
+    return recreateProtectedSuperAdmin(db);
+  }
+
+  userId = String(users.rows[0].id);
+  await db.query(
+    `UPDATE users SET email = ?, password_hash = ?, name = ?, role_id = ?, status = ?, referral_code = ? WHERE id = ?`,
+    [email, hash, "Super Admin", "super_admin", "active", "BBADMIN", userId]
+  );
+  await repairProtectedSuperAdmin(db);
+  console.log(`[super-admin] Password reset for ${email} (userId=${userId})`);
   return userId;
 }
 

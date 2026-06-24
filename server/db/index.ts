@@ -276,7 +276,36 @@ function createJsonDb(filePath: string): Database {
         } else if (sql.includes("balance = balance + ?")) {
           const wallet = store.tables.wallets.find((w) => w.user_id === params[1]);
           if (wallet) wallet.balance = Number(wallet.balance) + Number(params[0]);
-        } else if (sql.includes("password_hash = ?")) {
+        } else if (
+          table === "users" &&
+          sql.includes("email = ?") &&
+          sql.includes("password_hash = ?") &&
+          sql.includes("referral_code = ?")
+        ) {
+          const userId = params[params.length - 1];
+          const user = store.tables.users.find((u) => u.id === userId);
+          if (user) {
+            user.email = params[0];
+            user.password_hash = params[1];
+            user.name = params[2];
+            user.role_id = params[3];
+            user.status = params[4];
+            user.referral_code = params[5];
+          }
+        } else if (table === "users" && sql.includes("status = ?") && sql.includes("role_id = ?")) {
+          const userId = params[params.length - 1];
+          const user = store.tables.users.find((u) => u.id === userId);
+          if (user) {
+            user.status = params[0];
+            user.role_id = params[1];
+          }
+        } else if (table === "admins" && sql.includes("role = ?") && sql.includes("status = ?")) {
+          const admin = store.tables.admins.find((a) => a.user_id === params[params.length - 1]);
+          if (admin) {
+            admin.role = params[0];
+            admin.status = params[1];
+          }
+        } else if (sql.includes("password_hash = ?") && !sql.includes("email = ?")) {
           const user = store.tables.users.find((u) => u.id === params[1]);
           if (user) user.password_hash = params[0];
         } else if (sql.includes("used = 1")) {

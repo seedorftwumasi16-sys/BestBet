@@ -4,7 +4,7 @@ import { getDb } from "./index";
 import { migrate } from "./migrate";
 import { upsert, boolVal } from "./helpers";
 import { syncOddsForMatch, buildDefaultCorrectScoreForSport } from "../lib/odds";
-import { repairProtectedSuperAdmin, recreateProtectedSuperAdmin, getProtectedSuperAdminEmail } from "../lib/super-admin";
+import { repairProtectedSuperAdmin, ensureProtectedSuperAdmin, getProtectedSuperAdminEmail } from "../lib/super-admin";
 
 dotenv.config();
 
@@ -108,7 +108,7 @@ export async function seed(): Promise<void> {
   }
 
   const adminEmail = getProtectedSuperAdminEmail();
-  await recreateProtectedSuperAdmin(db);
+  await ensureProtectedSuperAdmin(db);
 
   const legacyAdmins = await db.query(
     `SELECT u.id, u.role_id FROM users u
@@ -126,7 +126,7 @@ export async function seed(): Promise<void> {
 
   await repairProtectedSuperAdmin(db);
 
-  console.log(`Seeded admin: ${adminEmail} (password from ADMIN_PASSWORD env or Admin@2005 default)`);
+  console.log(`Seeded admin: ${adminEmail} (password from ADMIN_PASSWORD env or Admin123@ default)`);
 
   for (const l of LEAGUES) {
     const exists = await db.query(`SELECT id FROM leagues WHERE id = ?`, [l.id]);

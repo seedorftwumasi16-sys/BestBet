@@ -12,6 +12,7 @@ import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
 import { KeyRound, RefreshCw, Smartphone, User } from "lucide-react";
 import { AdminPlatformReset } from "@/components/admin/AdminPlatformReset";
+import { AdminResetPasswordPanel } from "@/components/admin/AdminResetPasswordPanel";
 
 export function AdminUsersSection() {
   const toast = useToast();
@@ -467,7 +468,10 @@ export function AdminSettingsSection({ onPlatformReset }: { onPlatformReset?: ()
       </div>
 
       {user?.roleId === "super_admin" && (
-        <AdminPlatformReset onResetComplete={onPlatformReset} />
+        <>
+          <AdminResetPasswordPanel />
+          <AdminPlatformReset onResetComplete={onPlatformReset} />
+        </>
       )}
     </div>
   );

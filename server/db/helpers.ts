@@ -65,6 +65,13 @@ export async function getUserWithWallet(
         : `SELECT * FROM users WHERE email = ?`,
       [normalizedEmail]
     );
+    if (userResult.rows.length === 0 && db.driver === "json") {
+      userResult = await db.query(`SELECT * FROM users`, []);
+      const match = userResult.rows.find(
+        (row) => String(row.email ?? "").toLowerCase().trim() === normalizedEmail
+      );
+      userResult = { rows: match ? [match] : [], rowCount: match ? 1 : 0 };
+    }
   } else if (lookup.id) {
     userResult = await db.query(`SELECT * FROM users WHERE id = ?`, [lookup.id]);
   } else {

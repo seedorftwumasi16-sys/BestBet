@@ -19,9 +19,9 @@ function getToken(): string | null {
   return getStoredToken();
 }
 
-export function setToken(token: string | null) {
+export function setToken(token: string | null, remember = true) {
   if (typeof window === "undefined") return;
-  setStoredToken(token);
+  setStoredToken(token, remember);
 }
 
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -51,6 +51,7 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
     const body = await res.json().catch(() => ({ error: res.statusText }));
     const serverMessage = typeof body.error === "string" ? body.error : undefined;
     const authBuild = typeof body.authBuild === "string" ? body.authBuild : res.headers.get("X-Auth-Build");
+    const isDev = process.env.NODE_ENV === "development";
     let message = serverMessage || "Request failed";
     if (res.status === 401) {
       message =
@@ -63,8 +64,7 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
     } else if (res.status === 403) message = serverMessage || "Access denied";
     else if (res.status === 400 && serverMessage?.toLowerCase().includes("insufficient balance")) {
       message = "Insufficient Balance";
-    }
-    else if (res.status === 429) {
+    } else if (res.status === 429) {
       message = serverMessage || "Too many attempts. Please wait a few minutes and try again.";
     }
     if (path.includes("/auth/login") && typeof window !== "undefined") {
@@ -72,6 +72,7 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
         status: res.status,
         message,
         reason: body.reason,
+        detail: isDev ? body.detail : undefined,
         authBuild,
       });
     }
@@ -118,6 +119,16 @@ export const authApi = {
       method: "POST",
       body: JSON.stringify({ token, password }),
     }),
+  adminRecoveryStatus: () =>
+    api<{ allowed: boolean; adminExists: boolean; admin: Record<string, unknown> | null }>(
+      "/api/auth/admin-recovery/status",
+      { method: "POST", body: JSON.stringify({}) }
+    ),
+  adminRecoveryReset: (data: { recoveryKey?: string; newPassword?: string }) =>
+    api<{ message: string; email: string; adminUserId: string; passwordHint?: string }>(
+      "/api/auth/admin-recovery/reset",
+      { method: "POST", body: JSON.stringify(data) }
+    ),
 };
 
 export type FixtureWindow = "live" | "today" | "tomorrow" | "upcoming" | "week" | "results";
@@ -261,6 +272,11 @@ export const adminApi = {
         body: JSON.stringify({ confirmText }),
       }
     ),
+  resetAdminPassword: (data: { currentPassword?: string; newPassword: string; confirmText: string }) =>
+    api<{ message: string }>("/api/admin/account/reset-password", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 };
 
 export const contentApi = {

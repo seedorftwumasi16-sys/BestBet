@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Mail, Lock } from "lucide-react";
@@ -10,20 +10,18 @@ import { Input } from "@/components/ui/Input";
 import { useAuth } from "@/context/AuthContext";
 import { getPostLoginPath } from "@/lib/constants";
 import { ApiError } from "@/lib/api";
-import { clearStoredAuth } from "@/lib/auth-storage";
+import { getRememberMePreference, isLocalAdminRecoveryHost } from "@/lib/auth-storage";
 
 export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(() =>
+    typeof window !== "undefined" ? getRememberMePreference() : true
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    clearStoredAuth();
-    setError("");
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,18 +29,19 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
     try {
-      const user = await login(email.trim(), password);
+      const user = await login(email.trim(), password, rememberMe);
       router.push(getPostLoginPath(user.roleId));
     } catch (err) {
       if (err instanceof ApiError) {
-        console.error("[login] rejected", {
-          status: err.status,
-          message: err.message,
-          email: email.trim(),
-        });
+        if (process.env.NODE_ENV === "development") {
+          console.error("[login] rejected", {
+            status: err.status,
+            message: err.message,
+            email: email.trim(),
+          });
+        }
         setError(err.message);
       } else if (err instanceof Error) {
-        console.error("[login] rejected", { message: err.message, email: email.trim() });
         setError(err.message);
       } else {
         setError("Login failed");
@@ -102,6 +101,8 @@ export default function LoginPage() {
           <label className="flex cursor-pointer items-center gap-2.5">
             <input
               type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
               className="h-4 w-4 rounded border-[var(--border)] accent-bestbet-yellow"
             />
             <span className="text-bestbet-gray-muted">Remember me</span>
@@ -121,6 +122,15 @@ export default function LoginPage() {
         >
           Log In
         </Button>
+
+        {isLocalAdminRecoveryHost() && (
+          <p className="text-center text-xs text-bestbet-gray-muted">
+            Admin locked out?{" "}
+            <Link href="/admin/recovery" className="text-bestbet-yellow font-semibold hover:underline">
+              Open Admin Recovery
+            </Link>
+          </p>
+        )}
       </form>
     </AuthShell>
   );

@@ -4,7 +4,7 @@
  */
 const API_URL = (process.env.API_URL || "https://bestbet-api-production.up.railway.app").replace(/\/$/, "");
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@bestbet.gh";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "Admin@2005";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "Admin123@";
 
 const FIXTURES = [
   { homeTeam: "Accra Stars", awayTeam: "Kumasi United", league: "Ghana Premier League" },

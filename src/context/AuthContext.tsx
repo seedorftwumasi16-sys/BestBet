@@ -23,7 +23,7 @@ interface AuthContextType {
   notifications: Notification[];
   unreadCount: number;
   loading: boolean;
-  login: (email: string, password: string) => Promise<User>;
+  login: (email: string, password: string, remember?: boolean) => Promise<User>;
   logout: () => Promise<void>;
   register: (data: { name: string; email: string; password: string; phone?: string; referralCode?: string }) => Promise<void>;
   markNotificationRead: (id: string) => void;
@@ -87,12 +87,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [refreshUser]);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, remember = true) => {
     clearStoredAuth();
     setToken(null);
     setUser(null);
     const { token, user: u } = await authApi.login(email, password);
-    setToken(token);
+    setToken(token, remember);
     const user = mapApiUser(u);
     setUser(user);
     await loadNotifications();
@@ -105,6 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // ignore
     }
+    clearStoredAuth();
     setToken(null);
     setUser(null);
     setNotifications([]);

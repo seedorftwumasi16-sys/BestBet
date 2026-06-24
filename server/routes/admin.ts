@@ -4,10 +4,15 @@ import { getDb, getWalletBalance } from "../db";
 import { authenticate, requirePermission, requireRole, logAudit } from "../middleware/auth";
 import { createNotification } from "../services/notifications";
 import { getUserWithWallet } from "../db/helpers";
-import { canChangeUserStatus } from "../lib/super-admin";
+import {
+  canChangeUserStatus,
+  isProtectedSuperAdmin,
+  resetProtectedSuperAdminPassword,
+} from "../lib/super-admin";
 import { formatCurrency } from "../lib/currency";
 import { isValidPlatformResetConfirmation, resetPlatformData } from "../lib/platform-reset";
 import { cacheInvalidatePrefix } from "../services/redis";
+import bcrypt from "bcryptjs";
 import adminMatchesRoutes from "./admin/matches";
 import adminAdminsRoutes from "./admin/admins";
 import adminBookingCodesRoutes from "./admin/booking-codes";
@@ -245,6 +250,40 @@ router.post("/platform/reset", authenticate, requireRole("super_admin"), async (
     console.error("[admin/platform/reset]", err);
     res.status(500).json({
       error: err instanceof Error ? err.message : "Platform reset failed",
+    });
+  }
+});
+
+router.post("/account/reset-password", authenticate, requireRole("super_admin"), async (req, res) => {
+  const { currentPassword, newPassword, confirmText } = req.body ?? {};
+  if (confirmText !== "RESET ADMIN PASSWORD") {
+    return res.status(400).json({ error: 'Type "RESET ADMIN PASSWORD" to confirm' });
+  }
+  if (typeof newPassword !== "string" || newPassword.trim().length < 8) {
+    return res.status(400).json({ error: "New password must be at least 8 characters" });
+  }
+
+  try {
+    const db = await getDb();
+    const row = await getUserWithWallet(db, { id: req.user!.id });
+    if (!row || !isProtectedSuperAdmin(row.id, row.email)) {
+      return res.status(403).json({ error: "Only the primary super admin can reset this password here" });
+    }
+
+    if (typeof currentPassword === "string" && currentPassword.trim()) {
+      const matches = await bcrypt.compare(currentPassword.trim(), row.password_hash);
+      if (!matches) {
+        return res.status(401).json({ error: "Current password is incorrect" });
+      }
+    }
+
+    await resetProtectedSuperAdminPassword(db, newPassword.trim());
+    await logAudit(req.user!.id, "admin_password_reset", "Super admin password updated from admin panel");
+    res.json({ message: "Admin password updated successfully" });
+  } catch (err) {
+    console.error("[admin/account/reset-password]", err);
+    res.status(500).json({
+      error: err instanceof Error ? err.message : "Failed to reset admin password",
     });
   }
 });

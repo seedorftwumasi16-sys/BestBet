@@ -21,7 +21,7 @@ import {
   LIVE_DATA_RESET_SQL,
   MATCH_SCHEDULING_COLUMNS_SQL,
 } from "./schema-ext";
-import { recreateProtectedSuperAdmin } from "../lib/super-admin";
+import { ensureProtectedSuperAdmin } from "../lib/super-admin";
 import { ensureMatchSchema } from "./schema-verify";
 import { cacheInvalidatePrefix } from "../services/redis";
 
@@ -87,7 +87,7 @@ export async function migrate(): Promise<{ driver: string }> {
 
   await cacheInvalidatePrefix("matches:");
 
-  await recreateProtectedSuperAdmin(db);
+  await ensureProtectedSuperAdmin(db);
 
   return { driver: db.driver };
 }
