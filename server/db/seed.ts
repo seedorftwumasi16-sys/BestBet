@@ -108,7 +108,14 @@ export async function seed(): Promise<void> {
   }
 
   const adminEmail = getProtectedSuperAdminEmail();
-  await ensureProtectedSuperAdmin(db);
+  try {
+    await ensureProtectedSuperAdmin(db);
+  } catch (err) {
+    console.warn(
+      "[seed] Protected admin bootstrap deferred:",
+      err instanceof Error ? err.message : err
+    );
+  }
 
   const legacyAdmins = await db.query(
     `SELECT u.id, u.role_id FROM users u

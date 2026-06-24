@@ -8,7 +8,14 @@ export const PROTECTED_SUPER_ADMIN_EMAIL = "admin@bestbet.gh";
 /** Primary seed super-admin user id — cannot be banned or demoted. */
 export const PROTECTED_SUPER_ADMIN_ID = "admin-001";
 
+/** PostgreSQL deployments use UUID user ids — keep a stable protected id there too. */
+export const PROTECTED_SUPER_ADMIN_PG_ID = "a0000001-0000-4000-8000-000000000001";
+
 const DEFAULT_ADMIN_PASSWORD = "Admin123@";
+
+export function getProtectedSuperAdminSeedId(db: Database): string {
+  return db.driver === "postgresql" ? PROTECTED_SUPER_ADMIN_PG_ID : PROTECTED_SUPER_ADMIN_ID;
+}
 
 export function getProtectedSuperAdminEmail(): string {
   return PROTECTED_SUPER_ADMIN_EMAIL;
@@ -28,7 +35,11 @@ export function getProtectedAdminPasswordCandidates(): string[] {
 
 export function isProtectedSuperAdmin(userId: string, email: string): boolean {
   const normalized = String(email || "").toLowerCase().trim();
-  return userId === PROTECTED_SUPER_ADMIN_ID || normalized === PROTECTED_SUPER_ADMIN_EMAIL;
+  return (
+    userId === PROTECTED_SUPER_ADMIN_ID ||
+    userId === PROTECTED_SUPER_ADMIN_PG_ID ||
+    normalized === PROTECTED_SUPER_ADMIN_EMAIL
+  );
 }
 
 export function isAdminRole(roleId?: string): boolean {
@@ -55,7 +66,7 @@ export async function recreateProtectedSuperAdmin(db: Database): Promise<string>
   const email = PROTECTED_SUPER_ADMIN_EMAIL;
   const password = getProtectedSuperAdminPassword();
   const hash = await bcrypt.hash(password, 10);
-  const adminId = PROTECTED_SUPER_ADMIN_ID;
+  const adminId = getProtectedSuperAdminSeedId(db);
 
   const existing = await db.query(`SELECT id, status, role_id FROM users WHERE LOWER(email) = ?`, [email]);
   let userId = adminId;
@@ -130,7 +141,7 @@ export async function resetProtectedSuperAdminPassword(
 
   const hash = await bcrypt.hash(password, 10);
   const users = await db.query(`SELECT id FROM users WHERE LOWER(email) = ?`, [email.toLowerCase()]);
-  let userId = PROTECTED_SUPER_ADMIN_ID;
+  let userId = getProtectedSuperAdminSeedId(db);
 
   if (users.rows.length === 0) {
     return recreateProtectedSuperAdmin(db);
