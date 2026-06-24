@@ -36,6 +36,8 @@ import {
 
   Ticket,
 
+  Wallet,
+
 } from "lucide-react";
 
 import { Logo } from "@/components/brand/Logo";
@@ -70,6 +72,7 @@ import { AdminAdminsSection } from "@/components/admin/AdminAdminsSection";
 
 import { AdminBettingHistorySection } from "@/components/admin/AdminBettingHistorySection";
 import { AdminBookingCodesSection } from "@/components/admin/AdminBookingCodesSection";
+import { AdminBalanceManagementSection } from "@/components/admin/AdminBalanceManagementSection";
 import { AdminSportsSyncStatus } from "@/components/admin/AdminSportsSyncStatus";
 import { AdminErrorBoundary } from "@/components/admin/AdminErrorBoundary";
 import { normalizeAdminStats, safeFormatCount } from "@/lib/admin-utils";
@@ -95,6 +98,8 @@ const iconMap: Record<string, React.ComponentType<{ size?: number; className?: s
   Settings,
 
   Ticket,
+
+  Wallet,
 
 };
 
@@ -451,6 +456,12 @@ export default function AdminPage() {
           {activeSection === "booking-codes" && (
             <AdminErrorBoundary section="Booking Codes">
               <AdminBookingCodesSection />
+            </AdminErrorBoundary>
+          )}
+
+          {activeSection === "balance-management" && (
+            <AdminErrorBoundary section="Balance Management">
+              <AdminBalanceManagementSection />
             </AdminErrorBoundary>
           )}
 

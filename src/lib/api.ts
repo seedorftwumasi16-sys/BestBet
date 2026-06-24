@@ -1,4 +1,5 @@
 import { getApiBaseUrl } from "./config";
+import { extractApiErrorMessage } from "./api-errors";
 import {
   clearStoredAuth,
   getStoredToken,
@@ -48,17 +49,17 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   }
 
   if (!res.ok) {
-    const body = await res.json().catch(() => ({ error: res.statusText }));
-    const serverMessage = typeof body.error === "string" ? body.error : undefined;
+    const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    const serverMessage = extractApiErrorMessage(body, res.status, res.statusText, path);
     const authBuild = typeof body.authBuild === "string" ? body.authBuild : res.headers.get("X-Auth-Build");
     const isDev = process.env.NODE_ENV === "development";
-    let message = serverMessage || "Request failed";
+    let message = serverMessage;
     if (res.status === 401) {
       message =
         path.includes("/bets/") || path.includes("/wallets/")
           ? serverMessage || "Please log in to continue"
           : serverMessage || "Invalid email or password";
-      if (typeof window !== "undefined" && token) {
+      if (typeof window !== "undefined" && token && !path.includes("/auth/login")) {
         clearStoredAuth();
       }
     } else if (res.status === 403) message = serverMessage || "Access denied";
@@ -67,8 +68,9 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
     } else if (res.status === 429) {
       message = serverMessage || "Too many attempts. Please wait a few minutes and try again.";
     }
-    if (path.includes("/auth/login") && typeof window !== "undefined") {
-      console.error("[api/login]", {
+    if (typeof window !== "undefined" && (path.includes("/auth/login") || path.includes("/admin/"))) {
+      console.error("[api]", {
+        path,
         status: res.status,
         message,
         reason: body.reason,
@@ -276,6 +278,11 @@ export const adminApi = {
     api<{ message: string }>("/api/admin/account/reset-password", {
       method: "POST",
       body: JSON.stringify(data),
+    }),
+  resetAllUserBalances: (confirmText: string) =>
+    api<{ message: string; usersUpdated: number }>("/api/admin/balances/reset-all", {
+      method: "POST",
+      body: JSON.stringify({ confirmText }),
     }),
 };
 

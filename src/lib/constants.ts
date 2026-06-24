@@ -215,5 +215,6 @@ export const ADMIN_SECTIONS = [
   { id: "withdrawals", name: "Withdrawals", icon: "ArrowUpFromLine" },
   { id: "betting-history", name: "Betting History", icon: "TrendingUp" },
   { id: "booking-codes", name: "Booking Codes", icon: "Ticket" },
+  { id: "balance-management", name: "Balance Management", icon: "Wallet" },
   { id: "settings", name: "Settings", icon: "Settings" },
 ] as const;

@@ -8,6 +8,7 @@ import {
   canChangeUserStatus,
   isProtectedSuperAdmin,
   resetProtectedSuperAdminPassword,
+  PROTECTED_SUPER_ADMIN_EMAIL,
 } from "../lib/super-admin";
 import { formatCurrency } from "../lib/currency";
 import { isValidPlatformResetConfirmation, resetPlatformData } from "../lib/platform-reset";
@@ -60,25 +61,32 @@ router.get("/stats", authenticate, requireRole("super_admin", "sub_admin"), asyn
 });
 
 router.get("/users", authenticate, requirePermission("manage_users"), async (_req, res) => {
-  const db = await getDb();
-  const result = await db.query(
-    `SELECT u.id, u.email, u.name, u.phone, u.phone_verified, u.status, u.role_id, u.referral_code, u.created_at, w.balance, w.bonus_balance, w.locked_balance
-     FROM users u LEFT JOIN wallets w ON w.user_id = u.id ORDER BY u.created_at DESC`
-  );
-  res.json(result.rows.map((u) => ({
-    id: u.id,
-    email: u.email,
-    name: u.name,
-    phone: u.phone,
-    phoneVerified: u.phone_verified,
-    status: u.status || "active",
-    roleId: u.role_id,
-    referralCode: u.referral_code,
-    balance: Number(u.balance ?? 0),
-    bonusBalance: Number(u.bonus_balance ?? 0),
-    lockedBalance: Number(u.locked_balance ?? 0),
-    createdAt: u.created_at,
-  })));
+  try {
+    const db = await getDb();
+    const result = await db.query(
+      `SELECT u.id, u.email, u.name, u.phone, u.phone_verified, u.status, u.role_id, u.referral_code, u.created_at, w.balance, w.bonus_balance, w.locked_balance
+       FROM users u LEFT JOIN wallets w ON w.user_id = u.id ORDER BY u.created_at DESC`
+    );
+    res.json(
+      result.rows.map((u) => ({
+        id: u.id,
+        email: u.email,
+        name: u.name,
+        phone: u.phone,
+        phoneVerified: u.phone_verified,
+        status: u.status || "active",
+        roleId: u.role_id,
+        referralCode: u.referral_code,
+        balance: Number(u.balance ?? 0),
+        bonusBalance: Number(u.bonus_balance ?? 0),
+        lockedBalance: Number(u.locked_balance ?? 0),
+        createdAt: u.created_at,
+      }))
+    );
+  } catch (err) {
+    console.error("[admin/users]", err);
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed to load users" });
+  }
 });
 
 router.patch("/users/:id/status", authenticate, requirePermission("manage_users"), async (req, res) => {
@@ -122,30 +130,45 @@ router.patch("/users/:id/balance", authenticate, requireRole("super_admin"), asy
 });
 
 router.get("/deposits", authenticate, requirePermission("manage_deposits"), async (_req, res) => {
-  const db = await getDb();
-  const result = await db.query(
-    `SELECT d.*, u.email, u.name FROM deposits d
-     LEFT JOIN users u ON u.id = d.user_id ORDER BY d.created_at DESC`
-  );
-  res.json(result.rows);
+  try {
+    const db = await getDb();
+    const result = await db.query(
+      `SELECT d.*, u.email, u.name FROM deposits d
+       LEFT JOIN users u ON u.id = d.user_id ORDER BY d.created_at DESC`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("[admin/deposits]", err);
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed to load deposits" });
+  }
 });
 
 router.get("/withdrawals", authenticate, requirePermission("manage_withdrawals"), async (_req, res) => {
-  const db = await getDb();
-  const result = await db.query(
-    `SELECT w.*, u.email, u.name FROM withdrawals w
-     LEFT JOIN users u ON u.id = w.user_id ORDER BY w.created_at DESC`
-  );
-  res.json(result.rows);
+  try {
+    const db = await getDb();
+    const result = await db.query(
+      `SELECT w.*, u.email, u.name FROM withdrawals w
+       LEFT JOIN users u ON u.id = w.user_id ORDER BY w.created_at DESC`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("[admin/withdrawals]", err);
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed to load withdrawals" });
+  }
 });
 
 router.get("/bets", authenticate, requireRole("super_admin", "sub_admin"), async (_req, res) => {
-  const db = await getDb();
-  const bets = await db.query(
-    `SELECT b.*, u.email, u.name FROM bets b
-     LEFT JOIN users u ON u.id = b.user_id ORDER BY b.created_at DESC LIMIT 200`
-  );
-  res.json(bets.rows);
+  try {
+    const db = await getDb();
+    const bets = await db.query(
+      `SELECT b.*, u.email, u.name FROM bets b
+       LEFT JOIN users u ON u.id = b.user_id ORDER BY b.created_at DESC LIMIT 200`
+    );
+    res.json(bets.rows);
+  } catch (err) {
+    console.error("[admin/bets]", err);
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed to load bets" });
+  }
 });
 
 router.get("/bookings", authenticate, requireRole("super_admin", "sub_admin"), async (_req, res) => {
@@ -251,6 +274,43 @@ router.post("/platform/reset", authenticate, requireRole("super_admin"), async (
     res.status(500).json({
       error: err instanceof Error ? err.message : "Platform reset failed",
     });
+  }
+});
+
+router.post("/balances/reset-all", authenticate, requireRole("super_admin"), async (req, res) => {
+  const { confirmText } = req.body ?? {};
+  if (confirmText !== "RESET ALL BALANCES") {
+    return res.status(400).json({ error: 'Type "RESET ALL BALANCES" to confirm' });
+  }
+
+  try {
+    const db = await getDb();
+    const users = await db.query(
+      `SELECT id FROM users WHERE LOWER(TRIM(email)) <> ?`,
+      [PROTECTED_SUPER_ADMIN_EMAIL.toLowerCase()]
+    );
+    let usersUpdated = 0;
+    for (const row of users.rows) {
+      const userId = String(row.id);
+      const wallet = await db.query(`SELECT id FROM wallets WHERE user_id = ?`, [userId]);
+      if (wallet.rows.length === 0) {
+        await db.query(
+          `INSERT INTO wallets (id, user_id, balance, bonus_balance, locked_balance) VALUES (?, ?, ?, ?, ?)`,
+          [uuidv4(), userId, 0, 0, 0]
+        );
+      } else {
+        await db.query(
+          `UPDATE wallets SET balance = 0, bonus_balance = 0, locked_balance = 0 WHERE user_id = ?`,
+          [userId]
+        );
+      }
+      usersUpdated += 1;
+    }
+    await logAudit(req.user!.id, "reset_all_balances", `Reset balances for ${usersUpdated} users`);
+    res.json({ message: "All user balances reset to zero", usersUpdated });
+  } catch (err) {
+    console.error("[admin/balances/reset-all]", err);
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed to reset user balances" });
   }
 });
 
