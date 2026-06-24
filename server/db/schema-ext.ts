@@ -161,17 +161,8 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS role_id TEXT;
 `;
 
-/** Backfill users.role_id from legacy users.role on older PostgreSQL deployments. */
-export const PG_ROLE_ID_MIGRATION_SQL = `
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'role'
-  ) THEN
-    UPDATE users SET role_id = role WHERE role_id IS NULL AND role IS NOT NULL;
-  END IF;
-END $$;
+export const PG_ROLE_ID_BACKFILL_SQL = `
+UPDATE users SET role_id = role WHERE role_id IS NULL AND role IS NOT NULL;
 UPDATE users SET role_id = COALESCE(role_id, 'user') WHERE role_id IS NULL;
 `;
 
