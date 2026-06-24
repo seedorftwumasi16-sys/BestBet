@@ -66,10 +66,14 @@ async function logLogin(
       ]
     );
   } catch {
-    await db.query(
-      `INSERT INTO login_logs (id, user_id, email, ip_address, user_agent, device_id, success) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [uuidv4(), userId, email, info.ip, info.userAgent, info.deviceId, boolVal(db, success)]
-    );
+    try {
+      await db.query(
+        `INSERT INTO login_logs (id, user_id, email, ip_address, user_agent, device_id, success) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [uuidv4(), userId, email, info.ip, info.userAgent, info.deviceId, boolVal(db, success)]
+      );
+    } catch (err) {
+      console.warn("[auth/login] login log skipped:", err instanceof Error ? err.message : err);
+    }
   }
 
   if (!success) {
