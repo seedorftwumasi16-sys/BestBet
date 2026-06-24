@@ -1,5 +1,5 @@
 import helmet from "helmet";
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { Request, Response, NextFunction } from "express";
 
 export const securityHeaders = helmet({
@@ -39,12 +39,7 @@ export const authLimiter = rateLimit({
   keyGenerator: (req) => {
     const email =
       typeof req.body?.email === "string" ? req.body.email.toLowerCase().trim() : "";
-    const ip =
-      req.ip ||
-      (typeof req.headers["x-forwarded-for"] === "string"
-        ? req.headers["x-forwarded-for"].split(",")[0]?.trim()
-        : "") ||
-      "unknown";
+    const ip = ipKeyGenerator(req.ip ?? "", 56);
     return email ? `${ip}:${email}` : ip;
   },
   message: { error: "Too many login attempts, please try again in 15 minutes" },
