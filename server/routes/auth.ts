@@ -260,10 +260,14 @@ router.post("/login", authLimiter, async (req, res) => {
     );
 
     const info = getClientInfo(req);
-    await db.query(
-      `INSERT INTO device_sessions (id, user_id, device_id, device_name, ip_address) VALUES (?, ?, ?, ?, ?)`,
-      [uuidv4(), user.id, info.deviceId, info.userAgent.slice(0, 100), info.ip]
-    );
+    try {
+      await db.query(
+        `INSERT INTO device_sessions (id, user_id, device_id, device_name, ip_address) VALUES (?, ?, ?, ?, ?)`,
+        [uuidv4(), user.id, info.deviceId, info.userAgent.slice(0, 100), info.ip]
+      );
+    } catch (err) {
+      console.warn("[auth/login] device session skipped:", err instanceof Error ? err.message : err);
+    }
 
     res.json({
       token,

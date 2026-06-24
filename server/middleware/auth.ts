@@ -78,5 +78,17 @@ export function requireRole(...roles: string[]) {
 export async function logAudit(userId: string | null, action: string, details?: string) {
   const db = await getDb();
   const { v4: uuidv4 } = await import("uuid");
-  await db.query(`INSERT INTO audit_logs (id, user_id, action, details) VALUES (?, ?, ?, ?)`, [uuidv4(), userId, action, details ?? null]);
+  const detailValue =
+    db.driver === "postgresql" && details ? JSON.stringify({ message: details }) : details ?? null;
+
+  try {
+    await db.query(`INSERT INTO audit_logs (id, user_id, action, details) VALUES (?, ?, ?, ?)`, [
+      uuidv4(),
+      userId,
+      action,
+      detailValue,
+    ]);
+  } catch (err) {
+    console.warn("[audit] skipped:", err instanceof Error ? err.message : err);
+  }
 }
